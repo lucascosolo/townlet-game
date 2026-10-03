@@ -1,0 +1,23 @@
+{
+  "name": "townlet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Townlet: a cozy management sim where every resident remembers. M1 headless sim core.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "radio": "tsx src/tools/radio.ts",
+    "inspect": "tsx src/tools/inspect.ts",
+    "soak": "tsx src/tools/soak.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}

@@ -1,0 +1,135 @@
+Townlet radio play: scenario "bakery", seed 1, 12 days
+
+=== Day 1 · Spring ===
+Notice board:
+  - Fen now counts Ada as a friend.
+  - Ada now counts Fen as a friend.
+
+08:13  At the teahouse, Juniper teases Wren, and it lands badly.
+       (12 conversations yesterday, 0 of them gossip.)
+
+=== Day 2 · Spring ===
+Notice board:
+  - Juniper now counts Wren as a friend.
+  - Wren now counts Juniper as a friend.
+  - Bram has decided the teahouse is where the good evenings happen (after 2 times).
+
+07:59  Bram, at the teahouse, remembers: "The teahouse! Where everything happens, you know."
+08:00  The steward builds a bakery right beside Ada's cottage.
+08:00  Ada, looking at the bakery: "The bakery is a sensible addition, I must say."
+08:00  Bram, looking at the bakery: "Ha! The bakery! Now we are talking!"
+08:00  Juniper, looking at the bakery: "The bakery... What if it was always meant to be there?"
+08:00  Bram takes up work at the bakery.
+       Bram: "You know, a place of my own! Wait till they taste what I make here."
+16:47  At the teahouse, Marlow to Bram: "You always know what to say, Bram."
+04:16* Noise from the bakery wakes Ada. She lies awake till dawn.
+       (9 conversations yesterday, 0 of them gossip.)
+
+=== Day 3 · Spring ===
+Notice board:
+  - Nothing new.
+
+09:41  At the teahouse, Juniper to Wren: "Hmm, you notice things, Wren. I like that."
+04:27* Noise from the bakery wakes Ada. She lies awake till dawn.
+       (10 conversations yesterday, 0 of them gossip.)
+
+=== Day 4 · Spring ===
+Notice board:
+  - Fen has decided the brook is a lovely spot (after 5 times).
+
+13:11  Wren, at the teahouse, remembers: "I always end up at the teahouse. Best part of the day."
+16:17  At the teahouse, Bram to Marlow: "What would we do without you, Marlow?"
+17:18  At the teahouse, Juniper teases Wren, and it lands badly.
+19:45  At the old oak, Fen to Ada: "You did all right, Ada."
+22:15  At the old oak, Marlow and Juniper reminisce about the teahouse.
+04:18* Noise from the bakery wakes Ada. She lies awake till dawn.
+       (11 conversations yesterday, 0 of them gossip.)
+
+=== Day 5 · Spring ===
+Notice board:
+  - Marlow has decided the teahouse is a lovely spot (after 6 times).
+  - Marlow has decided the teahouse is where the good evenings happen (after 5 times).
+  - Juniper has decided the teahouse is where the good evenings happen (after 4 times).
+  - Wren has decided the teahouse is where the good evenings happen (after 3 times).
+  - Ada has decided the bakery keeps her up at night (after 3 times).
+  - Ada asks: "Steward, I must ask: could something be done about the noise from the bakery?"
+
+07:07  Marlow, at the teahouse, remembers: "I always end up at the teahouse. Best part of the day."
+12:36  At the teahouse, Bram tells Fen: "You know, have you noticed? The teahouse is where the good evenings happen!"
+17:54  At the brook, Ada tells Fen: "If you ask me, the bakery keeps me up at night."
+20:12  At the brook, Ada to Fen: "You have a gift, Fen."
+04:28* Noise from the bakery wakes Ada. She lies awake till dawn.
+       (15 conversations yesterday, 2 of them gossip.)
+
+=== Day 6 · Spring ===
+Notice board:
+  - Nothing new.
+
+10:00  The steward builds a hedge right beside Ada's cottage.
+10:00  Ada, looking at the hedge: "The hedge is a sensible addition, I must say."
+10:00  Fen, looking at the hedge: "The hedge. That will do nicely."
+10:00  Wren, looking at the hedge: "Oh, the hedge! That makes things nicer."
+10:00  The steward builds a hedge right beside Ada's cottage.
+14:30  Fen, at the brook, remembers: "The brook. Nice."
+21:31  At the teahouse, Juniper to Wren: "Wren, you make things feel possible."
+       (12 conversations yesterday, 1 of them gossip.)
+
+=== Day 7 · Spring ===
+Notice board:
+  - Ada: "I slept through the night. Thank you, steward. Truly."
+
+07:36  Juniper, at the teahouse, remembers: "The teahouse holds the evenings like a cup."
+       (16 conversations yesterday, 1 of them gossip.)
+
+=== Day 8 · Summer ===
+Notice board:
+  - Ada has decided the steward listens.
+
+11:12  Bram, at the teahouse, remembers: "The teahouse! Where everything happens, you know."
+17:27  At the teahouse, Marlow to Juniper: "Mind you, you always know what to say, Juniper."
+17:56  At the teahouse, Bram to Marlow: "What would we do without you, Marlow?"
+       (16 conversations yesterday, 0 of them gossip.)
+
+=== Day 9 · Summer ===
+Notice board:
+  - Bram has decided the teahouse is a lovely spot (after 6 times).
+  - Bram now counts Marlow as a friend.
+  - Fen has decided the old oak is a lovely spot (after 6 times).
+
+08:06  Wren, at the teahouse, remembers: "Everyone ends up at the teahouse sooner or later."
+10:00  The steward has the old oak taken down.
+       Ada: "I shall miss the old oak more than I expected."
+       Fen: "The old oak is gone."
+       Juniper: "There is a hole in the sky where the old oak was."
+       Wren: "We used to sit by the old oak every evening."
+14:09  At the brook, Ada tells Fen: "I have come to think the steward listens."
+15:14  Marlow, at the teahouse, remembers: "I could stay at the teahouse all day."
+15:20  At the teahouse, Marlow to Bram: "Honestly, you always know what to say, Bram."
+17:51  At the commons, Ada to Fen: "You have a gift, Fen."
+18:29  At the teahouse, Juniper to Wren: "Ooh, Wren, you make things feel possible."
+21:50  At the commons, Marlow and Juniper reminisce about the teahouse.
+       (13 conversations yesterday, 1 of them gossip.)
+
+=== Day 10 · Summer ===
+Notice board:
+  - Marlow now counts Bram as a friend.
+  - Wren has decided the old oak was a lovely spot (after 6 times).
+
+13:02  On the path, Ada tells Wren: "I have come to think the steward listens."
+14:48  Fen, at the brook, remembers: "Quiet here. Good."
+       (11 conversations yesterday, 2 of them gossip.)
+
+=== Day 11 · Summer ===
+Notice board:
+  - Nothing new.
+
+09:40  At the teahouse, Marlow to Juniper: "I'm glad you're here, Juniper."
+13:14  At the teahouse, Marlow tells Fen: "Can I tell you something? The teahouse is where the good evenings happen."
+       (15 conversations yesterday, 2 of them gossip.)
+
+=== Day 12 · Summer ===
+Notice board:
+  - Fen now counts Ada as a close friend.
+
+15:24  At the teahouse, Marlow to Bram: "Honestly, you always know what to say, Bram."
+19:03  At the teahouse, Bram to Marlow: "What would we do without you, Marlow?"

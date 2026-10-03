@@ -1,0 +1,80 @@
+// Directed relationships (spec 4.2.5). The steward is a node like any resident.
+
+import { clamp } from '../needs.js';
+import { STEWARD, TRAITS, VALUES, type Relationship, type RelTag, type ResidentDef, type ResidentState } from '../types.js';
+import type { MindContext } from './mind.js';
+import { opinion } from './memory.js';
+
+export function newRelationship(): Relationship {
+  return { affinity: 0.1, familiarity: 0.3, trust: 0.4, lastContact: -1, lastArgue: -1, tags: [] };
+}
+
+/** How well two personalities fit, [0, 1]: half trait similarity, half shared values. */
+export function compatibility(a: ResidentDef, b: ResidentDef): number {
+  const td = TRAITS.reduce((s, t) => s + Math.abs(a.traits[t] - b.traits[t]), 0) / (TRAITS.length * 2);
+  const vd = VALUES.reduce((s, v) => s + Math.abs(a.values[v] - b.values[v]), 0) / VALUES.length;
+  return 1 - 0.5 * td - 0.5 * vd;
+}
+
+/**
+ * Scale for affinity gained from pleasant exchanges. Well-matched pairs warm quickly; poorly
+ * matched pairs barely warm, or cool slightly, however often they chat.
+ */
+export function warmth(a: ResidentDef, b: ResidentDef): number {
+  return (compatibility(a, b) - 0.55) * 3;
+}
+
+export function rel(r: ResidentState, other: string): Relationship {
+  let x = r.rel[other];
+  if (!x) r.rel[other] = x = newRelationship();
+  return x;
+}
+
+export function adjust(
+  r: ResidentState,
+  other: string,
+  d: { affinity?: number; familiarity?: number; trust?: number },
+  tick?: number,
+): void {
+  const x = rel(r, other);
+  if (d.affinity) x.affinity = clamp(x.affinity + d.affinity, -1, 1);
+  if (d.familiarity) x.familiarity = clamp(x.familiarity + d.familiarity);
+  if (d.trust) x.trust = clamp(x.trust + d.trust);
+  if (tick !== undefined) x.lastContact = tick;
+}
+
+/** Tags with hysteresis: a tag is gained at one threshold and lost only well below it. */
+function tagsFor(x: Relationship): RelTag[] {
+  const had = (t: RelTag) => x.tags.includes(t);
+  const tags: RelTag[] = [];
+  const margin = (t: RelTag) => (had(t) ? 0.08 : 0);
+  if (x.affinity >= 0.45 - margin('friend') && x.familiarity >= 0.45 - margin('friend')) tags.push('friend');
+  if (x.affinity >= 0.7 - margin('close_friend') && x.familiarity >= 0.7 - margin('close_friend')) tags.push('close_friend');
+  if (x.affinity <= -0.35 + margin('rival') && x.familiarity >= 0.3 - margin('rival')) tags.push('rival');
+  return tags;
+}
+
+/**
+ * Overnight relationship drift: beliefs about a person pull affinity toward them, affinity
+ * relaxes toward neutral, familiarity fades without contact. The steward's affinity and trust
+ * follow the resident's opinion of the steward.
+ */
+export function nightlyRelationships(ctx: MindContext, r: ResidentState): void {
+  for (const [other, x] of Object.entries(r.rel)) {
+    if (other === STEWARD) {
+      const op = opinion(r, STEWARD);
+      x.affinity = clamp(x.affinity + 0.3 * (clamp(0.2 + 0.8 * op, -1, 1) - x.affinity), -1, 1);
+      x.trust = clamp(x.trust + 0.3 * (clamp(0.5 + 0.5 * op) - x.trust));
+      continue;
+    }
+    x.affinity = clamp(x.affinity * 0.99 + 0.06 * opinion(r, `r:${other}`), -1, 1);
+    if (x.lastContact < ctx.tick - 1440) x.familiarity *= 0.99;
+    const tags = tagsFor(x);
+    const added = tags.filter((t) => !x.tags.includes(t));
+    const removed = x.tags.filter((t) => !tags.includes(t));
+    if (added.length || removed.length) {
+      x.tags = tags;
+      ctx.emit({ t: ctx.tick, type: 'relationship', who: r.id, other, added, removed });
+    }
+  }
+}

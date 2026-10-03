@@ -1,8 +1,8 @@
 # Townlet — High-Level Game Design Specification
 
-Version 0.1, 2026-10-03. Status: first draft for discussion. Nothing here is locked; section 11 lists the questions that most change what gets built next.
+Version 0.2, 2026-10-03. Status: draft. The first four open questions (platform, AI approach, next milestone, team) were answered on 2026-10-03 and are recorded in [DECISIONS.md](DECISIONS.md); sections 4.6, 8.2 and 11 reflect them. Everything else is still open.
 
-Working title: **Townlet** (townlet.app). Genre: cozy-to-light management simulation. Target for the first release: a vertical slice on PC (Windows, Steam Deck), with a browser demo as a stretch goal.
+Working title: **Townlet** (townlet.app). Genre: cozy-to-light management simulation. Target for the first release: a vertical slice playable in the browser at townlet.app, wrapped for desktop (Windows, Steam Deck) later.
 
 ---
 
@@ -243,7 +243,7 @@ This section answers the brief's question about options for the residents other 
 | **D. B + small local LM as a "voice" layer** | B decides everything, and an on-device small model only paraphrases B's structured lines for variety | More varied phrasing with state still authoritative | Model size on disk (~0.5–1 GB+), GPU/CPU cost, localisation, review burden; inZOI's on-device Smart Zoi showed the performance and acceptance costs | Post-slice experiment, optional toggle |
 | **E. Spiking-network minds (brain-sim)** | Each resident runs a biologically grounded spiking network that learns from a sensory stream | Genuinely novel; memories as measurable physical changes; fits "inspectable mind" | Not yet ready: see 4.6.3 | Research track, gated |
 
-**Recommendation: build B, described as "brain-inspired, not brain-simulated".** It is the only option that meets every pillar on modest hardware with no per-player running cost, and it is the option where the design (what residents remember and how they feel about it) is directly authorable and testable. Option D stays open as a later experiment that can't change game state. Option E should be pursued as a research track with an explicit gate, described below.
+**Decision (2026-10-03): build B now, with fuller brain-sim minds as the long-term direction.** B is "brain-inspired, not brain-simulated". It is the only option that meets every pillar on modest hardware with no per-player running cost, and it is the option where the design (what residents remember and how they feel about it) is directly authorable and testable. Option D stays open as a later experiment that can't change game state. Option E is the long-term direction for the residents themselves, not only for a single creature. It is pursued as a research track with explicit gates (below). To keep that path open, the sim core reaches every resident's cognition through a `Mind` interface (perceive, decide, choose a social exchange, consolidate overnight). The structured mind is the first implementation, and a brain-sim-backed mind can replace it one resident at a time.
 
 #### 4.6.2 What brain-sim lends to the design today
 
@@ -270,6 +270,8 @@ brain-sim's current state, from its SPEC.md and the 2026-10-03 recovery notes:
 On that basis, **brain-sim can't drive 15 residents in the slice.** Running 15 brains at 2,600 neurons in real time alongside a game on consumer hardware is outside its current performance envelope. Memories that fade in seconds can't support relationships that last a season. Without sequence memory or language there is no way for a resident to form plans or speak.
 
 **There is a contained way to use it after the slice: one creature, not the residents.** One small non-speaking creature, such as the town cat, a hedgehog under the commons or a heron at the brook, could run a real brain-sim network. Its sense-nerve would carry a few town channels (who is nearby, time of day, food, noise), and its learned assemblies would bias a small set of behaviours (approach, avoid, follow, wait). A "look inside" view, which builds on brain-sim's existing viewer and its "make change visible" intent, would let curious players watch what it has learned, labelled honestly. This fits both projects. Townlet gets a unique, true hook ("one creature in this town has a working spiking brain"), and brain-sim gets a live sensory environment richer than four fixed patterns. The creature stays off the critical path: if it doesn't work, the game is unaffected.
+
+**The path from one creature to the residents.** The creature is the first rung. A brain-sim mind could then sit *beside* the structured mind for one resident, supplying recall and association signals while the structured mind still handles speech and plans. Full replacement would come only after brain-sim's Stage 2 (sequences) and a way to read out symbols exist. Each rung has its own gate, and the game never waits on the next one.
 
 **Proposed gate for the creature** (to be agreed with brain-sim's owner, in brain-sim's own kill-test style):
 1. An episode-recall criterion owner-accepted for this use, met on all seeds. This doesn't require the official K1.1 size clause, but the trained-minus-twin margin must hold.
@@ -338,14 +340,16 @@ Four options for the slice's single biome, a **temperate riverside valley** (bro
 
 ### 8.2 Recommended starting stack
 
-**Godot 4 (4.7 is the current stable release, from June 2026) with GDScript.**
+**Decision (2026-10-03): web-first TypeScript.** The sim core is plain TypeScript with no DOM or engine dependencies, so it runs headless under Node for tests, soak runs and the M1 "radio play", and the same code runs in the browser. The presentation layer (from M2) is Three.js, built with Vite, and Tauri wraps it for desktop. The Godot option is kept below for reference.
+
+**Previously recommended: Godot 4 (4.7 is the current stable release, from June 2026) with GDScript.**
 - It is free and open source with no royalties. It is strong for small 3D and 2D games, ships to Windows, Linux and Steam Deck, and exports to the web for the townlet.app demo.
 - **GDScript rather than C#**, because C# web export in Godot is still experimental. At 15 agents performance isn't the constraint, and GDScript's iteration speed matters more. Performance-sensitive parts, if any appear, can move to a GDExtension later.
 - The sim core is written as pure GDScript classes (no Node dependencies). A headless runner (`godot --headless`) drives tests and multi-year soak simulations.
 - Dialogue and storylets use **an in-house lightweight storylet and grammar format in JSON** rather than a third-party narrative plugin. The needs are narrow (preconditions on sim state, weighted selection, templated lines with voice substitution), and this avoids plugin-maintenance and C#-only dependencies. Ink or Yarn Spinner can be reconsidered later if writers need more tooling.
 - Testing uses GUT or gdUnit4 for unit tests, plus the headless soak harness.
 
-**The alternative, if web-first matters more than Steam (Q1),** is TypeScript, Three.js and Vite, wrapped with Tauri for desktop. It gives the best browser experience and the fastest web deploys, but no editor, so more custom tooling, and the desktop and console path is weaker. It also fits brain-sim's existing vanilla-JS UI if the creature's "look inside" viewer is ever reused directly.
+**The chosen option,** web-first TypeScript, Three.js and Vite, wrapped with Tauri for desktop. It gives the best browser experience and the fastest web deploys, but no editor, so more custom tooling, and the desktop and console path is weaker. It also fits brain-sim's existing vanilla-JS UI if the creature's "look inside" viewer is ever reused directly.
 
 ### 8.3 Tooling that is part of the design, not an afterthought
 
@@ -427,7 +431,7 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 | **Localisation of generated text** | Grammar output breaks in other languages | Per-language grammar rules from day one; budget for it before the 1.0 decision |
 | **Scope creep** | Generations, multi-town and LLM voice are all tempting | Section 9.1's "not in the slice" list is binding; new ideas go to 9.2 |
 | **Coupling to research** | Waiting on brain-sim stalls the game | The creature is post-slice and off the critical path; its gate is explicit (4.6.3) |
-| **Godot 3D web export performance** | The browser demo may be heavier than desktop | Keep the web demo optional; it doesn't block release |
+| **Browser 3D performance** | Three.js on integrated GPUs and in the Tauri webview may be heavier than a native engine | Low-poly art direction (section 6), instancing, a performance budget from M2, measured on a low-end laptop |
 
 ---
 
@@ -435,15 +439,15 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 
 These are ordered by how much each answer changes what gets built next.
 
-1. **Platform priority.** Should development aim at Steam/desktop first with an optional web demo (Godot), or web-first on townlet.app (TypeScript and Three.js)? This decides the stack.
-2. **AI ambition for 1.0.** Is it a structured cognitive sim only, or should the local LM voice layer be in 1.0? Should the brain-sim creature be a 1.0 goal or a post-launch experiment?
+1. ~~**Platform priority.**~~ Decided 2026-10-03: web-first TypeScript (see DECISIONS.md).
+2. **AI ambition for 1.0.** Partly decided 2026-10-03: a structured sim now, with fuller brain-sim minds as the long-term direction. Still open: whether the brain-sim creature is a 1.0 goal or a post-launch experiment, and whether the local LM voice layer is ever wanted.
 3. **"No generative AI" stance.** Should the game commit publicly to no generative models, which closes off option D, or keep that door open?
 4. **Embodiment.** Is the steward an avatar walking the town, which is more intimate, allows conversations in place and suits gamepads, or a disembodied cursor and camera, which is simpler and closer to a builder?
 5. **Life cycle.** Do residents age, have children or pass away in the base game, or is time "seasonal but timeless" (as in the slice)?
 6. **Resident agency over layout.** Can residents ever act on the town themselves (plant a garden, rearrange decor, build a shed) or only react to it?
 7. **Grid.** Square grid with auto-joining (recommended), hex, or Townscaper-style irregular grid?
 8. **Conversation depth.** Should talking to residents remain choice-based, or is any freeform input (typed or keyword-based) wanted eventually?
-9. **Team and timeline.** Who is building this (solo, small team, contracted art) and by when? This sets the slice's content numbers.
+9. ~~**Team and timeline.**~~ Decided 2026-10-03: solo plus Claude, no deadline. The slice keeps 15 residents as the target but proves the format with 6 first (M1).
 10. **Art direction.** Which option from section 6, and is there budget for a technical artist?
 11. **End of the slice.** After the charter, does the game end with the Almanac and a "new town" button, or carry on as an open-ended sandbox?
 12. **The creature.** If brain-sim does reach its gate, which creature should it be, and what can players see when they look inside?

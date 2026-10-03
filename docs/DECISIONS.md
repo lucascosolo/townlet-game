@@ -18,4 +18,4 @@ These were decided by the project owner in answer to the first four open questio
 **Next chunk: M1, the headless "radio play".** M1 is the sim core with 6 residents, a text event log, an inspector, twin tests and a soak runner, with no graphics. The reasoning is that if the town isn't interesting as text, graphics won't save it.
 - *Rejected for now:* building the M2 greybox visuals first, and writing more design docs before any code.
 
-**Team and timeline: solo plus Claude, no deadline.** Scope stays lean. M1 uses 6 of the eventual 15 residents. Content numbers in the spec are targets, not commitments.
+**Team and timeline: solo plus Claude, no deadline, steady progress toward release.** There is no date, but development moves forward one chunk at a time towards a shippable release, not open-ended research. Each chunk ends with what was built, the honest findings, and a short round of questions to the owner before the next chunk starts. Scope stays lean. M1 uses 6 of the eventual 15 residents. Content numbers in the spec are targets, not commitments.

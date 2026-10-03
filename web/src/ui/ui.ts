@@ -23,6 +23,15 @@ export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
   { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop'] },
   { category: 'Dreams', types: ['orchard', 'glasshouse', 'banner'] },
 ];
+type LogFilter = 'highlights' | 'story' | 'everything';
+const LOG_FILTERS: Array<[LogFilter, string, string]> = [
+  ['highlights', 'Highlights', 'Only what really matters: asks, decisions, comings and goings, quarrels, dreams'],
+  ['story', 'Story', 'Everything except passing thoughts and small talk'],
+  ['everything', 'Everything', 'Every thought and word'],
+];
+/** Lines about the same resident within this many minutes fold together. */
+const FOLD_MINUTES = 60;
+
 export type Tool = { kind: 'select' } | { kind: 'build'; type: string } | { kind: 'remove' };
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, text?: string): HTMLElementTagNameMap[K] {
@@ -109,6 +118,12 @@ export class Ui {
   private lastJournalRender = 0;
   private lastYouRender = 0;
   private morning: NarratorEntry[] = [];
+  /** On-screen panels that speech bubbles must not cover. */
+  private readonly panels: HTMLElement[] = [];
+  /** The log's list, its filter, and the run of lines being folded together. */
+  private logList!: HTMLElement;
+  private logFilter: LogFilter = 'story';
+  private logGroup: { who: string; t: number; extra: HTMLElement; toggle: HTMLButtonElement; count: number } | null = null;
 
   constructor(root: HTMLElement, game: Game, view: TownView, opts: { intro: boolean }) {
     this.game = game;
@@ -137,6 +152,7 @@ export class Ui {
     rot.append(left, right, help);
     hud.append(el('div', { class: 'title' }, 'Townlet'), this.clockEl, this.stockEl, speeds, rot);
     root.appendChild(hud);
+    this.panels.push(hud);
 
     // The scroll: rolls up to its top rod.
     this.scroll = el('aside', { class: 'scroll', 'data-testid': 'scroll' });
@@ -162,9 +178,11 @@ export class Ui {
     }
     this.boardEl = this.tabs.get('board')!.pane;
     this.logEl = this.tabs.get('log')!.pane;
+    this.buildLogPane();
     this.journalEl = this.tabs.get('journal')!.pane;
     this.youEl = this.tabs.get('you')!.pane;
     root.appendChild(this.scroll);
+    this.panels.push(this.scroll);
     this.showTab('board');
 
     // The dock: look, build menu, remove, and a status line.
@@ -178,9 +196,11 @@ export class Ui {
     this.statusEl = el('div', { class: 'status', 'data-testid': 'palette-status' });
     dock.append(look, build, remove, this.statusEl);
     root.appendChild(dock);
+    this.panels.push(dock);
     this.menu = this.buildMenu();
     this.menu.hidden = true;
     root.appendChild(this.menu);
+    this.panels.push(this.menu);
 
     this.bubbleLayer = el('div', { class: 'bubbles' });
     root.appendChild(this.bubbleLayer);
@@ -232,6 +252,7 @@ export class Ui {
     }
     if (this.scroll.classList.contains('rolled')) this.toggleScroll();
     if (key === 'journal') this.renderJournal(true);
+    if (key === 'log') this.logEl.scrollTop = this.logEl.scrollHeight;
     if (key === 'you') this.renderYou(true);
   }
 
@@ -429,25 +450,94 @@ export class Ui {
     return nodes;
   }
 
-  private onEntry(e: NarratorEntry): void {
-    if (e.kind === 'day') this.morning = [];
-    if (e.kind === 'board') this.morning.push(e);
-    const row = el('div', { class: `entry ${e.kind}` });
+  private buildLogPane(): void {
+    const bar = el('div', { class: 'log-filter', role: 'group', 'aria-label': 'Show' });
+    for (const [key, label, title] of LOG_FILTERS) {
+      const b = el('button', { 'data-testid': `log-${key}`, title }, label);
+      b.classList.toggle('on', key === this.logFilter);
+      b.addEventListener('click', () => {
+        this.logFilter = key;
+        for (const x of bar.querySelectorAll('button')) x.classList.toggle('on', x === b);
+        this.rerenderLog();
+      });
+      bar.appendChild(b);
+    }
+    this.logList = el('div', { class: 'log-list', 'data-testid': 'log-list' });
+    this.logEl.append(bar, this.logList);
+  }
+
+  private passes(e: NarratorEntry): boolean {
+    if (e.kind === 'day') return true;
+    if (this.logFilter === 'highlights') return e.importance === 'major';
+    if (this.logFilter === 'story') return e.importance !== 'minor';
+    return true;
+  }
+
+  private rerenderLog(): void {
+    this.logList.replaceChildren();
+    this.logGroup = null;
+    const shown = this.game.narrator.entries.filter((e) => this.passes(e)).slice(-400);
+    for (const e of shown) this.appendLog(e);
+    this.logEl.scrollTop = this.logEl.scrollHeight;
+  }
+
+  private logRow(e: NarratorEntry): HTMLElement {
+    const row = el('div', { class: `entry ${e.kind} ${e.importance}` });
     if (e.kind === 'day') row.textContent = e.text;
     else {
       if (e.kind === 'live' || e.kind === 'thought') row.appendChild(el('span', { class: 'time' }, clock(e.t)));
       for (const n of this.nameLinks(e.text)) row.appendChild(n);
     }
-    const atBottom = this.logEl.scrollTop + this.logEl.clientHeight >= this.logEl.scrollHeight - 30;
-    this.logEl.appendChild(row);
-    while (this.logEl.childElementCount > 400) this.logEl.firstElementChild?.remove();
-    if (atBottom) this.logEl.scrollTop = this.logEl.scrollHeight;
+    return row;
+  }
+
+  /** Add a line to the log, folding a run of lines about the same resident under the first. */
+  private appendLog(e: NarratorEntry): void {
+    const row = this.logRow(e);
+    const who = e.who[0];
+    const foldable = (e.kind === 'live' || e.kind === 'thought' || e.kind === 'aside') && e.importance !== 'major' && who !== undefined;
+    const g = this.logGroup;
+    if (foldable && g && g.who === who && e.t - g.t <= FOLD_MINUTES) {
+      g.extra.appendChild(row);
+      g.count++;
+      g.t = e.t;
+      g.toggle.hidden = false;
+      g.toggle.textContent = g.extra.hidden ? `+${g.count} more from ${residentDef(who).name}` : 'fewer';
+      return;
+    }
+    const group = el('div', { class: 'log-group' });
+    group.appendChild(row);
+    if (foldable) {
+      const extra = el('div', { class: 'fold' });
+      extra.hidden = true;
+      const toggle = el('button', { class: 'more', 'data-testid': 'log-more' });
+      toggle.hidden = true;
+      const fold = { who, t: e.t, extra, toggle, count: 0 };
+      toggle.addEventListener('click', () => {
+        extra.hidden = !extra.hidden;
+        toggle.textContent = extra.hidden ? `+${fold.count} more from ${residentDef(who).name}` : 'fewer';
+      });
+      group.append(extra, toggle);
+      this.logGroup = fold;
+    } else this.logGroup = null;
+    this.logList.appendChild(group);
+    while (this.logList.childElementCount > 400) this.logList.firstElementChild?.remove();
+  }
+
+  private onEntry(e: NarratorEntry): void {
+    if (e.kind === 'day') this.morning = [];
+    if (e.kind === 'board') this.morning.push(e);
+    if (this.passes(e)) {
+      const atBottom = this.logEl.scrollTop + this.logEl.clientHeight >= this.logEl.scrollHeight - 30;
+      this.appendLog(e);
+      if (atBottom) this.logEl.scrollTop = this.logEl.scrollHeight;
+    }
 
     // A quoted line becomes a bubble over whoever speaks first in it.
     const quote = /"([^"]+)"/.exec(e.text);
     if (quote && (e.kind === 'live' || e.kind === 'aside' || e.kind === 'thought') && e.who.length > 0) {
       const speaker = [...e.who].sort((a, b) => e.text.indexOf(residentDef(a).name) - e.text.indexOf(residentDef(b).name))[0] as string;
-      this.bubble(speaker, quote[1] as string, e.kind === 'thought' ? 'thought' : '');
+      this.bubble(speaker, quote[1] as string, e.kind === 'thought' ? 'thought' : e.importance === 'major' ? 'major' : '');
     }
     this.lastBoardKey = '';
   }
@@ -536,7 +626,8 @@ export class Ui {
     if (this.morning.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'Nothing new on the board.'));
     const list = el('ul');
     for (const e of this.morning) {
-      const li = el('li');
+      if (e.importance === 'minor') continue;
+      const li = el('li', { class: e.importance });
       for (const n of this.nameLinks(e.text)) li.appendChild(n);
       list.appendChild(li);
     }
@@ -600,6 +691,18 @@ export class Ui {
     det.addEventListener('toggle', () => {
       if (det.open) this.openWhy.add(summary);
       else this.openWhy.delete(summary);
+    });
+    return det;
+  }
+
+  /** A journal section that stays folded unless the player opens it (remembered across redraws). */
+  private section(summary: string, key: string): HTMLDetailsElement {
+    const det = el('details', { class: 'section', 'data-testid': `section-${key}` });
+    det.appendChild(el('summary', {}, summary));
+    det.open = this.openWhy.has(`section:${key}`);
+    det.addEventListener('toggle', () => {
+      if (det.open) this.openWhy.add(`section:${key}`);
+      else this.openWhy.delete(`section:${key}`);
     });
     return det;
   }
@@ -705,8 +808,10 @@ export class Ui {
     j.appendChild(this.meter('Mood', rep.mood));
     j.appendChild(this.meter('Settled here', rep.disposition));
 
-    j.appendChild(el('h3', {}, 'Needs'));
-    for (const n of rep.needs) j.appendChild(this.meter(cap(n.need), n.level, n.setpoint));
+    const low = rep.needs.filter((n) => n.level < n.setpoint * 0.6).map((n) => n.need);
+    const needs = this.section(`Needs${low.length ? ` · low: ${low.join(', ')}` : ' · all met'}`, 'needs');
+    for (const n of rep.needs) needs.appendChild(this.meter(cap(n.need), n.level, n.setpoint));
+    j.appendChild(needs);
 
     j.appendChild(el('h3', {}, 'Feeling'));
     const feel = el('p', { 'data-testid': 'feelings' });
@@ -736,20 +841,24 @@ export class Ui {
       }
     }
 
-    j.appendChild(el('h3', {}, 'People'));
+    const friends = rep.relationships.filter((x) => x.id !== 'steward' && x.tags.includes('friend')).length;
+    const peopleSection = this.section(`People · ${friends} friend${friends === 1 ? '' : 's'}`, 'people');
     const people = el('ul', { class: 'people' });
     for (const x of rep.relationships) {
       const word = x.tags.includes('close_friend') ? 'close friend' : x.tags.includes('friend') ? 'friend' : x.tags.includes('rival') ? 'not getting on' : x.affinity > 0.25 ? 'fond of' : x.affinity < -0.15 ? 'wary of' : 'knows';
       people.appendChild(el('li', {}, `${x.id === 'steward' ? 'You' : x.name}: ${word}`));
     }
-    j.appendChild(people);
+    peopleSection.appendChild(people);
+    j.appendChild(peopleSection);
 
     const asks = this.game.sim.state.requests.filter((x) => x.by === rep.id);
     if (asks.length) {
-      j.appendChild(el('h3', {}, 'Asked of you'));
+      const open = asks.filter((q) => q.status === 'open').length;
+      const sec = this.section(`Asked of you · ${open} waiting`, 'asks');
       const ul = el('ul');
       for (const q of asks) ul.appendChild(el('li', {}, `${cap(ASK_TITLES[q.kind].replace('asks for ', ''))}: ${q.status}`));
-      j.appendChild(ul);
+      sec.appendChild(ul);
+      j.appendChild(sec);
     }
     pane.appendChild(j);
   }
@@ -774,14 +883,19 @@ export class Ui {
       if (d) this.showDilemma(d);
     }
     const now = performance.now();
+    const covers = this.panels.filter((p) => !p.hidden).map((p) => p.getBoundingClientRect());
     for (const [id, b] of this.bubbles) {
       const pos = this.view.residentHead(id);
-      const show = pos !== null && pos.visible && now < b.until;
-      b.el.hidden = !show;
+      let show = pos !== null && pos.visible && now < b.until;
       if (show && pos) {
+        b.el.hidden = false;
         b.el.style.left = `${pos.x}px`;
         b.el.style.top = `${pos.y}px`;
+        // A bubble that would sit over the scroll, the dock or the top bar waits out of sight.
+        const r = b.el.getBoundingClientRect();
+        show = !covers.some((c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top);
       }
+      b.el.hidden = !show;
     }
   }
 }

@@ -28,6 +28,43 @@ const FIRST_PERSON: Person = { subj: 'I', obj: 'me', poss: 'my' };
 
 export type EntryKind = 'day' | 'board' | 'live' | 'aside' | 'note' | 'thought';
 
+/** How much a line matters to someone following along: the browser log filters and highlights by it. */
+export type Importance = 'major' | 'normal' | 'minor';
+
+/** Problems, decisions, people coming and going, dreams: major. Passing thoughts and small talk: minor. */
+export function importanceOf(e: SimEvent): Importance {
+  switch (e.type) {
+    case 'request_posted':
+    case 'dilemma_posted':
+    case 'dilemma_closed':
+    case 'thinking_of_leaving':
+    case 'decided_to_stay':
+    case 'left_town':
+    case 'disturbed_sleep':
+    case 'shortage':
+    case 'aspiration':
+      return 'major';
+    case 'request_closed':
+      return e.request.status === 'lapsed' ? 'major' : 'normal';
+    case 'wish':
+      return e.phase === 'made' ? 'normal' : 'major';
+    case 'relationship':
+      return e.added.includes('rival') || e.removed.includes('friend') ? 'major' : 'normal';
+    case 'exchange':
+      return e.kind === 'argue' || e.kind === 'apologize' ? 'major' : e.kind === 'comfort' ? 'normal' : 'minor';
+    case 'story':
+      return e.id === 'reconcile' || e.id === 'sick_alone' ? 'major' : 'normal';
+    case 'thought':
+    case 'recall':
+    case 'invite':
+    case 'belief_faded':
+    case 'took_job':
+      return 'minor';
+    default:
+      return 'normal';
+  }
+}
+
 /** One narrated line, with who it mentions, for UIs that want more than plain text. */
 export interface NarratorEntry {
   t: number;
@@ -35,6 +72,7 @@ export interface NarratorEntry {
   text: string;
   /** Residents named in the text. */
   who: string[];
+  importance: Importance;
 }
 
 const MAX_ENTRIES = 3000;
@@ -58,7 +96,9 @@ export class Narrator {
   readonly entries: NarratorEntry[] = [];
   private entryListeners: Array<(e: NarratorEntry) => void> = [];
   /** Notice-board items, rendered at dawn so they read right as of the morning. */
-  private board: Array<() => string> = [];
+  private board: Array<{ text: () => string; importance: Importance }> = [];
+  /** Importance of the event being narrated now. */
+  private importance: Importance = 'normal';
   private rng: RngHolder;
   private exchangesToday = 0;
   private gossipToday = 0;
@@ -93,9 +133,13 @@ export class Narrator {
     this.entryListeners.push(listener);
   }
 
+  private pushBoard(text: () => string): void {
+    this.board.push({ text, importance: this.importance });
+  }
+
   private entry(kind: EntryKind, t: number, text: string): void {
     const who = this.state.order.filter((id) => new RegExp(`\\b${this.name(id)}\\b`).test(text));
-    const e: NarratorEntry = { t, kind, text, who };
+    const e: NarratorEntry = { t, kind, text, who, importance: kind === 'day' || kind === 'note' ? 'normal' : kind === 'thought' ? 'minor' : this.importance };
     this.entries.push(e);
     if (this.entries.length > MAX_ENTRIES) this.entries.splice(0, this.entries.length - MAX_ENTRIES);
     for (const l of this.entryListeners) l(e);
@@ -237,6 +281,7 @@ export class Narrator {
   // ---------------------------------------------------------------- events
 
   private handle(e: SimEvent): void {
+    this.importance = importanceOf(e);
     switch (e.type) {
       case 'dawn':
         this.dawn(e.day, e.t);
@@ -294,55 +339,55 @@ export class Narrator {
         const from = e.hearsay ? e.belief.sources.find((s) => s.from)?.from : undefined;
         const n = e.belief.sources.filter((s) => s.kind === 'witnessed').length;
         const why = from ? ` (heard it from ${this.name(from)})` : n >= 2 ? ` (after ${n} times)` : '';
-        this.board.push(() => `${this.name(e.who)} has decided ${this.statement(e.who, e.belief)}${why}.`);
+        this.pushBoard(() => `${this.name(e.who)} has decided ${this.statement(e.who, e.belief)}${why}.`);
         break;
       }
       case 'belief_flipped':
-        this.board.push(() => `${this.name(e.who)} has changed ${residentDef(e.who).pronouns.poss} mind: ${this.statement(e.who, e.belief)}${e.belief.valence >= 0 ? '' : ', after all'}.`);
+        this.pushBoard(() => `${this.name(e.who)} has changed ${residentDef(e.who).pronouns.poss} mind: ${this.statement(e.who, e.belief)}${e.belief.valence >= 0 ? '' : ', after all'}.`);
         break;
       case 'belief_faded':
-        this.board.push(() => `${this.name(e.who)} has stopped dwelling on how ${this.statement(e.who, e)}.`);
+        this.pushBoard(() => `${this.name(e.who)} has stopped dwelling on how ${this.statement(e.who, e)}.`);
         break;
       case 'request_posted':
-        this.board.push(
+        this.pushBoard(
           () =>
             `${this.name(e.request.by)} asks ${this.you ? 'you' : 'the steward'}: ${this.voice(e.request.by, ASKS[e.request.kind], { s: this.subjectName(e.request.subject), what: e.request.wants ? buildingDef(e.request.wants).name.toLowerCase() : 'place' })}`,
         );
         break;
       case 'request_closed':
         if (e.request.status === 'resolved') break;
-        this.board.push(
+        this.pushBoard(
           () => `${this.name(e.request.by)}: ${this.voice(e.request.by, e.request.status === 'fulfilled' ? (e.request.kind === 'quieter_home' ? SPEECH.fulfilled : SPEECH.thanks) : SPEECH.lapsed, { s: this.subjectName(e.request.subject) })}`,
         );
         break;
       case 'wish':
-        if (e.phase === 'made') this.board.push(() => `Town Wish for the season: ${e.wish.label}. (${this.names(e.wish.supporters)} would like this.)`);
+        if (e.phase === 'made') this.pushBoard(() => `Town Wish for the season: ${e.wish.label}. (${this.names(e.wish.supporters)} would like this.)`);
         else if (e.phase === 'granted') this.announce(e.t, `Wish granted: ${e.wish.label.toLowerCase()}. The whole town feels it.`);
-        else this.board.push(() => `The season ended without ${e.wish.label.toLowerCase()}. ${this.names(e.wish.supporters)} had hoped for it.`);
+        else this.pushBoard(() => `The season ended without ${e.wish.label.toLowerCase()}. ${this.names(e.wish.supporters)} had hoped for it.`);
         break;
       case 'standing': {
         const why = e.reasons[0] ?? '';
         const who = this.name(e.who);
         const towards = this.you ? 'you' : 'the steward';
-        this.board.push(() => (e.delta > 0 ? `${who} thinks better of ${towards}: ${why}.` : `${who} thinks less of ${towards}: ${why}.`));
+        this.pushBoard(() => (e.delta > 0 ? `${who} thinks better of ${towards}: ${why}.` : `${who} thinks less of ${towards}: ${why}.`));
         break;
       }
       case 'relationship':
         for (const tag of e.added) {
-          if (tag === 'friend') this.board.push(() => `${this.name(e.who)} now counts ${this.name(e.other)} as a friend.`);
-          if (tag === 'close_friend') this.board.push(() => `${this.name(e.who)} now counts ${this.name(e.other)} as a close friend.`);
-          if (tag === 'rival') this.board.push(() => `${this.name(e.who)} is not getting on with ${this.name(e.other)}.`);
+          if (tag === 'friend') this.pushBoard(() => `${this.name(e.who)} now counts ${this.name(e.other)} as a friend.`);
+          if (tag === 'close_friend') this.pushBoard(() => `${this.name(e.who)} now counts ${this.name(e.other)} as a close friend.`);
+          if (tag === 'rival') this.pushBoard(() => `${this.name(e.who)} is not getting on with ${this.name(e.other)}.`);
         }
-        if (e.removed.includes('friend')) this.board.push(() => `${this.name(e.who)} and ${this.name(e.other)} have drifted apart.`);
+        if (e.removed.includes('friend')) this.pushBoard(() => `${this.name(e.who)} and ${this.name(e.other)} have drifted apart.`);
         break;
       case 'thinking_of_leaving':
-        this.board.push(() => `${this.name(e.who)} is thinking of leaving. ${this.voice(e.who, SPEECH.leaving)}`);
+        this.pushBoard(() => `${this.name(e.who)} is thinking of leaving. ${this.voice(e.who, SPEECH.leaving)}`);
         break;
       case 'decided_to_stay':
-        this.board.push(() => `${this.name(e.who)} has decided to stay. ${this.voice(e.who, SPEECH.staying)}`);
+        this.pushBoard(() => `${this.name(e.who)} has decided to stay. ${this.voice(e.who, SPEECH.staying)}`);
         break;
       case 'left_town':
-        this.board.push(() => `${this.name(e.who)} has packed up and left the valley.`);
+        this.pushBoard(() => `${this.name(e.who)} has packed up and left the valley.`);
         break;
       case 'perceived':
       case 'town_memory':
@@ -351,11 +396,11 @@ export class Narrator {
         this.gathering(e);
         break;
       case 'weather':
-        if (e.kind === 'rain') this.board.push(() => 'Rain today. The paths will be muddy.');
+        if (e.kind === 'rain') this.pushBoard(() => 'Rain today. The paths will be muddy.');
         else this.live(e.t, 'Dark clouds pile up over the valley. A storm is coming.');
         break;
       case 'dilemma_posted':
-        this.board.push(
+        this.pushBoard(
           () =>
             `${this.name(e.dilemma.proposer)} proposes: ${this.voice(e.dilemma.proposer, PROPOSALS[e.dilemma.type])} (Approve or decline on the board.)`,
         );
@@ -431,7 +476,7 @@ export class Narrator {
 
   /** Before dawn it goes on the board; after, it is narrated as it happens. */
   private announce(t: number, text: string): void {
-    if (minuteOf(t) < DAWN_MINUTE) this.board.push(() => text);
+    if (minuteOf(t) < DAWN_MINUTE) this.pushBoard(() => text);
     else this.live(t, text);
   }
 
@@ -617,8 +662,9 @@ export class Narrator {
     this.out('Notice board:');
     if (this.board.length === 0) this.out('  - Nothing new.');
     for (const item of this.board) {
-      const text = item();
+      const text = item.text();
       this.out(`  - ${text}`);
+      this.importance = item.importance;
       this.entry('board', t, text);
     }
     this.out('');

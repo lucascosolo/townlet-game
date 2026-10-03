@@ -410,6 +410,7 @@ Grammar-generated dialogue is the hardest thing to localise, because of gender a
 |---|---|---|
 | **M0: Paper and spreadsheet sim** (2–3 wk) | Ambient qualities, needs, a toy memory model on paper and in a spreadsheet | The bakery example from section 3 can be played through by hand |
 | **M1: Headless "radio play"** (4–6 wk) | Sim core with 6 residents, a text-only event log and an inspector; no graphics | Read a 3-day text log cold: at least 3 moments are worth retelling, twin tests pass for memory and gossip, a 10-year soak shows no degenerate state |
+| **M1.5: Storyteller and friction** (headless) | Event director (seasons, festivals, visitors, weather, personal events, dilemmas); gentle friction; less dominance by one gathering place | See "M1.5 criteria" below |
 | **M2: Greybox playable** (6–8 wk) | Grid, building, paths, residents walking, notice board, one season | A first-time player can explain *why* one resident is unhappy, using only in-game UI |
 | **M3: Vertical slice** (3–4 mo) | Full slice content, art pass, audio | A playtest group finishes the year; most can name three residents and retell one story unprompted |
 
@@ -429,6 +430,17 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 - **Too little friction.** Across all soaks there were 2 rival pairs in total, no departures and no "thinking of leaving". The structured mind is stable, but too gentle to generate its own drama.
 - **Stories need a push.** Story density depends heavily on steward actions. The storyteller and events (spec 4.4) are needed for pacing, especially early in the game.
 - **One dominant gathering place.** The teahouse becomes the social centre in almost every seed, because of a positive feedback loop between fond beliefs and place choice. Layout doesn't yet do enough to spread social life around the town.
+
+**M1.5 criteria (predeclared 2026-10-03, before any M1.5 code).** M1.5 passes only if all of these hold. A failure gets reported as a failure, not redefined.
+
+1. **Early story.** In the `quiet` scenario (no scripted steward actions), days 1–3 contain at least 6 notable events on each of seeds 1–5. Notable means a story event, a belief formed, a request, a relationship change, an argument, comfort, an apology, a reminiscence, or gossip.
+2. **Pacing.** The director never fires two negative events within 48 hours of each other, on any of the soak seeds.
+3. **Gentle friction.** Across 10 seeds × 28 days of the soak (random steward), the mean number of rival pairs per run is between 0.5 and 4. At least 7 of 10 runs contain an argument. No more than 1 run has a departure.
+4. **Neglect versus care (twin).** In a neglect scenario, where requests are ignored, places residents love are removed and noisy buildings are put beside homes, at least one resident starts thinking of leaving within 28 days on at least 4 of seeds 1–5. In the caring twin, nobody does on any seed.
+5. **Festivals leave shared memories.** Every resident who attends a festival holds a town memory of it, and attendees' affinity for each other rises compared with a twin with no festival.
+6. **Dilemmas split the town by values.** Approving a proposal raises the steward's standing with residents who share the proposal's values and lowers it with those who oppose them, relative to the declining twin, on seeds 1–5.
+7. **Spread.** In the soak, the busiest social place accounts for less than 60% of all socialising minutes, on average across runs.
+8. **No regressions.** All M1 tests still pass, and a 10-year soak on 3 seeds shows no degenerate state.
 
 ---
 

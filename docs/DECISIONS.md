@@ -2,6 +2,23 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-03: After M1 — next chunk, friction, steward, art direction
+
+These were decided by the owner after reviewing M1's results (spec 9.3, "M1 status").
+
+**Next chunk: M1.5, storyteller and friction, still headless.** M1.5 adds the event director (spec 4.4): seasons, festivals, visitors, weather, small personal events, and dilemmas the steward decides. It also tunes friction, so the radio play reads well from day 1 and the town has some texture.
+- *Rejected for now:* going straight to the M2 greybox, and doing a thin slice of both.
+- *Why:* M1 showed days 1–3 are thin and story density depends on steward actions. Those are content and pacing problems that a renderer would hide, not fix.
+
+**Friction: gentle.** The target is occasional squabbles and one or two simmering rivalries per year. A departure should happen only after real neglect, and it must always be recoverable.
+- *Rejected:* moderate friction (factions, a likely departure every year), as too far from cozy.
+- *Rejected:* leaving friction at the near-zero M1 level.
+
+**Steward: disembodied.** The player is a cursor and camera, and talks to residents by clicking them. This is simpler and closer to a builder.
+- *Rejected:* a walking avatar, which is more intimate but a lot more work.
+
+**Art direction: low-poly lantern-light** (spec 6, option C), the cheapest 3D that still looks good in a browser, with time-of-day and seasonal lighting doing most of the atmosphere. It is the target for M2's greybox.
+
 ## 2026-10-03: Platform, AI approach, next milestone, team
 
 These were decided by the project owner in answer to the first four open questions in the game design spec.

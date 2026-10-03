@@ -36,6 +36,8 @@ export const BELIEF_STATEMENTS: Record<string, string> = {
   decided_badly: 'the steward makes poor decisions',
   turned_me_down: 'the steward turned {obj} down',
   granted_wish: 'the steward makes wishes come true',
+  asks_too_much: 'the steward asks too much of {obj}',
+  looks_out_for_me: 'the steward looks out for {obj}',
 };
 
 /** Thoughts and speech, keyed by aspect and sign ("+" or "-"). */

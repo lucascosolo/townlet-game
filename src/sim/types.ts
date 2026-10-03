@@ -241,6 +241,10 @@ export interface ResidentState {
   lastMoodEnd?: number;
   /** Day of the steward's last talk with them that counted (M3b: no farming). */
   lastTalkDay?: number;
+  /** A favour they agreed to and are doing (M3c). */
+  favour?: Favour | null;
+  /** Ticks the steward asked them favours, for the last week. */
+  favoursAsked?: number[];
   emotions: Emotion[];
   /** Today's salient episodes, consolidated overnight. */
   buffer: Episode[];
@@ -285,6 +289,24 @@ export interface MoodArc {
 }
 
 export type TalkQuestion = 'how' | 'mind' | 'hope' | 'opinion' | 'me';
+
+/** What the steward can ask of a resident (M3c). */
+export type FavourKind = 'timber' | 'catch' | 'garden' | 'clear' | 'visit' | 'mend';
+
+/** Why a resident says no, always drawn from their state. */
+export type RefusalReason = 'asleep' | 'busy' | 'unwell' | 'tired' | 'low' | 'asked_often' | 'distrust' | 'not_speaking' | 'nowhere' | 'gone';
+
+export interface Favour {
+  id: number;
+  kind: FavourKind;
+  /** Where the work is done (a building id): the woodlot, the jetty, a wild plot, someone's home. */
+  placeId: number;
+  /** For visit and mend: the other resident. */
+  other?: string;
+  askedTick: number;
+  minutesNeeded: number;
+  minutes: number;
+}
 
 /** An answer, as data drawn from state; the narrator gives it a voice. */
 export interface TalkAnswer {
@@ -433,6 +455,11 @@ export interface SimState {
   stock: Record<Resource, number>;
   /** Day of the last food shortage announcement, or 0. */
   lastShortageDay: number;
+  nextFavourId?: number;
+  /** Today's production so far, by resident (or building type for what grows itself), shown each morning. */
+  produced?: Record<string, Partial<Record<Resource, number>>>;
+  /** Work done towards clearing each wild plot, in minutes, by building id (M3c). */
+  clearing?: Record<string, number>;
 }
 
 // ---------------------------------------------------------------- events
@@ -487,6 +514,12 @@ export type SimEvent =
   | { t: number; type: 'dream_formed'; who: string; kind: string; subject?: SubjectId; title: string }
   /** A longer mood starts or ends (M3b). */
   | { t: number; type: 'mood'; who: string; phase: 'start' | 'end'; arc: MoodArc; how?: 'resolved' | 'faded' }
+  /** A favour asked, agreed or refused, done or given up (M3c). */
+  | { t: number; type: 'favour'; who: string; phase: 'asked' | 'refused' | 'agreed' | 'done' | 'abandoned'; kind: FavourKind; other?: string; reason?: RefusalReason; yield?: Partial<Record<Resource, number>>; placeId?: number }
+  /** Yesterday's work, announced at dawn. */
+  | { t: number; type: 'production'; by: Record<string, Partial<Record<Resource, number>>> }
+  /** A wild plot has been cleared and is open to build on (M3c). */
+  | { t: number; type: 'plot_cleared'; building: number; by: string[] }
   /** The steward talks with a resident (M3b). */
   | { t: number; type: 'talk'; who: string; answer: TalkAnswer; counted: boolean }
   /** A resident's view of the steward moved overnight, and why. */

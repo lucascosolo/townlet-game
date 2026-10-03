@@ -7,12 +7,13 @@ import { residentDef } from '../../../src/content/residents.js';
 import { DILEMMA_NAMES, PROPOSALS } from '../../../src/content/story.js';
 import { residentReport, type ResidentReport } from '../../../src/inspect/inspector.js';
 import type { NarratorEntry } from '../../../src/narrate/narrator.js';
+import { FAVOUR_MINUTES, openPlots, recentAsks } from '../../../src/sim/favours.js';
 import { opinion } from '../../../src/sim/mind/memory.js';
 import { ambientPrefs, prefScore } from '../../../src/sim/needs.js';
 import { wishProgress } from '../../../src/sim/story/director.js';
 import { dilemmaDef, stanceScore } from '../../../src/sim/story/dilemmas.js';
 import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
-import type { Dilemma, QualityMap, Request, SimEvent } from '../../../src/sim/types.js';
+import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
 import { RESIDENT_COLORS } from '../view/meshes.js';
 import type { TownView } from '../view/scene.js';
@@ -23,6 +24,42 @@ export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
   { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop'] },
   { category: 'Dreams', types: ['orchard', 'glasshouse', 'banner'] },
 ];
+interface TalkPanel {
+  root: HTMLElement;
+  reply: HTMLElement;
+  status: HTMLElement;
+  controls: Array<HTMLButtonElement | HTMLSelectElement>;
+  clear: HTMLButtonElement;
+  aboutSelect: HTMLSelectElement;
+  visitSelect: HTMLSelectElement;
+  mendSelect: HTMLSelectElement;
+}
+
+const QUESTIONS: Array<[TalkQuestion, string]> = [
+  ['how', 'How are you?'],
+  ['mind', "What's on your mind?"],
+  ['hope', 'What are you hoping for?'],
+  ['me', 'What do you think of me?'],
+];
+
+const FAVOUR_LABELS: Record<FavourKind, string> = {
+  timber: 'Cut timber',
+  catch: 'Bring in a catch',
+  garden: 'Work the garden',
+  clear: 'Help clear wild land',
+  visit: 'Look in on…',
+  mend: 'Make peace with…',
+};
+
+const FAVOUR_DOING: Record<FavourKind, string> = {
+  timber: 'cutting timber',
+  catch: 'fishing',
+  garden: 'working the garden',
+  clear: 'clearing wild land',
+  visit: 'going to see someone',
+  mend: 'going to make peace',
+};
+
 type LogFilter = 'highlights' | 'story' | 'everything';
 const LOG_FILTERS: Array<[LogFilter, string, string]> = [
   ['highlights', 'Highlights', 'Only what really matters: asks, decisions, comings and goings, quarrels, dreams'],
@@ -118,6 +155,8 @@ export class Ui {
   private lastJournalRender = 0;
   private lastYouRender = 0;
   private morning: NarratorEntry[] = [];
+  /** One talk panel per resident, kept across journal redraws so its choices stay put. */
+  private readonly talkPanels = new Map<string, TalkPanel>();
   /** On-screen panels that speech bubbles must not cover. */
   private readonly panels: HTMLElement[] = [];
   /** The log's list, its filter, and the run of lines being folded together. */
@@ -695,6 +734,114 @@ export class Ui {
     return det;
   }
 
+  // ---------------------------------------------------------------- talking and favours
+
+  private talkPanel(id: string): HTMLElement {
+    let p = this.talkPanels.get(id);
+    if (!p) {
+      p = this.buildTalkPanel(id);
+      this.talkPanels.set(id, p);
+    }
+    this.refreshTalkPanel(id, p);
+    return p.root;
+  }
+
+  private buildTalkPanel(id: string): TalkPanel {
+    const name = residentDef(id).name;
+    const root = el('div', { class: 'talk', 'data-testid': 'talk' });
+    root.appendChild(el('h3', {}, `Talk with ${name}`));
+    const controls: Array<HTMLButtonElement | HTMLSelectElement> = [];
+    const ask = (question: TalkQuestion, about?: string) => {
+      this.game.command({ kind: 'talk', who: id, question, ...(about ? { about } : {}) });
+      this.renderJournal(true);
+    };
+    const qs = el('div', { class: 'talk-row' });
+    for (const [q, label] of QUESTIONS) {
+      const b = el('button', { 'data-testid': `ask-${q}` }, label);
+      b.addEventListener('click', () => ask(q));
+      qs.appendChild(b);
+      controls.push(b);
+    }
+    root.appendChild(qs);
+    const aboutRow = el('div', { class: 'talk-row' });
+    const aboutSelect = el('select', { 'data-testid': 'ask-about' });
+    const aboutButton = el('button', { 'data-testid': 'ask-opinion' }, 'What do you think of…');
+    aboutButton.addEventListener('click', () => ask('opinion', aboutSelect.value));
+    aboutRow.append(aboutButton, aboutSelect);
+    root.appendChild(aboutRow);
+    controls.push(aboutSelect, aboutButton);
+
+    root.appendChild(el('h3', {}, 'Ask a favour'));
+    const favour = (kind: FavourKind, other?: string) => {
+      this.game.command({ kind: 'favour', who: id, favour: kind, ...(other ? { other } : {}) });
+      this.renderJournal(true);
+    };
+    const fs = el('div', { class: 'talk-row' });
+    let clear!: HTMLButtonElement;
+    for (const kind of ['timber', 'catch', 'garden', 'clear'] as FavourKind[]) {
+      const b = el('button', { 'data-testid': `favour-${kind}`, title: `About ${Math.round(FAVOUR_MINUTES[kind] / 60)} hours of work` }, FAVOUR_LABELS[kind]);
+      b.addEventListener('click', () => favour(kind));
+      fs.appendChild(b);
+      controls.push(b);
+      if (kind === 'clear') clear = b;
+    }
+    root.appendChild(fs);
+    const people = el('div', { class: 'talk-row' });
+    const visitSelect = el('select', { 'data-testid': 'favour-visit-who' });
+    const visit = el('button', { 'data-testid': 'favour-visit' }, FAVOUR_LABELS.visit);
+    visit.addEventListener('click', () => visitSelect.value && favour('visit', visitSelect.value));
+    const mendSelect = el('select', { 'data-testid': 'favour-mend-who' });
+    const mend = el('button', { 'data-testid': 'favour-mend' }, FAVOUR_LABELS.mend);
+    mend.addEventListener('click', () => mendSelect.value && favour('mend', mendSelect.value));
+    people.append(visit, visitSelect, mend, mendSelect);
+    root.appendChild(people);
+    controls.push(visitSelect, visit, mendSelect, mend);
+
+    const reply = el('blockquote', { class: 'reply', 'data-testid': 'talk-reply' });
+    const status = el('p', { class: 'quiet', 'data-testid': 'favour-status' });
+    root.append(reply, status);
+    return { root, reply, status, controls, clear, aboutSelect, visitSelect, mendSelect };
+  }
+
+  private fillSelect(sel: HTMLSelectElement, options: Array<[string, string]>): void {
+    const key = options.map(([v]) => v).join('|');
+    if (sel.dataset.key === key) return;
+    const keep = sel.value;
+    sel.replaceChildren(...options.map(([v, label]) => el('option', { value: v }, label)));
+    sel.dataset.key = key;
+    if (options.some(([v]) => v === keep)) sel.value = keep;
+  }
+
+  private refreshTalkPanel(id: string, p: TalkPanel): void {
+    const state = this.game.sim.state;
+    const r = this.game.sim.resident(id);
+    const others = state.order.filter((o) => o !== id && !state.residents[o]?.departed);
+    const places = state.buildings.filter((b) => !b.removed && b.type !== 'wild' && buildingDef(b.type).kind !== 'home');
+    this.fillSelect(p.aboutSelect, [
+      ...others.map((o) => [`r:${o}`, residentDef(o).name] as [string, string]),
+      ...places.map((b) => [`b:${b.id}`, this.game.narrator.subjectName(`b:${b.id}`)] as [string, string]),
+    ]);
+    this.fillSelect(p.visitSelect, others.map((o) => [o, residentDef(o).name]));
+    const cool = others.filter((o) => (r.rel[o]?.affinity ?? 0) < 0.1);
+    this.fillSelect(p.mendSelect, (cool.length ? cool : others).map((o) => [o, residentDef(o).name]));
+    const asleep = r.activity?.id === 'sleep' && r.at === r.homeId;
+    for (const c of p.controls) c.disabled = asleep || r.departed;
+    p.clear.disabled = p.clear.disabled || openPlots(state).length === 0;
+    p.clear.title = openPlots(state).length === 0 ? 'No wild land is open for clearing yet: the valley opens as the town thrives' : 'About 6 hours of work';
+    const last = this.game.narrator.lastReply;
+    p.reply.textContent = asleep ? `${residentDef(id).name} is asleep. Talk in the morning.` : last && last.who === id ? `“${last.text}”` : '';
+    p.reply.hidden = p.reply.textContent === '';
+    p.status.textContent = this.favourStatus(r);
+  }
+
+  private favourStatus(r: ResidentState): string {
+    const state = this.game.sim.state;
+    const asked = recentAsks(r, state.tick);
+    const f = r.favour;
+    const doing = f ? `Doing for you: ${FAVOUR_DOING[f.kind]}${f.minutesNeeded > 1 ? ` (${Math.floor(f.minutes / 60)}h of ${Math.round(f.minutesNeeded / 60)}h)` : ''}. ` : '';
+    return `${doing}Favours asked this week: ${asked}${asked >= 3 ? ' (that is a lot)' : ''}.`;
+  }
+
   /** A journal section that stays folded unless the player opens it (remembered across redraws). */
   private section(summary: string, key: string): HTMLDetailsElement {
     const det = el('details', { class: 'section', 'data-testid': `section-${key}` });
@@ -710,6 +857,13 @@ export class Ui {
   private renderJournal(force = false): void {
     const now = performance.now();
     if (!force && now - this.lastJournalRender < 600) return;
+    // Mid-choice in the talk panel: refresh it in place rather than redraw (an open dropdown would close).
+    const busy = [...this.talkPanels.entries()].find(([, p]) => p.root.isConnected && p.root.contains(document.activeElement));
+    if (!force && busy) {
+      this.refreshTalkPanel(busy[0], busy[1]);
+      this.lastJournalRender = now;
+      return;
+    }
     this.lastJournalRender = now;
     const pane = this.journalEl;
     pane.replaceChildren();
@@ -805,6 +959,7 @@ export class Ui {
     }
     if (!mind.childElementCount) mind.appendChild(el('li', { class: 'quiet' }, 'Nothing much. Content.'));
     j.appendChild(mind);
+    j.appendChild(this.talkPanel(rep.id));
     j.appendChild(this.meter('Mood', rep.mood));
     j.appendChild(this.meter('Settled here', rep.disposition));
 

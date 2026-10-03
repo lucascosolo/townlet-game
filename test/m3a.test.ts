@@ -11,10 +11,16 @@ import { at } from '../src/sim/time.js';
 import type { SimEvent } from '../src/sim/types.js';
 import { SEEDS } from './helpers.js';
 
+/** Has the resident seen their first, authored dream through? (Later dreams form after it, M3b.) */
+const firstDreamDone = (sim: Simulation, id: string) => {
+  const a = sim.state.residents[id]?.aspiration;
+  return !!a && ((a.completed ?? 0) >= 1 || (!a.kind && a.done));
+};
+
 const doneAfter28 = (steward: 'considerate' | 'none', seed: number) => {
   const sim = runScenario('quiet', seed, steward);
   sim.runUntil(at(29, 0));
-  return sim.state.order.filter((id) => sim.state.residents[id]?.aspiration.done).length;
+  return sim.state.order.filter((id) => firstDreamDone(sim, id)).length;
 };
 
 describe('criterion 1: aspirations', () => {
@@ -36,10 +42,10 @@ describe('criterion 1: aspirations', () => {
       const narrator = new Narrator(sim);
       const steps: Array<Extract<SimEvent, { type: 'aspiration' }>> = [];
       sim.on((e) => {
-        if (e.type === 'aspiration') steps.push(e);
+        if (e.type === 'aspiration' && !e.kind) steps.push(e);
       });
       sim.runUntil(at(29, 0));
-      total += sim.state.order.filter((id) => sim.state.residents[id]?.aspiration.done).length;
+      total += sim.state.order.filter((id) => firstDreamDone(sim, id)).length;
       for (const s of steps) {
         const line = ASPIRATION_LINES[`${s.who}:${s.stage}${s.outcome ? `:${s.outcome}` : ''}`] as string;
         const opening = line.split(/[{"]/)[0]?.trim() as string;
@@ -84,7 +90,7 @@ describe("criterion 2: Marlow's choice", () => {
           m.disposition = 0.5;
         }
         sim.runUntil(at(24, 12));
-        expect(m.aspiration.done, `seed ${seed}`).toBe(true);
+        expect(firstDreamDone(sim, 'marlow'), `seed ${seed}`).toBe(true);
         expect(m.aspiration.outcome, `seed ${seed} isolated=${isolate}`).toBe(isolate ? 'leave' : 'stay');
         expect(sim.resident('marlow').departed).toBe(isolate);
       }

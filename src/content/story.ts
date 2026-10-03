@@ -78,3 +78,13 @@ export const ASPIRATION_LINES: Record<string, string> = {
   'marlow:decide:stay': 'Marlow lets the trade cart go without him. "Turns out I live here."',
   'marlow:decide:leave': 'Marlow climbs onto the trade cart with his bag. He waves until the bend in the road.',
 };
+
+/** When a template dream (M3b) comes true. {name}, {x} (its subject), {partner}, {you}, {poss}. */
+export const DREAM_DONE_LINES: Record<string, string> = {
+  gift: '{name} gives {x} something {subj} made by hand. {x} is touched.',
+  thank: '{name} leaves a parcel of food and timber on {yourStep}.',
+  mend: '{name} and {x} have made their peace.',
+  place: '{name} and {partner} spend a long evening at {x}.',
+  relive: 'There is a new bench, and {name} tells everyone about {x} again.',
+  remember_gone: 'Friends gather with {name} to remember {x}.',
+};

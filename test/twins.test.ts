@@ -28,9 +28,10 @@ describe('twin: night noise becomes a belief and a request', () => {
       const bakeryNear = near.state.buildings.find((b) => b.type === 'bakery')!;
       const bakeryFar = far.state.buildings.find((b) => b.type === 'bakery')!;
       expect(nearAda.beliefs[`b:${bakeryNear.id}|noisy_at_night`], `seed ${seed}`).toBeDefined();
-      expect(near.state.requests.some((q) => q.by === 'ada'), `seed ${seed}`).toBe(true);
+      expect(near.state.requests.some((q) => q.by === 'ada' && q.kind === 'quieter_home'), `seed ${seed}`).toBe(true);
       expect(farAda.beliefs[`b:${bakeryFar.id}|noisy_at_night`], `seed ${seed}`).toBeUndefined();
-      expect(far.state.requests).toHaveLength(0);
+      // Other asks exist since M2.5; none about noise.
+      expect(far.state.requests.filter((q) => q.kind === 'quieter_home')).toHaveLength(0);
     }
   });
 });

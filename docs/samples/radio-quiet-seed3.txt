@@ -2,187 +2,256 @@ Townlet radio play: scenario "quiet", seed 3, 14 days
 
 === Day 1 · Spring ===
 Notice board:
+  - Bram asks the steward: "Give me a bakery and I will show you what I can do!"
   - Fen now counts Ada as a friend.
+  - Fen asks the steward: "Something green by my door."
+  - Town Wish for the season: More green about the place. (Ada, Fen and Wren would like this.)
+  - Town Wish for the season: Proper places to work. (Bram would like this.)
   - Rain today. The paths will be muddy.
   - Wren asked Juniper to help sort out a tangle of netting, and Juniper did.
   - Ada now counts Fen as a friend.
+  - Ada asks the steward: "A few flowers near my home would lift my spirits."
 
-20:30  At the old oak, Juniper and Ada have words. "You never listen, Ada."
-       (16 conversations yesterday, 0 of them gossip.)
+10:00  The steward builds a bakery near Marlow's cottage.
+10:00  Bram takes up work at the bakery.
+       Bram: "You know, the bakery, all mine! Ha!"
+10:00  The steward builds a flower bed right beside Fen's tent.
+10:00  The steward builds a flower bed right beside Ada's cottage.
+10:00  Ada spots the new flower bed: "A touch of green does wonders."
+10:00  Bram spots the new bakery: "Work! Trade! Things are happening!"
+10:00  Fen spots the new flower bed: "Mm. Bit of green. Nice."
+10:00  Juniper spots the new bakery: "The air smells like a memory now."
+10:00  Wren spots the new bakery: "Kind of, I can smell it from my doorstep. Lovely."
+13:10  Ada spots the new flower bed: "I must say, it does lift the place, I must admit."
+13:10  Wren spots the new flower bed: "Oh, that makes the town so much prettier."
+15:05  Marlow spots the new bakery: "Mind you, I can smell it from my doorstep. Lovely."
+18:00  Fen hears about the new flower bed: "Looks nice."
+18:00  Wren hears about the new flower bed: "Oh, that makes the town so much prettier."
+18:45  At the commons, Juniper and Ada have words. "You never listen, Ada."
+       (11 conversations yesterday, 0 of them gossip.)
 
 === Day 2 · Spring ===
 Notice board:
   - Juniper now counts Wren as a friend.
   - Wren now counts Juniper as a friend.
+  - Wren asks the steward: "Could we have some flowers near my place?"
+  - Bram thinks better of the steward: built the bakery for him.
+  - Bram: "You did it! Marvellous!"
+  - Fen thinks better of the steward: built the flower bed.
   - Pip's trade cart is due under the old oak this morning.
+  - Wish granted: proper places to work. The whole town feels it.
   - Juniper proposes: "Ooh, can I show everyone my contraption on the commons? It might even work." (Approve or decline on the board.)
+  - Ada thinks better of the steward: built the flower bed.
 
 09:00  Juniper's contraption will be unveiled on the commons tomorrow afternoon.
 09:00  The steward approves Juniper's contraption on the commons. Juniper is delighted. Bram and Marlow are glad. Ada and Fen are not pleased.
 09:00  Pip's trade cart pulls up under the old oak.
-13:00  Pip's trade cart packs up. Ada, Bram, Wren, Juniper and Fen came by.
+10:00  The steward builds a flower bed right beside Juniper and Wren's cottage.
+10:00  Ada spots the new flower bed: "It does lift the place, I must admit."
+10:00  Juniper spots the new flower bed: "Something green is growing where I live."
+12:05  Fen spots the new flower bed: "Pretty."
+13:00  Pip's trade cart packs up. Ada, Juniper, Marlow, Wren and Bram came by.
+13:05  Wren spots the new flower bed: "Something green to look at in the morning!"
 15:00  A travelling fiddler wanders into the valley. There will be music on the commons tonight.
 18:00  The fiddler strikes up on the commons.
-21:30  A travelling fiddler packs up. Bram, Fen, Juniper, Wren, Ada and Marlow came by.
-       (12 conversations yesterday, 0 of them gossip.)
+21:30  A travelling fiddler packs up. Ada, Bram, Marlow, Juniper, Wren and Fen came by.
+       (16 conversations yesterday, 0 of them gossip.)
 
 === Day 3 · Spring ===
 Notice board:
+  - Marlow thinks better of the steward: built the bakery.
+  - Juniper thinks better of the steward: built the bakery.
+  - Wren thinks better of the steward: built the bakery.
+  - Bram has decided the steward listens.
+  - Bram has decided the steward makes wishes come true.
+  - Bram thinks better of the steward: a proper place to work.
+  - Fen thinks better of the steward: granted the town's wish: proper places to work.
   - It's Bram's birthday. Marlow remembered.
   - Ada asked Marlow to help sort out a tangle of netting. Marlow was too busy.
+  - Ada thinks less of the steward: said yes to Juniper's contraption.
 
-08:53  At the flower bed, Juniper tells Ada: "Do you ever feel like the steward listens?"
+08:49  Wren, at the commons, remembers: "Everyone ends up at the commons sooner or later."
 14:00  Juniper's contraption: the unveiling on the commons.
-15:30  Juniper's contraption whirs, clanks, and works! Bram, Fen, Wren and Marlow cheer.
-       (11 conversations yesterday, 1 of them gossip.)
+15:04  At the commons, Bram tells Wren: "Have you noticed? The steward listens!"
+15:30  Juniper's contraption whirs, clanks, and works! Ada, Bram, Fen, Wren and Marlow cheer.
+18:30  At the brook, Juniper tells Fen: "I keep thinking the steward listens."
+19:37  At the commons, Juniper tells Wren: "Do you ever feel like the steward listens?"
+       (10 conversations yesterday, 3 of them gossip.)
 
 === Day 4 · Spring ===
 Notice board:
+  - Marlow thinks better of the steward: said yes to Juniper's contraption.
   - Juniper has decided the steward listens.
-  - Bram has decided the teahouse is a lovely spot (after 6 times).
+  - Juniper thinks better of the steward: said yes to my idea.
+  - Wren has decided the commons is where the good evenings happen (after 4 times).
+  - Wren thinks better of the steward: built the flower bed.
   - Tomorrow evening: Blossom Day, on the commons.
   - Juniper has come down with a cold.
 
-08:00  Bram, at the teahouse, remembers: "Nice spot, the teahouse, nice spot."
-14:02  Wren, at the brook, remembers: "I could stay at the brook all day."
-       (7 conversations yesterday, 0 of them gossip.)
+14:06  At the flower bed, Bram tells Wren: "Have you noticed? The steward makes wishes come true!"
+       (4 conversations yesterday, 2 of them gossip.)
 
 === Day 5 · Spring ===
 Notice board:
-  - Wren has decided the brook is a lovely spot (after 4 times).
+  - Marlow has decided the teahouse is a lovely spot (after 6 times).
+  - Wren has decided the commons is a lovely spot (after 5 times).
+  - Wren thinks better of the steward: heard it from Juniper.
 
 15:00  Wren brings Juniper soup and sits with her a while.
+15:56  At the teahouse, Marlow to Bram: "You brighten the place up, Bram."
 17:00  Lanterns go up on the commons: Blossom Day begins.
-17:56  At the commons, Marlow to Bram: "You brighten the place up, Bram."
-17:56  At the commons, Juniper tells Wren: "Do you ever feel like the steward listens?"
-20:33  At the commons, Ada to Fen: "I must say, you have a gift, Fen."
-22:00  Blossom Day winds down. Bram, Marlow, Wren, Fen, Juniper and Ada were there.
-       (21 conversations yesterday, 2 of them gossip.)
+17:41  At the commons, Bram tells Fen: "Listen, listen: the steward listens!"
+18:22  At the commons, Juniper tells Ada: "Do you ever feel like the steward listens?"
+22:00  Blossom Day winds down. Bram, Wren, Fen, Marlow, Ada and Juniper were there.
+       (22 conversations yesterday, 3 of them gossip.)
 
 === Day 6 · Spring ===
 Notice board:
-  - Marlow has decided the teahouse is a lovely spot (after 6 times).
-  - Wren has decided the teahouse is where the good evenings happen (after 3 times).
-  - Bram has decided the commons is where the good evenings happen (after 3 times).
-  - Bram now counts Marlow as a friend.
-  - Fen has decided the commons is where the good evenings happen (after 5 times).
+  - Wren has decided the teahouse is a lovely spot (after 6 times).
+  - Bram has decided the teahouse is where the good evenings happen (after 2 times).
   - Marlow proposes: "What if we had a little market on the commons, once a week? Honestly, it would liven things up." (Approve or decline on the board.)
 
-08:06  Wren, at the teahouse, remembers: "Kind of, I always end up at the teahouse. Best part of the day."
 09:00  The steward declines Marlow's weekly market. Marlow is disappointed. Ada, Fen and Wren are glad. Bram and Juniper are not pleased.
-16:32  Marlow, at the commons, remembers: "Honestly, I always end up at the commons. Best part of the day."
-       (9 conversations yesterday, 0 of them gossip.)
+21:31  Marlow, at the teahouse, remembers: "I could stay at the teahouse all day."
+       (9 conversations yesterday, 1 of them gossip.)
 
 === Day 7 · Spring ===
 Notice board:
-  - Marlow has decided the commons is where the good evenings happen (after 6 times).
-  - Bram has decided the teahouse is where the good evenings happen (after 3 times).
+  - Marlow has decided the commons is where the good evenings happen (after 4 times).
+  - Wren thinks better of the steward: heard it from Juniper.
+  - Bram has decided the teahouse is a lovely spot (after 6 times).
+  - Bram has decided the commons is where the good evenings happen (after 2 times).
+  - Bram thinks less of the steward: said no to Marlow's market day.
+  - Fen thinks better of the steward: said no to Marlow's market day.
   - Wren asked Juniper to help sort out a tangle of netting, and Juniper did.
+  - Ada thinks better of the steward: said no to Marlow's market day.
 
-17:15  At the teahouse, Juniper tells Bram: "I keep thinking the steward listens."
-18:57  At the teahouse, Bram to Wren: "Wren, you are a treasure, you know that?"
-       (16 conversations yesterday, 1 of them gossip.)
+13:11  Wren, at the teahouse, remembers: "I could stay at the teahouse all day."
+17:39  Juniper, at the commons, remembers: "Ooh, the commons holds the evenings like a cup."
+18:09  At the teahouse, Marlow and Bram reminisce about the commons.
+       (7 conversations yesterday, 0 of them gossip.)
 
 === Day 8 · Summer ===
 Notice board:
-  - Marlow now counts Bram as a friend.
-  - Fen has decided the brook is a lovely spot (after 6 times).
-  - Fen now counts Ada as a close friend.
+  - Marlow thinks less of the steward: said no to my idea.
+  - Juniper has decided the commons is where the good evenings happen (after 6 times).
+  - Juniper now counts Wren as a close friend.
+  - Juniper thinks less of the steward: said no to Marlow's market day.
+  - Wren thinks better of the steward: said no to Marlow's market day.
+  - Bram now counts Marlow as a friend.
+  - The season ended without more green about the place. Ada, Fen and Wren had hoped for it.
+  - Town Wish for the season: More green about the place. (Ada, Fen and Wren would like this.)
   - It's Marlow's birthday. Bram, Juniper and Wren remembered.
+  - Ada thinks less of the steward: our wish for more green about the place came to nothing.
 
-07:37  Bram, at the teahouse, remembers: "The teahouse! Where everything happens, you know."
-       (8 conversations yesterday, 2 of them gossip.)
+13:34  Wren, at the commons, remembers: "Everyone ends up at the commons sooner or later."
+16:00  At the commons, Bram and Wren reminisce about the teahouse.
+18:03  At the commons, Bram and Juniper reminisce about the teahouse.
+18:27  At the commons, Marlow to Bram: "You brighten the place up, Bram."
+       (11 conversations yesterday, 2 of them gossip.)
 
 === Day 9 · Summer ===
 Notice board:
-  - Marlow has decided the teahouse is where the good evenings happen (after 6 times).
+  - Juniper has decided the teahouse is a lovely spot (after 6 times).
+  - Wren now counts Juniper as a close friend.
+  - Wren thinks less of the steward: our wish for more green about the place came to nothing.
+  - Fen thinks less of the steward: our wish for more green about the place came to nothing.
+  - Fen: "Asked. Nothing happened."
   - Pip's trade cart is due at the bench this morning.
-  - Ada now counts Fen as a close friend.
+  - Ada: "I must say, I did ask. Evidently it was not a priority."
 
 09:00  Pip's trade cart pulls up at the bench.
-13:00  Pip's trade cart packs up. Ada, Bram, Juniper, Wren and Fen came by.
-17:02  Wren, at the fishing jetty, remembers: "I could stay at the fishing jetty all day."
-21:08  At the commons, Marlow and Wren reminisce about the teahouse.
-       (10 conversations yesterday, 0 of them gossip.)
+13:00  Pip's trade cart packs up. Juniper, Wren, Bram and Fen came by.
+13:45  Bram, at the commons, remembers: "The commons! Where everything happens, you know."
+15:05  Bram, at the teahouse, remembers: "Nice spot, the teahouse, nice spot."
+15:58  At the teahouse, Wren tells Ada: "Between us, the commons is where the good evenings happen."
+17:20  At the teahouse, Bram tells Juniper: "Have you noticed? The steward listens!"
+22:25  At the commons, Marlow and Wren reminisce about the teahouse.
+       (11 conversations yesterday, 3 of them gossip.)
 
 === Day 10 · Summer ===
 Notice board:
-  - Wren has decided the fishing jetty is a lovely spot (after 6 times).
+  - Juniper has decided the commons is a lovely spot (after 6 times).
+  - Wren thinks better of the steward: heard it from Juniper.
+  - Wren: "I suppose nobody heard me, then."
+  - Fen thinks less of the steward: nothing was done.
   - Fen asked Bram to help fix a sticking door. Bram was too busy.
+  - Ada thinks less of the steward: nothing was done.
 
-07:07  Marlow, at the teahouse, remembers: "Mind you, I could stay at the teahouse all day."
-07:43  At the teahouse, Marlow tells Juniper: "Can I tell you something? The teahouse is where the good evenings happen."
-13:02  On the path, Bram to Wren: "Wren, you are a treasure, you know that?"
-13:32  Fen, at the commons, remembers: "Good evenings at the commons."
-15:01  Wren, at the brook, remembers: "I could stay at the brook all day."
-17:13  At the teahouse, Marlow and Bram reminisce about the commons.
-17:48  At the brook, Wren tells Ada: "Between us, the teahouse is where the good evenings happen."
-17:51  At the brook, Ada to Fen: "You have a gift, Fen."
-       (12 conversations yesterday, 2 of them gossip.)
+13:00  On the path, Wren tells Ada: "You know, the commons is a lovely spot."
+17:40  At the commons, Juniper to Wren: "You notice things, Wren. I like that."
+       (7 conversations yesterday, 3 of them gossip.)
 
 === Day 11 · Summer ===
 Notice board:
+  - Marlow has decided the teahouse is where the good evenings happen (after 6 times).
+  - Juniper thinks better of the steward: heard it from Bram.
+  - Wren thinks less of the steward: nothing was done.
   - Tomorrow evening: Midsummer Lanterns, under the old oak.
   - It's Ada's birthday. Fen and Wren remembered.
   - Marlow has come down with a cold.
-  - Ada has decided the fishing jetty is a lovely spot (after 6 times).
-  - Ada has decided the brook is a lovely spot (after 6 times).
+  - Ada now counts Fen as a close friend.
 
-08:17  At the teahouse, Bram to Marlow: "Marlow, you are a treasure, you know that?"
-08:25  At the teahouse, Bram tells Juniper: "Listen, listen: the teahouse is where the good evenings happen!"
-15:00  A travelling fiddler wanders into the valley. There will be music at the teahouse tonight.
-18:00  The fiddler strikes up at the teahouse.
-18:06  At the teahouse, Marlow to Bram: "I'm glad you're here, Bram."
-18:17  At the teahouse, Marlow tells Fen: "Between us, the teahouse is where the good evenings happen."
-18:24  At the teahouse, Bram tells Fen: "Have you noticed? The teahouse is where the good evenings happen!"
-19:09  At the teahouse, Wren tells Fen: "You know, the teahouse is where the good evenings happen."
-21:30  A travelling fiddler packs up. Bram, Juniper, Marlow, Fen, Wren and Ada came by.
-       (14 conversations yesterday, 4 of them gossip.)
+08:40  Marlow, at the teahouse, remembers: "Everyone ends up at the teahouse sooner or later."
+14:25  At the old oak, Ada to Fen: "You have a gift, Fen."
+17:11  Juniper, at the teahouse, remembers: "Hmm, the teahouse is humming something only I can hear."
+18:49  At the teahouse, Marlow to Juniper: "I'm glad you're here, Juniper."
+       (10 conversations yesterday, 0 of them gossip.)
 
 === Day 12 · Summer ===
 Notice board:
-  - Wren has decided the old oak is a lovely spot (after 6 times).
+  - Wren thinks better of the steward: heard it from Juniper.
+  - Fen asks the steward: "Something green by my door."
+  - Ada asks the steward: "A few flowers near my home would lift my spirits."
 
-07:36  Juniper, at the teahouse, remembers: "The teahouse holds the evenings like a cup."
-07:46  Bram, at the teahouse, remembers: "The teahouse! Where everything happens, you know."
-07:51  Ada, at the fishing jetty, remembers: "A person can think properly at the fishing jetty."
-08:06  Wren, at the teahouse, remembers: "I always end up at the teahouse. Best part of the day."
+10:00  The steward builds a flower bed right beside Fen's tent.
+10:00  The steward builds a flower bed right beside Ada's cottage.
+10:00  Ada spots the new flower bed: "A touch of green does wonders."
+10:00  Fen spots the new flower bed: "Green by the door."
+10:00  Wren spots the new flower bed: "Oh, that makes the town so much prettier."
+13:02  On the path, Ada to Wren: "Honestly, that was well done, Wren. Truly."
+13:08  Wren, at the commons, remembers: "I always end up at the commons. Best part of the day."
+13:10  Ada spots the new flower bed: "It does lift the place, I must admit."
+13:10  Wren spots the new flower bed: "Oh, that makes the town so much prettier."
 15:00  Bram brings Marlow soup and sits with him a while.
 17:00  Lanterns go up under the old oak: Midsummer Lanterns begins.
-18:04  At the old oak, Bram and Wren reminisce about the teahouse.
-20:35  At the old oak, Wren and Ada reminisce about the brook.
-22:00  Midsummer Lanterns winds down. Ada, Fen, Marlow, Wren, Bram and Juniper were there.
-23:11  Wren, at the old oak, remembers: "I could stay at the old oak all day."
-23:22  At the old oak, Juniper to Wren: "You notice things, Wren. I like that."
-06:22* Bram, at the commons, remembers: "Ha! The commons! Where everything happens, you know."
-       (17 conversations yesterday, 3 of them gossip.)
+17:31  At the old oak, Marlow to Wren: "Mind you, I'm glad you're here, Wren."
+17:32  At the old oak, Marlow tells Ada: "Between us, the teahouse is a lovely spot."
+18:00  Fen hears about the new flower bed: "Pretty."
+22:00  Midsummer Lanterns winds down. Fen, Wren, Bram, Juniper, Ada and Marlow were there.
+       (19 conversations yesterday, 5 of them gossip.)
 
 === Day 13 · Summer ===
 Notice board:
-  - Juniper has decided the teahouse is where the good evenings happen (after 3 times).
-  - Bram now counts Marlow as a close friend.
-  - Juniper proposes: "Ooh, can I show everyone my contraption on the commons? It might even work." (Approve or decline on the board.)
+  - Wren asks the steward: "Could we have some flowers near my place?"
+  - Fen now counts Ada as a close friend.
+  - Fen thinks better of the steward: built the flower bed.
+  - Fen: "That helps. Thanks."
+  - Bram asked Juniper to help carry a heavy crate. Juniper was too busy.
+  - Ada thinks better of the steward: built the flower bed.
+  - Ada: "Thank you, steward. It is just what was needed."
 
-09:00  Juniper's contraption will be unveiled on the commons tomorrow afternoon.
-09:00  The steward approves Juniper's contraption on the commons. Juniper is delighted. Bram and Marlow are glad. Ada and Fen are not pleased.
-13:04  On the path, Bram to Wren: "Wren, you are a treasure, you know that?"
-18:46  Fen, at the brook, remembers: "Quiet here. Good."
-19:21  At the brook, Ada to Fen: "That was well done, Fen. Truly."
-       (10 conversations yesterday, 2 of them gossip.)
+10:00  The steward builds a flower bed right beside Juniper and Wren's cottage.
+10:00  Juniper spots the new flower bed: "Something green is growing where I live."
+12:59  At the teahouse, Bram and Juniper reminisce about the commons.
+13:05  Wren spots the new flower bed: "Like, something green to look at in the morning!"
+13:20  Fen spots the new flower bed: "Mm. Looks nice."
+18:00  Ada hears about the new flower bed: "It does lift the place, I must admit."
+       (10 conversations yesterday, 1 of them gossip.)
 
 === Day 14 · Summer ===
 Notice board:
-  - Bram has decided Marlow is kind (after 6 times).
-  - Marlow asked Wren to help find a lost hen, and Wren did.
+  - Marlow has decided the old oak is where the good evenings happen (after 3 times).
+  - Marlow now counts Bram as a friend.
+  - Wren thinks better of the steward: built the flower bed.
+  - Fen has decided the steward listens.
+  - Fen thinks better of the steward: green by my door.
+  - Wish granted: more green about the place. The whole town feels it.
+  - Ada has decided the steward listens.
+  - Ada thinks better of the steward: green by my door.
 
-09:09  Ada, at the brook, remembers: "I must say, a person can think properly at the brook."
-13:02  On the path, Bram tells Ada: "Have you noticed? Marlow is kind!"
-13:09  On the path, Bram tells Wren: "Have you noticed? Marlow is kind!"
-14:00  Juniper's contraption: the unveiling on the commons.
-14:41  At the commons, Bram tells Fen: "Have you noticed? Marlow is kind!"
-15:17  Marlow, at the commons, remembers: "I always end up at the commons. Best part of the day."
-15:30  Juniper's contraption goes off with a bang and a puff of smoke.
-16:12  Wren, at the fishing jetty, remembers: "I could stay at the fishing jetty all day."
-16:48  Wren, at the brook, remembers: "I could stay at the brook all day."
-17:00  Marlow, at the teahouse, remembers: "Everyone ends up at the teahouse sooner or later."
-17:56  At the teahouse, Juniper tells Marlow: "Do you ever feel like the steward listens?"
+11:03  Bram, at the teahouse, remembers: "The teahouse! Where everything happens, you know."
+17:14  Juniper, at the commons, remembers: "The commons is humming something only I can hear."
+17:25  At the commons, Bram to Juniper: "Juniper, you are a treasure, you know that?"
+18:56  Wren, at the teahouse, remembers: "I could stay at the teahouse all day."
+22:04  At the teahouse, Juniper to Wren: "Wren, you make things feel possible."

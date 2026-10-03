@@ -488,7 +488,53 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - A hedge placed from the palette is logged, and residents react.
    - Removing the place residents are most attached to logs "taken down", and at least one resident records a `lost_place` memory.
 5. **Performance budget: met.** Sim stepping at 10× costs 0.38–0.47 ms per frame on average in headless Chromium. Frame rate was 17–27 fps under software rendering in the container, recorded for information only.
-6. **Legibility: open.** This is the owner's playtest.
+6. **Legibility: playtested 2026-10-03.** The owner's playtest led to M2.5 (see DECISIONS.md). The headline finding was "fun to poke for ten minutes, but it feels detached from my actions; I don't really need to be here". The site is deployed at https://lucascosolo.github.io/townlet-game/, so criterion 1 is now fully met.
+
+**M2.5 criteria (predeclared 2026-10-03, before any M2.5 code).**
+
+1. **Introduction and voice.** On first load, an introduction states that the player is the steward. In the browser, live narration of the player's own actions uses "you". This is checked in an end-to-end test.
+2. **Camera.** Right-dragging changes the view's yaw continuously, and Q/E snap to quarter turns. This is checked in an end-to-end test.
+3. **Seeing before reacting.** No resident reacts to a building change while asleep. A resident asleep at the time reacts on waking or when they first see the change, and anyone else reacts by word of mouth within 24 hours. Across a 28-day soak, every reaction line names what changed for that resident, and at least 12 distinct reaction lines appear.
+4. **Rotation.** A rotated workshop occupies its swapped footprint in the sim, and R rotates the placement ghost in the browser.
+5. **Menus.** The build menu is closed by default and opens from one button. Its cards show each building's cost and what it gives off. The scroll panel collapses and expands. These are checked in an end-to-end test.
+6. **Being needed.** Over 28 days on seeds 1–5, comparing a do-nothing steward with a responsive stand-in steward (the considerate policy, extended to the new asks):
+   - the responsive steward ends with a mean standing at least 0.3 higher and a mean disposition at least 0.08 higher;
+   - in the first 7 days with a do-nothing steward, residents make at least 3 distinct asks on every seed.
+7. **Thin economy.** Building costs timber, and a build that can't be afforded is refused. With the responsive steward, food runs short on no more than 10% of days across 10 seeds × 28 days. With the do-nothing steward, shortages are allowed but nobody's Food need sits below 0.1 for more than 25% of waking hours (the existing soak check).
+8. **No regressions.** All earlier unit and browser tests still pass, adjusted only where M2.5 deliberately changes timing (reactions now wait until residents see things), and a 10-year soak on 3 seeds shows no degenerate state.
+
+**M2.5 status (2026-10-03): built; all eight criteria met.** The tests are in `test/m25.test.ts`, `e2e/m25.spec.ts` and `e2e/townlet.spec.ts`.
+
+1. **Introduction and voice: met.** A three-page introduction ("You are the steward") opens on first load, and in the browser the narrator says "You build…" and "You approve…".
+2. **Camera: met.** Right-drag or middle-drag turns the view freely, and Q/E snap to quarter turns.
+3. **Seeing before reacting: met.**
+   - A flower bed built at 2 a.m. draws no reaction until Ada wakes, and her reaction is marked "woke".
+   - Everyone else takes it in by sight or by word of mouth. Word of mouth reaches anyone awake 8 hours after a change.
+   - Every reaction names what changed for that person: quieter, greener, busier, scent, somewhere to sit, somewhere to gather, pretty, or work. A year shows at least 12 distinct reaction lines.
+4. **Rotation: met.** A workshop built turned once occupies a 1×2 footprint, and R turns the placement ghost.
+5. **Menus: met.**
+   - The build menu is closed by default, and its cards show timber cost, what each building gives off, and who it is likely to please.
+   - The scroll rolls up.
+   - Proposals open a popup that pauses the game, lists who would welcome the proposal and who wouldn't, and offers Approve, Decline or Decide later. (The owner asked for this popup mid-chunk.)
+6. **Being needed: met, by a wide margin.**
+   - Over 28 days on seeds 1–5, a responsive stand-in steward ends with a mean standing of 0.83–0.91, against −0.34 to −0.55 for a do-nothing steward.
+   - Mean disposition is 0.89–0.91 against 0.55–0.58.
+   - With no steward at all, residents make four distinct asks in the first week on every seed.
+7. **Thin economy: met.**
+   - Timber is spent on building, and an unaffordable build is refused, both directly and as a scheduled command.
+   - With the responsive steward, no food shortages occurred across 10 seeds × 28 days.
+   - A do-nothing steward runs the larder dry in winter, because gardens yield a quarter as much then, but nobody goes hungry for more than 25% of waking hours.
+8. **No regressions: met.** 30 unit tests and 10 browser tests pass. The one-year soak (10 seeds) gives 1.2 rival pairs per run, no departures, and the busiest place at 57%. The 10-year soak on 3 seeds shows no degenerate state.
+
+**Found and fixed on the way:**
+- **Residents reacted while still asleep.** Noticing happened in the same tick as waking, before the resident was out of bed.
+- **Word of mouth was too slow.** It took 24 hours, so some residents slept through it.
+- **Grievances piled up endlessly.**
+  - A resident whose asks went ignored kept asking every few days and took a fresh hit each time. In the first 10-year soak this drove Ada out of 2 of 3 towns. Residents now give up asking after two ignored asks in a fortnight, and repeat lapses sting less.
+  - The same proposal returned every 10 days, so a resident suffered the same unwelcome decision again and again. After a yes, a proposal now waits a season; after a no, a fortnight.
+- **Festival closeness was too strong over ten years.** One town ended with 26 of 30 pairs friends, so the per-festival bump is now smaller and weighted by how well each pair fits.
+
+**Release gate (owner, 2026-10-03):** the minds must feel more alive before release. See DECISIONS.md.
 
 **Still open, for the next chunk to weigh:**
 - Gossip about places ("the commons is where the good evenings happen") is still the commonest kind of gossip.

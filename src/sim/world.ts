@@ -8,6 +8,16 @@ export function emptyQualities(): QualityMap {
   return { noise: 0, bustle: 0, green: 0, scent: 0, water: 0 };
 }
 
+/** A building type's footprint after a number of quarter turns. */
+export function footprint(type: string, rot = 0): [number, number] {
+  const [w, h] = buildingDef(type).size;
+  return rot % 2 === 1 ? [h, w] : [w, h];
+}
+
+export function sizeOf(b: BuildingState): [number, number] {
+  return footprint(b.type, b.rot ?? 0);
+}
+
 export function liveBuildings(state: SimState): BuildingState[] {
   return state.buildings.filter((b) => !b.removed);
 }
@@ -20,13 +30,13 @@ export function getBuilding(state: SimState, id: number): BuildingState {
 
 /** The tile residents stand on when they are "at" a building. */
 export function placeTile(b: BuildingState): [number, number] {
-  const [w, h] = buildingDef(b.type).size;
+  const [w, h] = sizeOf(b);
   return [b.x + Math.floor((w - 1) / 2), b.y + Math.floor((h - 1) / 2)];
 }
 
 /** Chebyshev distance from a tile to the nearest tile of a building's footprint. */
 export function distanceTo(b: BuildingState, x: number, y: number): number {
-  const [w, h] = buildingDef(b.type).size;
+  const [w, h] = sizeOf(b);
   const dx = Math.max(b.x - x, 0, x - (b.x + w - 1));
   const dy = Math.max(b.y - y, 0, y - (b.y + h - 1));
   return Math.max(dx, dy);
@@ -121,11 +131,11 @@ export function route(from: [number, number], to: [number, number]): Array<[numb
   return path;
 }
 
-export function canPlace(state: SimState, type: string, x: number, y: number): string | null {
-  const [w, h] = buildingDef(type).size;
+export function canPlace(state: SimState, type: string, x: number, y: number, rot = 0): string | null {
+  const [w, h] = footprint(type, rot);
   if (x < 0 || y < 0 || x + w > state.width || y + h > state.height) return 'out of bounds';
   for (const b of liveBuildings(state)) {
-    const [bw, bh] = buildingDef(b.type).size;
+    const [bw, bh] = sizeOf(b);
     if (x < b.x + bw && x + w > b.x && y < b.y + bh && y + h > b.y) return `overlaps ${b.type} #${b.id}`;
   }
   return null;

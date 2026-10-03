@@ -50,7 +50,16 @@ export interface BuildingDef {
   open?: [number, number];
   /** For places to gather: how many people fit before it feels crowded. */
   comfortable?: number;
+  /** Timber it costs to build. Removing refunds half. */
+  cost?: number;
+  /** What each worker makes per hour on shift (spec 4.3, thin economy). */
+  produces?: Partial<Record<Resource, number>>;
+  /** One line for the build menu. */
+  blurb?: string;
 }
+
+export const RESOURCES = ['food', 'timber'] as const;
+export type Resource = (typeof RESOURCES)[number];
 
 export interface Pronouns {
   subj: string;
@@ -90,6 +99,8 @@ export interface BuildingState {
   /** Who placed it: the steward, or "founding" for the starting town. */
   placedBy: 'steward' | 'founding';
   removed: boolean;
+  /** Quarter turns clockwise, 0-3. Odd turns swap the footprint. */
+  rot?: number;
 }
 
 export interface ActivityState {
@@ -98,6 +109,8 @@ export interface ActivityState {
   until: number;
   /** Night sleep (as opposed to a nap): waking from it triggers consolidation. */
   night?: boolean;
+  /** A meal eaten from a bare larder: it fills less. */
+  meagre?: boolean;
 }
 
 export interface Episode {
@@ -166,6 +179,13 @@ export interface Relationship {
   tags: RelTag[];
 }
 
+/** A change to the town a resident hasn't taken in yet. */
+export interface Unseen {
+  building: number;
+  kind: 'built' | 'removed';
+  tick: number;
+}
+
 export interface ResidentState {
   id: string;
   homeId: number;
@@ -210,16 +230,32 @@ export interface ResidentState {
   lastVisit: Record<string, number>;
   /** Tick until which the resident has a cold, or -1. */
   coldUntil: number;
+  unseen: Unseen[];
   rng: number;
 }
+
+export type RequestKind = 'quieter_home' | 'workplace' | 'more_food' | 'somewhere_to_sit' | 'more_green' | 'place_to_gather';
 
 export interface Request {
   id: number;
   by: string;
-  kind: 'quieter_home';
+  kind: RequestKind;
   subject: SubjectId;
+  /** For a workplace ask: the building type wanted. */
+  wants?: string;
   postedTick: number;
-  status: 'open' | 'fulfilled' | 'lapsed';
+  /** fulfilled: the steward dealt with it. resolved: it went away by itself. lapsed: ignored. */
+  status: 'open' | 'fulfilled' | 'resolved' | 'lapsed';
+  closedTick?: number;
+}
+
+export interface Wish {
+  id: number;
+  kind: RequestKind;
+  label: string;
+  supporters: string[];
+  madeTick: number;
+  status: 'open' | 'granted' | 'missed';
   closedTick?: number;
 }
 
@@ -295,6 +331,8 @@ export interface StoryState {
   sparks: Spark[];
   dilemmas: Dilemma[];
   memories: TownMemory[];
+  /** Seasonal Town Wishes. */
+  wishes: Wish[];
   /** Approved standing arrangements. */
   marketDay: boolean;
   /** Buildings working outside their shift, [buildingId, from, until]. */
@@ -316,6 +354,10 @@ export interface SimState {
   nextEpisodeId: number;
   nextRequestId: number;
   story: StoryState;
+  /** The town's shared stores. */
+  stock: Record<Resource, number>;
+  /** Day of the last food shortage announcement, or 0. */
+  lastShortageDay: number;
 }
 
 // ---------------------------------------------------------------- events
@@ -344,8 +386,23 @@ export type SimEvent =
   | { t: number; type: 'request_posted'; request: Request }
   | { t: number; type: 'request_closed'; request: Request }
   | { t: number; type: 'relationship'; who: string; other: string; added: RelTag[]; removed: RelTag[] }
-  | { t: number; type: 'reaction'; who: string; building: number; aspect: string; valence: number }
-  | { t: number; type: 'grief'; who: string; building: number; btype: string }
+  | {
+      t: number;
+      type: 'reaction';
+      who: string;
+      building: number;
+      aspect: string;
+      valence: number;
+      /** What about it they noticed: quieter, greener, sit, gather... */
+      detail: string;
+      how: 'saw' | 'woke' | 'heard';
+      change: 'built' | 'removed';
+    }
+  | { t: number; type: 'grief'; who: string; building: number; btype: string; how: 'saw' | 'woke' | 'heard' }
+  | { t: number; type: 'shortage'; resource: Resource; who: string }
+  | { t: number; type: 'wish'; phase: 'made' | 'granted' | 'missed'; wish: Wish }
+  /** A resident's view of the steward moved overnight, and why. */
+  | { t: number; type: 'standing'; who: string; delta: number; reasons: string[] }
   | { t: number; type: 'thinking_of_leaving'; who: string }
   | { t: number; type: 'decided_to_stay'; who: string }
   | { t: number; type: 'left_town'; who: string }

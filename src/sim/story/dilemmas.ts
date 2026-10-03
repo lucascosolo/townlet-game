@@ -127,7 +127,7 @@ export function closeDilemma(host: StoryHost, d: Dilemma, outcome: 'approved' | 
       valence: 0.6 * sign,
       base: clamp(Math.abs(v)) * 0.7,
       source: 'witnessed',
-      note: `${outcome} ${residentDef(d.proposer).name}'s ${d.type.replace('_', ' ')}`,
+      note: `${outcome === 'approved' ? 'said yes to' : outcome === 'declined' ? 'said no to' : 'never answered'} ${residentDef(d.proposer).name}'s ${d.type.replace('_', ' ')}`,
     });
     reactions.push({ who: r.id, valence: sign });
   }

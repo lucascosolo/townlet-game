@@ -104,7 +104,7 @@ export function soakRun(scenarioName: string, seed: number, days: number): RunMe
       for (let tries = 0; tries < 40; tries++) {
         const x = intBetween(steward, 0, sim.state.width - w);
         const y = intBetween(steward, 0, sim.state.height - h);
-        if (canPlace(sim.state, type, x, y) === null) {
+        if (canPlace(sim.state, type, x, y) === null && sim.canAfford(type)) {
           sim.build(type, x, y);
           builds++;
           break;

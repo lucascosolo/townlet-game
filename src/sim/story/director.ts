@@ -23,8 +23,10 @@ import {
   type SubjectId,
   type Tone,
   type TownMemory,
+  type Wish,
 } from '../types.js';
 import { liveBuildings } from '../world.js';
+import { ASK_KINDS, WISH_LABELS, assess } from '../asks.js';
 import { DILEMMAS, closeDilemma } from './dilemmas.js';
 
 /** What the director needs from the simulation. */
@@ -64,6 +66,7 @@ export function newStoryState(seed: number): StoryState {
     sparks: [],
     dilemmas: [],
     memories: [],
+    wishes: [],
     marketDay: false,
     extraShifts: [],
   };
@@ -200,6 +203,9 @@ function morning(host: StoryHost): void {
   if (story.marketDay && dayInSeason === 6 && commons !== null) {
     addGathering(host, { kind: 'market', label: 'market day', placeId: commons, from: at(day, 9), until: at(day, 14), pull: 0.6, appeal: { prosperity: 0.8, community: 0.4 }, emits: { bustle: 0.6, noise: 0.35 }, radius: 3 });
   }
+
+  if (dayInSeason === 1) seasonWishes(host);
+  else checkWishes(host);
 
   const dayOfYear = ((day - 1) % (DAYS_PER_SEASON * 4)) + 1;
   for (const r of active(state)) if (residentDef(r.id).birthday === dayOfYear) birthday(host, r);
@@ -460,8 +466,10 @@ const EVENTS: StoryEventDef[] = [
       const state = host.state;
       if (state.story.dilemmas.some((d) => d.status === 'open')) return null;
       const options = DILEMMAS.filter((d) => {
+        // After a yes, the same proposal waits a season; after a no or silence, a fortnight.
         const lastSame = [...state.story.dilemmas].reverse().find((x) => x.type === d.type);
-        if (lastSame && state.tick - lastSame.postedTick < 10 * TICKS_PER_DAY) return false;
+        const wait = lastSame?.status === 'approved' ? 4 * DAYS_PER_SEASON : 14;
+        if (lastSame && state.tick - lastSame.postedTick < wait * TICKS_PER_DAY) return false;
         return d.eligible(state) && d.proposer(state) !== null;
       });
       const d = options.length > 0 ? pick(state.story, options) : undefined;
@@ -475,6 +483,57 @@ const EVENTS: StoryEventDef[] = [
     },
   },
 ];
+
+// ------------------------------------------------------------------ Town Wishes
+
+/** Close last season's wishes and gather this season's from what residents want. */
+function seasonWishes(host: StoryHost): void {
+  const state = host.state;
+  const ctx = host.mindContext();
+  for (const w of state.story.wishes) {
+    if (w.status !== 'open') continue;
+    w.status = 'missed';
+    w.closedTick = state.tick;
+    for (const id of w.supporters) {
+      const r = state.residents[id];
+      if (r && !r.departed) host.mind.perceive(ctx, r, { subject: 'steward', aspect: 'ignores_me', valence: -0.4, base: 0.35, source: 'witnessed', note: `our wish for ${w.label.toLowerCase()} came to nothing` });
+    }
+    host.emitEvent({ t: state.tick, type: 'wish', phase: 'missed', wish: { ...w } });
+  }
+  const candidates = ASK_KINDS.map((kind) => ({ kind, supporters: active(state).filter((r) => assess(state, r, kind).want).map((r) => r.id) }))
+    .filter((c) => c.supporters.length > 0)
+    .sort((a, b) => b.supporters.length - a.supporters.length)
+    .slice(0, 3);
+  for (const c of candidates) {
+    const w: Wish = { id: state.story.nextId++, kind: c.kind, label: WISH_LABELS[c.kind], supporters: c.supporters, madeTick: state.tick, status: 'open' };
+    state.story.wishes.push(w);
+    host.emitEvent({ t: state.tick, type: 'wish', phase: 'made', wish: { ...w } });
+  }
+}
+
+/** A wish is granted when it is met for everyone who made it. */
+function checkWishes(host: StoryHost): void {
+  const state = host.state;
+  const ctx = host.mindContext();
+  for (const w of state.story.wishes) {
+    if (w.status !== 'open') continue;
+    const people = w.supporters.map((id) => state.residents[id]).filter((r): r is ResidentState => !!r && !r.departed);
+    if (people.length === 0 || !people.every((r) => assess(state, r, w.kind, w.madeTick).met)) continue;
+    w.status = 'granted';
+    w.closedTick = state.tick;
+    for (const r of active(state)) {
+      const mine = w.supporters.includes(r.id);
+      host.mind.perceive(ctx, r, { subject: 'steward', aspect: 'granted_wish', valence: 0.9, base: mine ? 0.9 : 0.4, source: 'witnessed', note: `granted the town's wish: ${w.label.toLowerCase()}` });
+    }
+    host.emitEvent({ t: state.tick, type: 'wish', phase: 'granted', wish: { ...w } });
+  }
+}
+
+/** Progress on an open wish: how many of its supporters already have what they asked for. */
+export function wishProgress(state: SimState, w: Wish): { met: number; of: number } {
+  const people = w.supporters.map((id) => state.residents[id]).filter((r): r is ResidentState => !!r && !r.departed);
+  return { met: people.filter((r) => assess(state, r, w.kind, w.madeTick).met).length, of: people.length };
+}
 
 // ------------------------------------------------------------------ personal beats
 
@@ -551,7 +610,7 @@ function endGathering(host: StoryHost, g: Gathering): void {
       for (const b of attendees) {
         if (a === b) continue;
         const fit = Math.max(0, warmth(residentDef(a.id), residentDef(b.id)));
-        adjust(a, b.id, { affinity: (g.kind === 'festival' ? 0.015 : 0.01) + 0.03 * fit, familiarity: 0.03 }, state.tick);
+        adjust(a, b.id, { affinity: (g.kind === 'festival' ? 0.01 : 0.005) + 0.02 * fit, familiarity: 0.03 }, state.tick);
       }
     }
     host.emitEvent({ t: state.tick, type: 'story', id: success ? `${g.kind}_success` : `${g.kind}_failure`, tone: success ? 'good' : 'neutral', cast: attendees.map((r) => r.id), place: g.placeId, topic: `m:${memory.id}` });

@@ -7,6 +7,8 @@ const h = (hours: number, minutes = 0) => hours * 60 + minutes;
 export const BUILDINGS: Record<string, BuildingDef> = {
   tent: {
     type: 'tent',
+    cost: 0,
+    blurb: 'A canvas roof for one.',
     name: 'Tent',
     kind: 'home',
     size: [1, 1],
@@ -17,6 +19,8 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   cottage: {
     type: 'cottage',
+    cost: 10,
+    blurb: 'A home for two.',
     name: 'Cottage',
     kind: 'home',
     size: [2, 2],
@@ -27,6 +31,8 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   well: {
     type: 'well',
+    cost: 4,
+    blurb: 'Water, and a reason to stop and chat.',
     name: 'Well',
     kind: 'civic',
     size: [1, 1],
@@ -36,6 +42,8 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   commons: {
     type: 'commons',
+    cost: 6,
+    blurb: 'An open green for gathering and festivals.',
     comfortable: 5,
     name: 'Commons',
     kind: 'social',
@@ -46,6 +54,8 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   teahouse: {
     type: 'teahouse',
+    cost: 12,
+    blurb: 'Tea, warmth and evening company.',
     comfortable: 3,
     name: 'Teahouse',
     kind: 'social',
@@ -57,6 +67,8 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   oak: {
     type: 'oak',
+    cost: 0,
+    blurb: 'An old tree to sit beneath.',
     comfortable: 3,
     name: 'Old oak',
     kind: 'nature',
@@ -67,6 +79,8 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   brook: {
     type: 'brook',
+    cost: 0,
+    blurb: 'Running water.',
     name: 'Brook',
     kind: 'nature',
     size: [1, 10],
@@ -76,6 +90,9 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   garden: {
     type: 'garden',
+    cost: 3,
+    blurb: 'Plots that feed the town.',
+    produces: { food: 0.9 },
     name: 'Garden plots',
     kind: 'work',
     size: [2, 2],
@@ -87,6 +104,9 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   bakery: {
     type: 'bakery',
+    cost: 10,
+    blurb: 'Bread for everyone. The ovens start at four.',
+    produces: { food: 1.2 },
     name: 'Bakery',
     kind: 'work',
     size: [2, 2],
@@ -99,6 +119,8 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   workshop: {
     type: 'workshop',
+    cost: 8,
+    blurb: 'A place to make and mend. Noisy by day.',
     name: 'Workshop',
     kind: 'work',
     size: [2, 1],
@@ -111,6 +133,9 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   woodlot: {
     type: 'woodlot',
+    cost: 2,
+    blurb: 'Trees tended for timber.',
+    produces: { timber: 0.3 },
     name: 'Woodlot',
     kind: 'work',
     size: [2, 2],
@@ -123,6 +148,9 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   jetty: {
     type: 'jetty',
+    cost: 3,
+    blurb: 'Fishing from the brook.',
+    produces: { food: 0.6 },
     name: 'Fishing jetty',
     kind: 'work',
     size: [1, 1],
@@ -134,6 +162,8 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   bench: {
     type: 'bench',
+    cost: 2,
+    blurb: 'Somewhere to sit and watch the world.',
     comfortable: 2,
     name: 'Bench',
     kind: 'decor',
@@ -144,6 +174,8 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   hedge: {
     type: 'hedge',
+    cost: 1,
+    blurb: 'Softens noise and adds green.',
     name: 'Hedge',
     kind: 'decor',
     size: [1, 1],
@@ -153,6 +185,8 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   flowerbed: {
     type: 'flowerbed',
+    cost: 0,
+    blurb: 'Colour and scent.',
     name: 'Flower bed',
     kind: 'decor',
     size: [1, 1],

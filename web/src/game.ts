@@ -49,7 +49,8 @@ export class Game {
   constructor(options: GameOptions) {
     this.options = options;
     this.sim = runScenario(options.scenario, options.seed, options.steward);
-    this.narrator = new Narrator(this.sim);
+    // In the browser the player is the steward: narrate their actions as "you".
+    this.narrator = new Narrator(this.sim, { stewardIsYou: true });
     this.sim.on((e) => {
       this.eventHash = fnv(this.eventHash, JSON.stringify(e));
       this.eventCount++;

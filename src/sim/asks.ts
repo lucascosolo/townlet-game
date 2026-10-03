@@ -24,6 +24,7 @@ export const ASK_LAPSE_DAYS: Record<RequestKind, number> = {
 };
 
 const NEAR_HOME = 6;
+const DREAM_BUILDINGS = new Set(['orchard', 'glasshouse', 'banner']);
 
 export interface AskAssessment {
   want: boolean;
@@ -52,8 +53,9 @@ export function assess(state: SimState, r: ResidentState, kind: RequestKind, sin
   const self: SubjectId = `r:${r.id}`;
   switch (kind) {
     case 'aspiration': {
-      // Asked for by the aspiration engine, not by this loop: met once the dream is built.
-      const met = !!wants && liveBuildings(state).some((b) => b.type === wants);
+      // Asked for by the aspiration engine, not by this loop: met once the dream is built. A
+      // bench to remember by has to be a new one; a dream building only needs to stand.
+      const met = !!wants && liveBuildings(state).some((b) => b.type === wants && (DREAM_BUILDINGS.has(wants) || b.placedTick >= since));
       return { want: false, met, subject: self, ...(wants ? { wants } : {}) };
     }
     case 'quieter_home': {

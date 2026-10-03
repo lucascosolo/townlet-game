@@ -2,16 +2,18 @@
 // whose conditions are on the sim's state, so the simulation decides when, whether and with whom
 // each one happens. Some stages need the steward (a building, timber, a festival going ahead).
 
+import { buildingDef } from '../../content/buildings.js';
 import { residentDef } from '../../content/residents.js';
 import type { Perception } from '../mind/mind.js';
 import { addEmotion, opinion } from '../mind/memory.js';
 import { adjust, rel } from '../mind/relationships.js';
 import { clamp, unit } from '../needs.js';
 import { TICKS_PER_DAY, dayOf, seasonOf } from '../time.js';
-import type { Request, ResidentState, SimState } from '../types.js';
+import { STEWARD, type Request, type ResidentState, type SimState, type SubjectId } from '../types.js';
 import { liveBuildings } from '../world.js';
 import type { StoryHost } from './director.js';
 import { active, addMemory } from './director.js';
+import { chooseDream, templateDream } from './dreams.js';
 
 /** What the aspiration engine needs beyond the storyteller's host. */
 export interface AspirationHost extends StoryHost {
@@ -27,8 +29,10 @@ export interface Stage {
   check(h: AspirationHost, r: ResidentState): boolean;
   /** What happens when it is reached. */
   enter?(h: AspirationHost, r: ResidentState): void;
-  /** Where working on this stage happens; time there counts, and the place pulls them. */
+  /** Where working on this stage happens; time there counts, and the place pulls them. 'home' is their own home. */
   place?: string;
+  /** A particular building of that type, when it matters which. */
+  placeId?: number;
   /** Time at the place counts only with the partner there too. */
   together?: boolean;
 }
@@ -83,7 +87,9 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
         id: 'ask',
         next: 'Ask the steward for an orchard',
         check: (h, r) => days(h, r) >= 1,
-        enter: (h, r) => askFor(h, r, 'orchard'),
+        enter: (h, r) => {
+          if (!exists(h.state, 'orchard')) askFor(h, r, 'orchard');
+        },
       },
       {
         id: 'planted',
@@ -210,7 +216,9 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
         id: 'ask',
         next: 'Ask the steward for a glasshouse',
         check: () => true,
-        enter: (h, r) => askFor(h, r, 'glasshouse'),
+        enter: (h, r) => {
+          if (!exists(h.state, 'glasshouse')) askFor(h, r, 'glasshouse');
+        },
       },
       {
         id: 'built',
@@ -250,7 +258,9 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
         id: 'ask',
         next: 'Ask the steward for a banner pole',
         check: () => true,
-        enter: (h, r) => askFor(h, r, 'banner'),
+        enter: (h, r) => {
+          if (!exists(h.state, 'banner')) askFor(h, r, 'banner');
+        },
       },
       {
         id: 'paint',
@@ -296,31 +306,84 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
   },
 };
 
+/** The dream a resident is living now: their authored first dream, or one formed since (M3b). */
+export function dreamOf(state: SimState, r: ResidentState): AspirationDef | undefined {
+  return r.aspiration.kind ? templateDream(state, r) : ASPIRATIONS[r.id];
+}
+
 /** The stage a resident is working towards now, if any. */
-export function currentStage(r: ResidentState): Stage | undefined {
+export function currentStage(state: SimState, r: ResidentState): Stage | undefined {
   if (r.aspiration.done) return undefined;
-  return ASPIRATIONS[r.id]?.stages[r.aspiration.stage];
+  return dreamOf(state, r)?.stages[r.aspiration.stage];
+}
+
+/** A dream's subject, as words: "Wren", "the old oak", "Blossom Day", "the steward". */
+export function subjectWords(state: SimState, s: SubjectId | undefined): string {
+  if (!s || s === STEWARD) return 'the steward';
+  if (s.startsWith('r:')) return residentDef(s.slice(2)).name;
+  if (s.startsWith('m:')) return state.story.memories.find((m) => `m:${m.id}` === s)?.label ?? 'that day';
+  const b = state.buildings.find((x) => `b:${x.id}` === s);
+  return b ? `the ${b.type === 'oak' ? 'old oak' : buildingDef(b.type).name.toLowerCase()}` : 'that place';
+}
+
+function fillDream(state: SimState, r: ResidentState, text: string): string {
+  const partner = r.aspiration.partner ? residentDef(r.aspiration.partner).name : 'someone';
+  return text.replace(/\{partner\}/g, partner).replace(/\{x\}/g, subjectWords(state, r.aspiration.subject));
+}
+
+/** The dream's title, with its subject filled in. */
+export function dreamTitle(state: SimState, r: ResidentState): string | null {
+  const d = dreamOf(state, r);
+  return d ? fillDream(state, r, d.title) : null;
 }
 
 /** The journal's "next step", with the partner's name filled in. */
 export function nextStep(state: SimState, r: ResidentState): string | null {
-  const s = currentStage(r);
+  const s = currentStage(state, r);
   if (!s) return null;
-  const partner = r.aspiration.partner ? residentDef(r.aspiration.partner).name : 'someone';
-  return s.next.replace('{partner}', partner);
+  return fillDream(state, r, s.next);
 }
 
-/** Each morning: advance whoever's next stage has come about. */
+/** A few days after a dream is done, a new one forms from what they have lived through. */
+const DREAM_REST_DAYS = 4;
+
+function formNewDream(h: AspirationHost, r: ResidentState): void {
+  const a = r.aspiration;
+  if (!a.done || a.outcome === 'leave') return;
+  if (h.state.tick - (a.doneTick ?? a.since) < DREAM_REST_DAYS * TICKS_PER_DAY) return;
+  const choice = chooseDream(h.state, r);
+  if (!choice) return;
+  const past = [...(a.past ?? []), a.kind ?? 'authored'];
+  r.aspiration = {
+    stage: 0,
+    since: h.state.tick,
+    minutes: 0,
+    done: false,
+    kind: choice.kind,
+    subject: choice.subject,
+    completed: a.completed ?? 0,
+    past: past.slice(-6),
+  };
+  addEmotion(r, { kind: 'joy', intensity: 0.3, tick: h.state.tick });
+  h.emitEvent({ t: h.state.tick, type: 'dream_formed', who: r.id, kind: choice.kind, subject: choice.subject, title: dreamTitle(h.state, r) ?? '' });
+}
+
+/** Each morning: advance whoever's next stage has come about, and let new dreams form. */
 export function aspirationMorning(h: AspirationHost): void {
   for (const r of active(h.state)) {
-    const def = ASPIRATIONS[r.id];
-    const stage = currentStage(r);
+    formNewDream(h, r);
+    const def = dreamOf(h.state, r);
+    const stage = currentStage(h.state, r);
     if (!def || !stage || !stage.check(h, r)) continue;
     stage.enter?.(h, r);
     r.aspiration.stage++;
     r.aspiration.since = h.state.tick;
     r.aspiration.minutes = 0;
     r.aspiration.done = r.aspiration.stage >= def.stages.length;
+    if (r.aspiration.done) {
+      r.aspiration.completed = (r.aspiration.completed ?? 0) + 1;
+      r.aspiration.doneTick = h.state.tick;
+    }
     // Every step forward feels like something.
     addEmotion(r, { kind: r.aspiration.done ? 'pride' : 'joy', intensity: r.aspiration.done ? 0.8 : 0.4, tick: h.state.tick });
     r.needs.purpose = clamp(r.needs.purpose + (r.aspiration.done ? 0.4 : 0.15));
@@ -333,17 +396,24 @@ export function aspirationMorning(h: AspirationHost): void {
       done: r.aspiration.done,
       ...(r.aspiration.partner ? { partner: r.aspiration.partner } : {}),
       ...(r.aspiration.outcome ? { outcome: r.aspiration.outcome } : {}),
+      ...(r.aspiration.kind ? { kind: r.aspiration.kind } : {}),
+      ...(r.aspiration.subject ? { subject: r.aspiration.subject } : {}),
     });
     if (r.aspiration.outcome === 'leave') h.depart(r);
   }
 }
 
+function atStagePlace(state: SimState, r: ResidentState, stage: Stage): boolean {
+  if (r.at === null || !stage.place) return false;
+  if (stage.place === 'home') return r.at === r.homeId;
+  if (stage.placeId !== undefined) return r.at === stage.placeId;
+  return state.buildings.find((x) => x.id === r.at)?.type === stage.place;
+}
+
 /** Each minute: time spent where the current stage happens counts towards it. */
 export function aspirationMinute(state: SimState, r: ResidentState): void {
-  const stage = currentStage(r);
-  if (!stage?.place || r.at === null) return;
-  const b = state.buildings.find((x) => x.id === r.at);
-  if (!b || b.type !== stage.place) return;
+  const stage = currentStage(state, r);
+  if (!stage || !atStagePlace(state, r, stage)) return;
   if (stage.together) {
     const p = r.aspiration.partner ? state.residents[r.aspiration.partner] : undefined;
     if (!p || p.at !== r.at) return;
@@ -351,16 +421,15 @@ export function aspirationMinute(state: SimState, r: ResidentState): void {
   r.aspiration.minutes++;
 }
 
-/** Where a resident's dream pulls them now, and how strongly (also pulls a partner to the lesson). */
-export function aspirationPull(state: SimState, r: ResidentState): { type: string; weight: number } | null {
-  const mine = currentStage(r);
-  if (mine?.place) return { type: mine.place, weight: 0.9 };
-  // A student is drawn to where their teacher is waiting.
+/** Where a resident's dream pulls them now, and how strongly (also pulls a partner along). */
+export function aspirationPull(state: SimState, r: ResidentState): { type: string; placeId?: number; weight: number } | null {
+  const mine = currentStage(state, r);
+  if (mine?.place && mine.place !== 'home') return { type: mine.place, ...(mine.placeId !== undefined ? { placeId: mine.placeId } : {}), weight: 0.9 };
+  // A partner is drawn to where the dreamer is waiting.
   for (const other of active(state)) {
-    const s = currentStage(other);
-    if (s?.together && other.aspiration.partner === r.id && s.place) {
-      const there = other.at !== null && state.buildings.find((b) => b.id === other.at)?.type === s.place;
-      if (there) return { type: s.place, weight: 1.1 };
+    const s = currentStage(state, other);
+    if (s?.together && other.aspiration.partner === r.id && s.place && atStagePlace(state, other, s)) {
+      return { type: s.place, ...(s.placeId !== undefined ? { placeId: s.placeId } : {}), weight: 1.1 };
     }
   }
   return null;

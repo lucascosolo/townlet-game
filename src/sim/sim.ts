@@ -797,6 +797,7 @@ export class Simulation implements AspirationHost {
   /** A resident packs up and leaves the valley. */
   depart(r: ResidentState): void {
     r.departed = true;
+    r.departedTick = this.state.tick;
     r.at = null;
     r.activity = null;
     r.pending = null;

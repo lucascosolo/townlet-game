@@ -2,6 +2,23 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-03: M3b, deeper structured minds — directions chosen
+
+The owner chose to deepen the structured minds next ("the minds chunk"), rather than start the brain-sim creature (spec 4.6.3), which stays a later rung.
+
+**Chosen:**
+- **Memories come back in talk.** Residents bring up shared past events, mark the anniversaries of town memories, and speak of people who have left.
+- **Dreams that keep coming.** When a dream is done, a new one forms from what the resident has lived through: a friendship, a loss, a place they love. These are built from templates, not a single authored plan.
+- **Moods with weather inside.** Longer states, such as a bad week, homesickness, a crush or restlessness, each with an onset reason, a build-up and an end. They show on the person and in the journal.
+- **Talking to a resident.** The owner added this after the first answer: "Talking to a resident would be neat too." You click someone and ask a few fixed questions, and they answer honestly from their state. Asking is a steward action in the command log and can't be farmed.
+- **Surfaces.** The town log and bubbles, as now, plus the talk panel.
+
+**Not chosen this time:**
+- Gossip about people, with reputations and taking sides.
+- A chronicle page.
+
+The criteria are predeclared in spec 9.3 before any M3b code.
+
 ## 2026-10-03: M3a, how "on their mind" works, and a missed bound left standing
 
 **Chosen:**

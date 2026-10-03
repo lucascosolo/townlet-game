@@ -599,6 +599,41 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 - **No steward, smaller friend gap.** In unhappy towns the gap between friends' and others' time together narrows to just under 2×, and rivals stop avoiding each other.
 - **Civic needs.** The economy is thin (food and timber). Civic needs (spec 4.3) haven't been built.
 
+
+**M3b criteria: deeper minds (predeclared 2026-10-03, before any M3b code).** Measured in the quiet town on seeds 1–5 unless stated otherwise. A failure is reported as a failure, not redefined.
+
+1. **Memories come back in talk.**
+   - Over 28 days with the considerate steward, residents bring up a shared past event (a town memory both attended, or an episode both were in) at least once per resident per week on average.
+   - Every such mention is checked in a unit test: both speakers hold or attended the memory.
+   - In a two-year run, each town memory with three or more attendees is brought up within 3 days of its first anniversary, on at least 3 of 5 seeds.
+   - When a resident leaves, each of their friends mentions them within the following 28 days.
+2. **Dreams keep coming.**
+   - After a resident's dream is done, a new one forms within 7 days, on every seed.
+   - The new dream comes from their own life: its subject is a person, place or memory among their five strongest feelings or beliefs. This is checked in a unit test.
+   - Over one year with the considerate steward, every resident completes at least 2 dreams, and no resident repeats the same dream back to back.
+   - **Twin test:** the same resident on the same day, one with a friend who has just left and one without. Their next dreams differ.
+3. **Moods with weather inside.** Longer states such as a bad week, homesickness, a crush or restlessness.
+   - Each has an onset reason drawn from state and lasts 2–14 days.
+   - Each ends by resolving or fading, and the end is narrated.
+   - Over one year, every resident has at least one mood arc, on every seed.
+   - **Twin test:** a resident in a bad week who receives comfort from a friend comes out of it sooner than their twin who doesn't, on every seed.
+   - A mood colours talk: while it lasts, it is among the resident's top three topics at least half of the time.
+4. **Talking to a resident.**
+   - Clicking a resident offers a few fixed questions:
+     - How are you?
+     - What's on your mind?
+     - What are you hoping for?
+     - What do you think of… (a person or place)
+     - What do you think of me?
+   - **Honesty:** every answer is checked against state in a unit test. The mood word matches the mood band, the topics match the top three, and the sign of an opinion matches `opinion()`.
+   - Talking is a steward action in the command log. The first conversation of the day gives the resident a little company. Asking again the same day changes nothing, so it can't be farmed.
+   - Determinism holds with talks in the log.
+5. **In the browser.**
+   - An end-to-end test opens a talk, asks every question, and checks that the answers appear.
+   - A mood shows on the person (an icon) and in the journal, with its reason.
+   - A reminiscence appears as a bubble.
+6. **No regressions.** All earlier tests pass, adjusted only where M3b deliberately changes behaviour. The one-year and 10-year soaks show no degenerate state, and 7-day radio plays still have at least 80 distinct lines with none above 4%.
+
 ---
 
 ## 10. Risks

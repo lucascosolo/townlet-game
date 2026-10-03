@@ -191,6 +191,15 @@ export interface AspirationState {
   /** Who else is part of it (Fen's student). */
   partner?: string;
   done: boolean;
+  /** Which dream: undefined for the resident's authored first dream, else a template id (M3b). */
+  kind?: string;
+  /** What a template dream is about: a friend, a place, a memory, someone gone. */
+  subject?: SubjectId;
+  /** Dreams seen through so far, and the template ids of past dreams, most recent last. */
+  completed?: number;
+  past?: string[];
+  /** Tick the last dream was done, so a new one can form a few days later. */
+  doneTick?: number;
   /** How it ended, where it can end more than one way (Marlow). */
   outcome?: string;
 }
@@ -223,6 +232,15 @@ export interface ResidentState {
   lowDays: number;
   leaving: { sinceDay: number } | null;
   departed: boolean;
+  /** Tick they left the valley (M3b: friends speak of them). */
+  departedTick?: number;
+  /** A longer mood they are in, if any (M3b). */
+  moodArc?: MoodArc | null;
+  /** Mood arcs so far, and the tick the last one ended. */
+  moodArcs?: number;
+  lastMoodEnd?: number;
+  /** Day of the steward's last talk with them that counted (M3b: no farming). */
+  lastTalkDay?: number;
   emotions: Emotion[];
   /** Today's salient episodes, consolidated overnight. */
   buffer: Episode[];
@@ -252,6 +270,35 @@ export interface ResidentState {
   /** Mind topic key -> tick it was last thought or said, so they don't repeat themselves. */
   lastThoughts?: Record<string, number>;
   rng: number;
+}
+
+export type MoodKind = 'bad_week' | 'missing' | 'smitten' | 'restless' | 'glow';
+
+/** A mood that lasts days: why it began, how it is going (M3b, "moods with weather inside"). */
+export interface MoodArc {
+  kind: MoodKind;
+  since: number;
+  reason: string;
+  about?: SubjectId;
+  /** Kindness received during it; comfort from a friend lifts a bad week sooner. */
+  lift: number;
+}
+
+export type TalkQuestion = 'how' | 'mind' | 'hope' | 'opinion' | 'me';
+
+/** An answer, as data drawn from state; the narrator gives it a voice. */
+export interface TalkAnswer {
+  question: TalkQuestion;
+  /** how: mood band; opinion/me: feeling band. */
+  band?: string;
+  value?: number;
+  /** The topics or lines the answer draws on. */
+  topics?: MindMention[];
+  mood?: { kind: MoodKind; reason: string };
+  hope?: { title: string; next: string | null; done: boolean };
+  about?: SubjectId;
+  /** opinion/me: the belief behind it, if any. */
+  because?: { subject: SubjectId; aspect: string };
 }
 
 /** A mind topic as it was voiced: see mind/thoughts.ts. */
@@ -435,7 +482,13 @@ export type SimEvent =
   | { t: number; type: 'invite'; a: string; b: string; place: number }
   /** Something on a resident's mind surfaced as a passing thought (M3a). Always one of their top three. */
   | { t: number; type: 'thought'; who: string; key: string; about?: SubjectId; vars: Record<string, string>; rank: number }
-  | { t: number; type: 'aspiration'; who: string; stage: string; index: number; done: boolean; partner?: string; outcome?: string }
+  | { t: number; type: 'aspiration'; who: string; stage: string; index: number; done: boolean; partner?: string; outcome?: string; kind?: string; subject?: SubjectId }
+  /** A new dream forms from what they have lived through (M3b). */
+  | { t: number; type: 'dream_formed'; who: string; kind: string; subject?: SubjectId; title: string }
+  /** A longer mood starts or ends (M3b). */
+  | { t: number; type: 'mood'; who: string; phase: 'start' | 'end'; arc: MoodArc; how?: 'resolved' | 'faded' }
+  /** The steward talks with a resident (M3b). */
+  | { t: number; type: 'talk'; who: string; answer: TalkAnswer; counted: boolean }
   /** A resident's view of the steward moved overnight, and why. */
   | { t: number; type: 'standing'; who: string; delta: number; reasons: string[] }
   | { t: number; type: 'thinking_of_leaving'; who: string }

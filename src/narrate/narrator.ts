@@ -5,10 +5,11 @@
 
 import { buildingDef } from '../content/buildings.js';
 import { residentDef } from '../content/residents.js';
-import { ASPIRATION_LINES, DILEMMA_NAMES, GATHERING_START, PREPOSITIONS, PROPOSALS } from '../content/story.js';
+import { ASPIRATION_LINES, DILEMMA_NAMES, DREAM_DONE_LINES, GATHERING_START, PREPOSITIONS, PROPOSALS } from '../content/story.js';
 import { MIND_LINES } from '../content/thoughts.js';
 import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
 import { chance, deriveSeed, pick, type RngHolder } from '../sim/rng.js';
+import { subjectWords } from '../sim/story/aspirations.js';
 import type { Simulation } from '../sim/sim.js';
 import { DAWN_MINUTE, clock, dayOf, minuteOf, seasonOf } from '../sim/time.js';
 import type { Belief, MindMention, ResidentDef, SimEvent, SimState, SubjectId } from '../sim/types.js';
@@ -373,7 +374,27 @@ export class Narrator {
         this.live(e.t, `${this.name(e.a)} calls round for ${this.name(e.b)}, and they walk ${this.at(e.place).replace(/^(on|at|under|by) /, 'to ')} together.`);
         break;
       }
+      case 'dream_formed':
+        this.live(e.t, `${this.name(e.who)} has a new hope: ${(this.you ? e.title.replace(/the steward/g, 'you') : e.title).replace(/^./, (c) => c.toLowerCase())}.`);
+        break;
       case 'aspiration': {
+        if (e.kind) {
+          const line = e.done ? DREAM_DONE_LINES[e.kind] : undefined;
+          if (line) {
+            const p = residentDef(e.who).pronouns;
+            const x = e.subject === 'steward' && this.you ? 'you' : subjectWords(this.state, e.subject);
+            this.live(
+              e.t,
+              line
+                .replace(/\{name\}/g, this.name(e.who))
+                .replace(/\{x\}/g, x)
+                .replace(/\{partner\}/g, e.partner ? this.name(e.partner) : 'a friend')
+                .replace(/\{subj\}/g, p.subj)
+                .replace(/\{yourStep\}/g, this.you ? 'your step' : "the steward's step"),
+            );
+          }
+          break;
+        }
         const line = ASPIRATION_LINES[`${e.who}:${e.stage}${e.outcome ? `:${e.outcome}` : ''}`];
         if (!line) break;
         const partner = e.partner ? this.name(e.partner) : 'someone';

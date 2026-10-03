@@ -23,6 +23,12 @@ This repository currently holds **M1 and M1.5 of the headless "radio play"**. M1
 
 The journal shows what someone is hoping for, their next step, and the top things on their mind with the reason for each.
 
+**M3b and M3c (in progress)** give you ways to act through people:
+- When one dream is done, a new one forms from what the resident has lived through.
+- You can talk to anyone and ask them favours: cut timber, bring in a catch, work the garden, clear wild land, look in on someone, or make peace with someone. They say yes or no for real reasons.
+- Wild woods ring the valley, and residents can clear them to make room.
+- Build an empty cottage and someone new moves in. Each newcomer is generated with their own personality, which is shaped by the town you've built.
+
 You are the steward.
 
 ## Running it
@@ -37,7 +43,7 @@ npm run e2e                                               # browser tests (Playw
 npm run radio -- --scenario bakery --seed 1 --days 12    # the radio play
 npm run radio -- --scenario quiet --steward neglectful --days 28   # the same town, badly looked after
 npm run inspect -- --scenario bakery --days 10 --resident ada   # one mind, with its "Why?" chains
-npm run soak -- --seeds 10 --days 28                     # many towns, checked for degenerate states
+npm run soak -- --seeds 10 --days 28 [--newcomers]       # many towns, checked for degenerate states
 npm test                                                  # determinism, memory, twin and invariant tests
 npm run typecheck
 ```
@@ -48,6 +54,9 @@ In the browser, URL parameters choose the town: `?scenario=bakery&seed=2&steward
 - **Look:** drag to move the view, right-drag or middle-drag to turn it around the town, wheel or +/- to zoom. Q/E snap by quarter turns.
 - **Time:** space pauses, 0–4 set the speed.
 - **Building:** open **Build ▾** and pick a building; each card shows its timber cost, what it gives off, and who it's likely to please. Click a free spot to place it, R rotates, Esc returns to looking. The **Dreams** group holds the orchard, glasshouse and banner pole that residents' dreams ask for.
+- **People:** click someone (or pick them in the Journal) to see their personality, mood and hopes. Talk with them, and ask a favour, from the panel there.
+- **Land:** click a patch of wild woods to see whether it's open for clearing, and ask someone to help clear it.
+- **The log:** Highlights, Story and Everything filters. Runs of lines about one person fold under "+N more".
 - **Answering:** proposals pop up for a decision. The notice board, which rolls up like a scroll, shows the season's Town Wishes and what residents are asking of you. The **You** tab shows how each resident sees you, and why.
 
 Sample output from the text tools is in `docs/samples/`.
@@ -63,6 +72,7 @@ Sample output from the text tools is in `docs/samples/`.
 - `approve`, `decline`.
 - `neglectful`: never answers.
 - `random`: what the soak uses.
+- `favours`: considerate, plus one favour a day and a cottage whenever no home is empty. M3c's tests use it.
 - `none`.
 
 ## Layout

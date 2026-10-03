@@ -3,7 +3,7 @@
 
 import { buildingDef } from '../content/buildings.js';
 import { scenario as getScenario } from '../scenarios/index.js';
-import { attachSteward } from '../scenarios/steward.js';
+import { attachSteward, cottageSpot } from '../scenarios/steward.js';
 import { chance, deriveSeed, intBetween, pick, type RngHolder } from '../sim/rng.js';
 import { Simulation } from '../sim/sim.js';
 import { TICKS_PER_DAY, at } from '../sim/time.js';
@@ -15,6 +15,8 @@ export interface SoakOptions {
   seeds: number;
   days: number;
   firstSeed?: number;
+  /** Also build a cottage every nine days, so newcomers move in (M3c). */
+  newcomers?: boolean;
 }
 
 export interface RunMetrics {
@@ -57,7 +59,7 @@ const STEWARD_BUILDS = ['bench', 'flowerbed', 'hedge', 'garden', 'workshop', 'te
 /** The window at the end of the run that the degeneracy checks look at. */
 const WINDOW_DAYS = 7;
 
-export function soakRun(scenarioName: string, seed: number, days: number): RunMetrics {
+export function soakRun(scenarioName: string, seed: number, days: number, newcomers = false): RunMetrics {
   const sim = Simulation.fromScenario({ ...getScenario(scenarioName), commands: [] }, seed);
   attachSteward(sim, 'random');
   const steward: RngHolder = { rng: deriveSeed(seed, 'soak-steward') };
@@ -96,6 +98,12 @@ export function soakRun(scenarioName: string, seed: number, days: number): RunMe
   const flags: string[] = [];
 
   for (let day = 1; day <= days; day++) {
+    // With newcomers on: a cottage every nine days, so the town grows (M3c).
+    if (newcomers && day % 9 === 0) {
+      sim.runUntil(at(day, 9));
+      const spot = cottageSpot(sim);
+      if (spot && sim.canAfford('cottage')) sim.build('cottage', spot[0], spot[1]);
+    }
     // Every few days the steward builds something somewhere; now and then removes something.
     if (day % 3 === 0) {
       sim.runUntil(at(day, 10));
@@ -208,7 +216,7 @@ export function soakRun(scenarioName: string, seed: number, days: number): RunMe
 export function soak(opts: SoakOptions): { runs: RunMetrics[]; flagged: boolean; text: string } {
   const first = opts.firstSeed ?? 1;
   const runs: RunMetrics[] = [];
-  for (let s = first; s < first + opts.seeds; s++) runs.push(soakRun(opts.scenario, s, opts.days));
+  for (let s = first; s < first + opts.seeds; s++) runs.push(soakRun(opts.scenario, s, opts.days, opts.newcomers ?? false));
   const lines: string[] = [];
   lines.push(`Soak: scenario "${opts.scenario}", ${opts.seeds} seeds x ${opts.days} days (metrics over the last ${Math.min(opts.days, WINDOW_DAYS)} days)`);
   lines.push('seed  mood  minDisp  friends  rivals  left  leaving  notable/d  talk/d  beliefs  built/removed  args  story  busiest');

@@ -415,6 +415,21 @@ Grammar-generated dialogue is the hardest thing to localise, because of gender a
 
 M1 is the most important de-risking step: **if the town isn't interesting as text, graphics won't save it.**
 
+**M1 status (2026-10-03): built.** Measured against the three predeclared criteria:
+
+- **Twin tests: met.** They pass on seeds 1–5 (`test/twins.test.ts`).
+  - Night noise from a bakery next door becomes a belief and a request, and the same bakery across town produces neither.
+  - Answering the request earns the steward trust, and ignoring it costs trust.
+  - A grievance planted in one resident reaches others as hearsay, and nobody hears it in the twin without the grievance.
+  - A fond memory of the bench draws Fen back to it.
+- **10-year soak: met.** Five seeds × 280 days, with a steward who builds and removes things at random, showed no degenerate state. Mean mood was 0.82–0.84, the minimum disposition was 0.72, there were 14–25 of 30 directed friend pairs, and the last week had 4–14 notable events per day.
+- **Radio-play read: partly met.** The bakery arc reads well end to end: three bad nights, a request, the hedge, gratitude, and then Ada telling people that the steward listens. Grief and reminiscing about the felled oak come out of the sim unscripted. But the first three days are thin, and the in-between text leans on compliments and nostalgia for the teahouse.
+
+**Findings that shape the next chunk:**
+- **Too little friction.** Across all soaks there were 2 rival pairs in total, no departures and no "thinking of leaving". The structured mind is stable, but too gentle to generate its own drama.
+- **Stories need a push.** Story density depends heavily on steward actions. The storyteller and events (spec 4.4) are needed for pacing, especially early in the game.
+- **One dominant gathering place.** The teahouse becomes the social centre in almost every seed, because of a positive feedback loop between fond beliefs and place choice. Layout doesn't yet do enough to spread social life around the town.
+
 ---
 
 ## 10. Risks

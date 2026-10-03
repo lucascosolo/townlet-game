@@ -22,6 +22,7 @@ export const RESIDENTS: ResidentDef[] = [
     wake: h(6, 30),
     sleep: h(21, 30),
     aspiration: 'Plant the orchard her sister planned.',
+    birthday: 11,
   },
   {
     id: 'bram',
@@ -38,6 +39,7 @@ export const RESIDENTS: ResidentDef[] = [
     wake: h(3, 30),
     sleep: h(20, 0),
     aspiration: 'Bake for the whole valley at the harvest festival.',
+    birthday: 3,
   },
   {
     id: 'fen',
@@ -53,6 +55,7 @@ export const RESIDENTS: ResidentDef[] = [
     wake: h(5, 30),
     sleep: h(22, 0),
     aspiration: 'Teach someone to fish properly.',
+    birthday: 19,
   },
   {
     id: 'juniper',
@@ -68,6 +71,7 @@ export const RESIDENTS: ResidentDef[] = [
     wake: h(7, 30),
     sleep: h(23, 30),
     aspiration: 'Build a glasshouse the town can use all winter.',
+    birthday: 25,
   },
   {
     id: 'marlow',
@@ -83,6 +87,7 @@ export const RESIDENTS: ResidentDef[] = [
     wake: h(7, 0),
     sleep: h(23, 0),
     aspiration: 'Decide whether to stay or follow the trade cart.',
+    birthday: 8,
   },
   {
     id: 'wren',
@@ -98,6 +103,7 @@ export const RESIDENTS: ResidentDef[] = [
     wake: h(8, 0),
     sleep: h(23, 30),
     aspiration: "Paint the town's banner.",
+    birthday: 15,
   },
 ];
 

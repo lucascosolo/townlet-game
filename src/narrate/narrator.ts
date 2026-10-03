@@ -5,6 +5,7 @@
 
 import { buildingDef } from '../content/buildings.js';
 import { residentDef } from '../content/residents.js';
+import { DILEMMA_NAMES, GATHERING_START, PREPOSITIONS, PROPOSALS } from '../content/story.js';
 import { BELIEF_STATEMENTS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
 import { chance, deriveSeed, pick, type RngHolder } from '../sim/rng.js';
 import type { Simulation } from '../sim/sim.js';
@@ -78,6 +79,10 @@ export class Narrator {
   subjectName(subject: SubjectId): string {
     if (subject === 'steward') return 'the steward';
     if (subject.startsWith('r:')) return this.name(subject.slice(2));
+    if (subject.startsWith('m:')) {
+      const m = this.state.story.memories.find((x) => x.id === Number(subject.slice(2)));
+      return m ? m.label : 'that day';
+    }
     const id = Number(subject.slice(2));
     const b = this.state.buildings.find((x) => x.id === id);
     if (!b) return 'somewhere';
@@ -87,6 +92,12 @@ export class Narrator {
       if (owners.length > 0) return `${owners.join(' and ')}'s ${def.name.toLowerCase()}`;
     }
     return `the ${def.name.toLowerCase()}`;
+  }
+
+  /** "on the commons", "at the teahouse", "under the old oak". */
+  at(buildingId: number): string {
+    const b = this.state.buildings.find((x) => x.id === buildingId);
+    return `${PREPOSITIONS[b?.type ?? ''] ?? 'at'} ${this.subjectName(`b:${buildingId}`)}`;
   }
 
   private where(buildingId: number): string {
@@ -130,7 +141,9 @@ export class Narrator {
     const def = residentDef(who);
     const options = lines?.[def.voice.register] ?? lines?.plain ?? ['...'];
     let text = sentenceCase(this.fill(pick(this.rng, options), FIRST_PERSON, vars));
-    const tics = def.voice.tics.filter((t) => !text.toLowerCase().includes(t.toLowerCase()));
+    // No tic on a line that already opens with an interjection or a name.
+    const opensLoud = /^(Oh|Ha|Ooh|Hey|Listen|Kaboom|What)\b/.test(text) || this.keepsCapital(text) && !/^I\b/.test(text);
+    const tics = opensLoud ? [] : def.voice.tics.filter((t) => !text.toLowerCase().includes(t.toLowerCase()));
     if (tics.length > 0 && chance(this.rng, 0.25)) {
       const tic = pick(this.rng, tics);
       if (tic.endsWith('.') || tic.endsWith('!')) text = `${tic} ${text}`;
@@ -261,8 +274,118 @@ export class Narrator {
         this.board.push(() => `${this.name(e.who)} has packed up and left the valley.`);
         break;
       case 'perceived':
+      case 'town_memory':
+        break;
+      case 'gathering':
+        this.gathering(e);
+        break;
+      case 'weather':
+        if (e.kind === 'rain') this.board.push(() => 'Rain today. The paths will be muddy.');
+        else this.live(e.t, 'Dark clouds pile up over the valley. A storm is coming.');
+        break;
+      case 'dilemma_posted':
+        this.board.push(
+          () =>
+            `${this.name(e.dilemma.proposer)} proposes: ${this.voice(e.dilemma.proposer, PROPOSALS[e.dilemma.type])} (Approve or decline on the board.)`,
+        );
+        break;
+      case 'dilemma_closed':
+        this.dilemmaClosed(e);
+        break;
+      case 'story':
+        this.story(e);
         break;
     }
+  }
+
+  private names(ids: string[]): string {
+    const n = ids.map((id) => this.name(id));
+    return n.length <= 1 ? (n[0] ?? 'nobody') : `${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`;
+  }
+
+  /** Before dawn it goes on the board; after, it is narrated as it happens. */
+  private announce(t: number, text: string): void {
+    if (minuteOf(t) < DAWN_MINUTE) this.board.push(() => text);
+    else this.live(t, text);
+  }
+
+  private gathering(e: Extract<SimEvent, { type: 'gathering' }>): void {
+    const g = e.gathering;
+    const at = this.at(g.placeId);
+    if (e.phase === 'announced') {
+      if (g.kind === 'festival') this.announce(e.t, `Tomorrow evening: ${g.label}, ${at}.`);
+      else if (g.kind === 'trade_cart') this.announce(e.t, `Pip's trade cart is due ${at} this morning.`);
+      else if (g.kind === 'market') this.announce(e.t, `It's market day ${at}.`);
+      else if (g.kind === 'musician') this.announce(e.t, `A travelling fiddler wanders into the valley. There will be music ${at} tonight.`);
+      else if (g.kind === 'contraption') this.announce(e.t, `${g.label} will be unveiled ${at} tomorrow afternoon.`);
+      return;
+    }
+    if (e.phase === 'start') {
+      const template = GATHERING_START[g.kind] ?? '{festival} begins {at}.';
+      this.live(e.t, cap(template.replace('{at}', at).replace('{festival}', g.label)));
+      return;
+    }
+    if (g.kind === 'trade_cart' || g.kind === 'musician' || g.kind === 'market') {
+      const who = g.attendees.length > 0 ? `${this.names(g.attendees)} came by.` : 'Hardly anyone came.';
+      this.live(e.t, `${cap(g.label)} packs up. ${who}`);
+    }
+  }
+
+  private story(e: Extract<SimEvent, { type: 'story' }>): void {
+    const [first, second] = e.cast;
+    switch (e.id) {
+      case 'favour':
+        this.announce(
+          e.t,
+          e.ok
+            ? `${this.name(first as string)} asked ${this.name(second as string)} to help ${e.topic}, and ${this.name(second as string)} did.`
+            : `${this.name(first as string)} asked ${this.name(second as string)} to help ${e.topic}. ${this.name(second as string)} was too busy.`,
+        );
+        break;
+      case 'birthday': {
+        const givers = e.cast.slice(1);
+        this.announce(e.t, `It's ${this.name(first as string)}'s birthday. ${givers.length > 0 ? `${this.names(givers)} remembered.` : 'Nobody seems to have remembered.'}`);
+        break;
+      }
+      case 'cold':
+        this.announce(e.t, `${this.name(first as string)} has come down with a cold.`);
+        break;
+      case 'sick_visit':
+        this.live(e.t, `${this.name(second as string)} brings ${this.name(first as string)} soup and sits with ${residentDef(first as string).pronouns.obj} a while.`);
+        break;
+      case 'sick_alone':
+        this.live(e.t, `Nobody comes by to see ${this.name(first as string)}.`);
+        break;
+      case 'storm_passed':
+        this.announce(e.t, 'The storm has blown itself out. Neighbours check on one another.');
+        break;
+      case 'festival_success': {
+        const label = e.topic ? this.subjectName(e.topic) : 'The festival';
+        const absent = this.state.order.filter((id) => !e.cast.includes(id) && !this.state.residents[id]?.departed);
+        this.live(e.t, `${label} winds down. ${e.cast.length > 0 ? `${this.names(e.cast)} were there` : 'Hardly anyone came'}${absent.length > 0 ? `; ${this.names(absent)} stayed away` : ''}.`);
+        break;
+      }
+      case 'contraption_success':
+        this.live(e.t, `${e.topic ? this.subjectName(e.topic) : 'The contraption'} whirs, clanks, and works! ${this.names(e.cast)} cheer.`);
+        break;
+      case 'contraption_failure':
+        this.live(e.t, `${e.topic ? this.subjectName(e.topic) : 'The contraption'} goes off with a bang and a puff of smoke.`);
+        break;
+    }
+  }
+
+  private dilemmaClosed(e: Extract<SimEvent, { type: 'dilemma_closed' }>): void {
+    const d = e.dilemma;
+    const what = `${this.name(d.proposer)}'s ${DILEMMA_NAMES[d.type]}`;
+    const pleased = e.reactions.filter((x) => x.valence > 0 && x.who !== d.proposer).map((x) => x.who);
+    const displeased = e.reactions.filter((x) => x.valence < 0 && x.who !== d.proposer).map((x) => x.who);
+    let text: string;
+    if (d.status === 'approved') text = `The steward approves ${what}. ${this.name(d.proposer)} is delighted.`;
+    else if (d.status === 'declined') text = `The steward declines ${what}. ${this.name(d.proposer)} is disappointed.`;
+    else text = `${cap(what)} went unanswered. ${this.name(d.proposer)} takes it badly.`;
+    if (pleased.length > 0) text += ` ${this.names(pleased)} ${pleased.length > 1 ? 'are' : 'is'} glad.`;
+    if (displeased.length > 0) text += ` ${this.names(displeased)} ${displeased.length > 1 ? 'are' : 'is'} not pleased.`;
+    this.announce(e.t, text);
   }
 
   private exchange(e: Extract<SimEvent, { type: 'exchange' }>): void {
@@ -294,9 +417,11 @@ export class Narrator {
         text = `${at}${a} to ${b}: ${this.voice(e.a, SPEECH.compliment, { other: b })}`;
         break;
       }
-      case 'argue':
-        text = `${at}${a} and ${b} have words. ${this.voice(e.a, SPEECH.argue, { other: b })}`;
+      case 'argue': {
+        const about = e.topic ? ` about ${this.subjectName(e.topic.subject)}` : '';
+        text = `${at}${a} and ${b} have words${about}. ${this.voice(e.a, SPEECH.argue, { other: b })}`;
         break;
+      }
       case 'apologize':
         text = e.ok ? `${at}${a} finds ${b}. ${this.voice(e.a, SPEECH.apologize, { other: b })}` : `${a} tries to apologise to ${b}, who isn't ready to hear it.`;
         break;
@@ -310,7 +435,8 @@ export class Narrator {
         if (this.opts.verbose) text = `${at}${a} and ${b}: ${e.kind.replace('_', ' ')}.`;
     }
     if (!text) return;
-    if (!this.opts.verbose && this.exchangeLinesToday >= this.opts.exchangeLinesPerDay) return;
+    const important = e.kind === 'argue' || e.kind === 'apologize' || e.kind === 'comfort';
+    if (!important && !this.opts.verbose && this.exchangeLinesToday >= this.opts.exchangeLinesPerDay) return;
     this.exchangeLinesToday++;
     this.live(e.t, text);
   }

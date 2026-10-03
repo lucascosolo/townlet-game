@@ -55,14 +55,32 @@ export function emissionAt(b: BuildingState, x: number, y: number, worked: Reado
   return out;
 }
 
-/** Ambient qualities at a tile: the sum of every live building's emission, clamped to [0, 1]. */
-export function ambientAt(state: SimState, x: number, y: number, worked: ReadonlySet<number>): QualityMap {
+/** Night storms are loud everywhere, indoors or out. */
+export const STORM_NOISE = 0.55;
+
+/**
+ * Ambient qualities at a tile: every live building's emission, plus running gatherings (a
+ * market is noisy) and the weather, clamped to [0, 1]. `weather: false` leaves the storm out,
+ * to tell whether a building alone is the cause.
+ */
+export function ambientAt(state: SimState, x: number, y: number, worked: ReadonlySet<number>, opts: { weather?: boolean } = {}): QualityMap {
   const out = emptyQualities();
   for (const b of state.buildings) {
     if (b.removed) continue;
     const e = emissionAt(b, x, y, worked);
     for (const q of QUALITIES) out[q] += e[q];
   }
+  for (const g of state.story.gatherings) {
+    if (!g.emits || state.tick < g.from || state.tick >= g.until) continue;
+    const b = state.buildings.find((bb) => bb.id === g.placeId);
+    if (!b || b.removed) continue;
+    const r = g.radius ?? 2;
+    const d = distanceTo(b, x, y);
+    if (d > r) continue;
+    const f = 1 - d / (r + 1);
+    for (const q of QUALITIES) out[q] += (g.emits[q] ?? 0) * f;
+  }
+  if (opts.weather !== false && state.story.weather.kind === 'storm' && state.tick < state.story.weather.until) out.noise += STORM_NOISE;
   for (const q of QUALITIES) out[q] = Math.min(1, Math.max(0, out[q]));
   return out;
 }

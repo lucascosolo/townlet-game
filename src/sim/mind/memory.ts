@@ -16,6 +16,8 @@ import type {
 import type { MindContext, Perception } from './mind.js';
 
 export const TRACE_DECAY = 0.7;
+/** Feelings about people linger longer than impressions of places: grudges and gratitude both. */
+export const PERSON_TRACE_DECAY = 0.85;
 export const FORM_THRESHOLD = 0.9;
 export const BELIEF_DECAY = 0.96;
 export const BELIEF_FLOOR = 0.12;
@@ -161,8 +163,9 @@ export function consolidate(ctx: MindContext, r: ResidentState): void {
 
   // 1. Old unconsolidated evidence fades.
   for (const [k, tr] of Object.entries(r.traces)) {
-    tr.evidence *= TRACE_DECAY;
-    tr.sumI *= TRACE_DECAY;
+    const decay = tr.subject.startsWith('r:') ? PERSON_TRACE_DECAY : TRACE_DECAY;
+    tr.evidence *= decay;
+    tr.sumI *= decay;
     if (Math.abs(tr.evidence) < 0.05) delete r.traces[k];
   }
 

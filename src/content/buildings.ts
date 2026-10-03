@@ -36,6 +36,7 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   commons: {
     type: 'commons',
+    comfortable: 5,
     name: 'Commons',
     kind: 'social',
     size: [3, 3],
@@ -45,6 +46,7 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   teahouse: {
     type: 'teahouse',
+    comfortable: 3,
     name: 'Teahouse',
     kind: 'social',
     size: [2, 2],
@@ -55,6 +57,7 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   oak: {
     type: 'oak',
+    comfortable: 3,
     name: 'Old oak',
     kind: 'nature',
     size: [1, 1],
@@ -131,6 +134,7 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   bench: {
     type: 'bench',
+    comfortable: 2,
     name: 'Bench',
     kind: 'decor',
     size: [1, 1],

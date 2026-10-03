@@ -26,6 +26,15 @@ export const BELIEF_STATEMENTS: Record<string, string> = {
   improves_town: 'the steward is making the town better',
   spoils_town: "the steward doesn't think things through",
   destroyed_place: "the steward doesn't care what matters here",
+  wonderful_time: '{s} was wonderful',
+  glorious_failure: '{s} was a glorious mess',
+  too_noisy: '{s} was far too loud',
+  weathered_together: 'the town came through {s} together',
+  kept_awake: "{s} cost {obj} a night's sleep",
+  let_me_down: '{S} let {obj} down',
+  decided_well: 'the steward makes good decisions',
+  decided_badly: 'the steward makes poor decisions',
+  turned_me_down: 'the steward turned {obj} down',
 };
 
 /** Thoughts and speech, keyed by aspect and sign ("+" or "-"). */
@@ -85,6 +94,27 @@ export const THOUGHTS: Record<string, Lines> = {
     warm: ['A place of my own. I could cry.'],
     chatty: ['A place of my own! Wait till they taste what I make here.', '{S}, all mine! Ha!'],
     dreamy: ['{S} is mine to fill with things.'],
+  },
+  'wonderful_time+': {
+    plain: ['{S}. Good night, that.'],
+    formal: ['{S} was a credit to the town.'],
+    warm: ['Remember {s}? I still smile about it.'],
+    chatty: ['{S}! Best night of the year, you know!'],
+    dreamy: ['I can still hear {s} if I listen.'],
+  },
+  'weathered_together+': {
+    plain: ['We got through {s}.'],
+    formal: ['The town showed its mettle during {s}.'],
+    warm: ['Everyone looked out for each other after {s}.'],
+    chatty: ['What a night {s} was! And we all pulled together!'],
+    dreamy: ['{S} washed something clean.'],
+  },
+  'glorious_failure+': {
+    plain: ['{S}. Went bang. Worth it.'],
+    formal: ['{S} was an instructive failure.'],
+    warm: ['Oh, {s}! I still laugh about it.'],
+    chatty: ['Kaboom! {S}! Ha!'],
+    dreamy: ['{S} failed so beautifully.'],
   },
   'lost_place-': {
     plain: ['{S} is gone.'],

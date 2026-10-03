@@ -20,6 +20,7 @@ import { ambientAt, liveBuildings, placeTile, walkDistance } from '../world.js';
 import type { Mind, MindContext, Perception, Setting } from './mind.js';
 import { addEmotion, beliefsAbout, consolidate, opinion, perceive } from './memory.js';
 import { nightlyRelationships, rel } from './relationships.js';
+import { gatheringPull } from '../story/director.js';
 
 export function presentAt(state: SimState, placeId: number, except?: string): ResidentState[] {
   return state.order
@@ -59,7 +60,7 @@ export function gossipTopic(r: ResidentState, other: ResidentState, tick: number
     let score = Math.abs(b.valence) * b.strength;
     if (b.subject === 'steward' || b.subject.startsWith('r:')) score *= 1.2;
     if (b.valence < 0) score *= 1.2;
-    if (MILD_ASPECTS.has(b.aspect)) score *= 0.5;
+    if (MILD_ASPECTS.has(b.aspect)) score *= 0.35;
     const theirs = opinion(other, b.subject);
     if (Math.abs(theirs) > 0.2 && Math.sign(theirs) === Math.sign(b.valence)) score *= 0.3;
     if (!best || score > best.score) best = { key, score };
@@ -70,7 +71,8 @@ export function gossipTopic(r: ResidentState, other: ResidentState, tick: number
 /** A place both remember fondly, other than where they are standing, not recently reminisced about. */
 export function sharedFondPlace(r: ResidentState, o: ResidentState, here: number | null, tick: number): string | null {
   for (const b of Object.values(r.beliefs)) {
-    if (!b.subject.startsWith('b:') || b.valence <= 0 || b.strength < 0.3) continue;
+    // Places, and things the town lived through together.
+    if (!(b.subject.startsWith('b:') || b.subject.startsWith('m:')) || b.valence <= 0 || b.strength < 0.3) continue;
     if (here !== null && b.subject === `b:${here}`) continue;
     const last = r.told[`reminisce|${o.id}|${b.subject}`];
     if (last !== undefined && tick - last < 3 * 1440) continue;
@@ -96,6 +98,9 @@ export const StructuredMind: Mind = {
     pressure.company -= companyOvershoot(r.needs.company, r.setpoints.company, def);
 
     const sleepTime = inWindow(minute, def.sleep, def.wake);
+    const ill = r.coldUntil > tick;
+    const raining = ctx.state.story.weather.kind !== 'clear' && tick < ctx.state.story.weather.until;
+    const curious = unit(def.traits.curious);
     const candidates: Candidate[] = [];
     const add = (activity: ActivityId, placeId: number, routine: number) => {
       const b = ctx.state.buildings.find((x) => x.id === placeId);
@@ -107,8 +112,16 @@ export const StructuredMind: Mind = {
       const tile = placeTile(b);
       if (activity !== 'sleep') {
         score += 0.6 * prefScore(prefs, ambientAt(ctx.state, tile[0], tile[1], ctx.worked));
-        score += 0.8 * opinion(r, `b:${placeId}`);
+        score += 0.4 * opinion(r, `b:${placeId}`);
         score -= 0.015 * walkDistance(from, tile);
+        if (activity === 'socialize' || activity === 'stroll') {
+          // Somewhere not seen for a while has a pull of its own, more so for the curious.
+          const last = r.lastVisit[String(placeId)];
+          const since = last === undefined ? 2 * 1440 : tick - last;
+          score += 0.45 * (0.4 + curious) * Math.min(1, since / (2 * 1440));
+          if (raining && buildingDef(b.type).kind !== 'social') score -= 0.6;
+        }
+        if (ill) score += activity === 'rest' ? 1.2 : -1.2;
       }
       if (activity === 'socialize' || (activity === 'eat' && placeId !== r.homeId)) {
         let pull = 0;
@@ -117,7 +130,10 @@ export const StructuredMind: Mind = {
           const x = rel(r, o.id);
           pull += 0.4 * x.affinity + 0.1 * x.familiarity;
         }
-        score += clamp(pull, -0.8, 0.8) - 0.1 * others.length * (1 - s01);
+        score += clamp(pull, -0.5, 0.5) - 0.1 * others.length * (1 - s01);
+        // Past its comfortable number a place feels crowded, to everyone.
+        const comfortable = buildingDef(b.type).comfortable;
+        if (comfortable !== undefined) score -= 0.3 * Math.max(0, others.length + 1 - comfortable);
       }
       score += rand(r) * 0.3;
       candidates.push({ activity, placeId, score });
@@ -136,6 +152,11 @@ export const StructuredMind: Mind = {
         }
       }
       const evening = inWindow(minute, 17 * 60, def.sleep);
+      // Festivals, visitors and markets: a reason to be somewhere now, or soon.
+      for (const g of ctx.state.story.gatherings) {
+        if (tick < g.from - 45 || tick >= g.until - 20) continue;
+        add('socialize', g.placeId, 0.6 + gatheringPull(g, r));
+      }
       for (const b of liveBuildings(ctx.state)) {
         const bd = buildingDef(b.type);
         if (bd.kind === 'home') continue;
@@ -286,8 +307,12 @@ export const StructuredMind: Mind = {
   },
 
   consolidate(ctx, r) {
+    // Everything the steward did today, felt as one running account, before the buffer is
+    // folded into beliefs. Beliefs about the steward still form when an aspect repeats.
+    let stewardEvidence = 0;
+    for (const ep of r.buffer) if (ep.subject === 'steward' && ep.source !== 'recalled') stewardEvidence += ep.valence * ep.intensity;
     consolidate(ctx, r);
-    nightlyRelationships(ctx, r);
+    nightlyRelationships(ctx, r, stewardEvidence);
   },
 };
 

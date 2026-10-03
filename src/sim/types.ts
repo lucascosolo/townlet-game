@@ -48,6 +48,8 @@ export interface BuildingDef {
   shift?: [number, number];
   /** Opening hours for public places, [start, end) in minutes of the day. */
   open?: [number, number];
+  /** For places to gather: how many people fit before it feels crowded. */
+  comfortable?: number;
 }
 
 export interface Pronouns {
@@ -73,6 +75,8 @@ export interface ResidentDef {
   wake: number;
   sleep: number;
   aspiration: string;
+  /** Day of the year (1-28) the resident celebrates. */
+  birthday: number;
 }
 
 // ---------------------------------------------------------------- runtime state
@@ -202,6 +206,10 @@ export interface ResidentState {
   /** Places already appraised this visit, so a long stay counts once. */
   visitAppraised: boolean;
   lastScentDay: number;
+  /** placeId -> tick of the last visit, for the pull of somewhere not seen in a while. */
+  lastVisit: Record<string, number>;
+  /** Tick until which the resident has a cold, or -1. */
+  coldUntil: number;
   rng: number;
 }
 
@@ -215,8 +223,86 @@ export interface Request {
   closedTick?: number;
 }
 
+// ---------------------------------------------------------------- story (spec 4.4)
+
+export type Tone = 'good' | 'bad' | 'neutral';
+
+export type GatheringKind = 'festival' | 'trade_cart' | 'musician' | 'market' | 'contraption';
+
+/** A time-boxed reason to be somewhere: a festival, a visitor, a market. */
+export interface Gathering {
+  id: number;
+  kind: GatheringKind;
+  label: string;
+  placeId: number;
+  from: number;
+  until: number;
+  /** Base pull on everyone, before values and traits. */
+  pull: number;
+  /** Values that make this gathering more appealing, and how much. */
+  appeal: Partial<Record<Value, number>>;
+  /** Extra ambient emission at the place while it runs (a market is noisy). */
+  emits?: Partial<QualityMap>;
+  radius?: number;
+  attendees: string[];
+  /** The town memory written when it ends, if it was memorable. */
+  memoryId?: number;
+}
+
+export type WeatherKind = 'clear' | 'rain' | 'storm';
+
+export interface Weather {
+  kind: WeatherKind;
+  until: number;
+}
+
+/** Two residents who will have words the next time they meet. */
+export interface Spark {
+  a: string;
+  b: string;
+  topic: SubjectId | null;
+  until: number;
+}
+
+export type DilemmaType = 'market_day' | 'night_baking' | 'contraption';
+export type DilemmaStatus = 'open' | 'approved' | 'declined' | 'lapsed';
+
+export interface Dilemma {
+  id: number;
+  type: DilemmaType;
+  proposer: string;
+  postedTick: number;
+  status: DilemmaStatus;
+  closedTick?: number;
+}
+
+/** Something the whole town lived through together (spec 4.2.3, collective memory). */
+export interface TownMemory {
+  id: number;
+  tick: number;
+  kind: 'festival' | 'storm' | 'contraption';
+  label: string;
+  placeId: number | null;
+  attendees: string[];
+}
+
+export interface StoryState {
+  rng: number;
+  nextId: number;
+  history: Array<{ id: string; tick: number; tone: Tone }>;
+  gatherings: Gathering[];
+  weather: Weather;
+  sparks: Spark[];
+  dilemmas: Dilemma[];
+  memories: TownMemory[];
+  /** Approved standing arrangements. */
+  marketDay: boolean;
+  /** Buildings working outside their shift, [buildingId, from, until]. */
+  extraShifts: Array<[number, number, number]>;
+}
+
 export interface SimState {
-  version: 1;
+  version: 2;
   seed: number;
   tick: number;
   width: number;
@@ -229,6 +315,7 @@ export interface SimState {
   requests: Request[];
   nextEpisodeId: number;
   nextRequestId: number;
+  story: StoryState;
 }
 
 // ---------------------------------------------------------------- events
@@ -261,7 +348,13 @@ export type SimEvent =
   | { t: number; type: 'grief'; who: string; building: number; btype: string }
   | { t: number; type: 'thinking_of_leaving'; who: string }
   | { t: number; type: 'decided_to_stay'; who: string }
-  | { t: number; type: 'left_town'; who: string };
+  | { t: number; type: 'left_town'; who: string }
+  | { t: number; type: 'story'; id: string; tone: Tone; cast: string[]; place?: number; topic?: SubjectId; ok?: boolean }
+  | { t: number; type: 'gathering'; phase: 'announced' | 'start' | 'end'; gathering: Gathering }
+  | { t: number; type: 'weather'; kind: WeatherKind }
+  | { t: number; type: 'dilemma_posted'; dilemma: Dilemma }
+  | { t: number; type: 'dilemma_closed'; dilemma: Dilemma; reactions: Array<{ who: string; valence: number }> }
+  | { t: number; type: 'town_memory'; memory: TownMemory };
 
 export type ExchangeKind =
   | 'greet'

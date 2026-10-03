@@ -19,11 +19,16 @@ import { attachment, decayEmotions, emotionBalance, opinion } from './mind/memor
 import { newRelationship, rel } from './mind/relationships.js';
 import { StructuredMind } from './mind/structured.js';
 import { runExchange } from './social.js';
+import { activeGatherings, newStoryState, storyStep, type StoryHost } from './story/director.js';
+import { closeDilemma } from './story/dilemmas.js';
 import { DAWN_MINUTE, TICKS_PER_DAY, dayOf, minuteOf } from './time.js';
 import {
   NEEDS,
   STEWARD,
   type BuildingState,
+  type DilemmaType,
+  type ExchangeKind,
+  type SubjectId,
   type Need,
   type ResidentDef,
   type ResidentState,
@@ -34,7 +39,9 @@ import { ambientAt, canPlace, emptyQualities, getBuilding, liveBuildings, mainSo
 
 export type Command =
   | { at: number; kind: 'build'; type: string; x: number; y: number }
-  | { at: number; kind: 'remove'; x: number; y: number };
+  | { at: number; kind: 'remove'; x: number; y: number }
+  /** Answer the open dilemma of this type, if there is one. */
+  | { at: number; kind: 'decide'; dilemma: DilemmaType; option: 'approve' | 'decline' };
 
 export interface Scenario {
   name: string;
@@ -48,10 +55,13 @@ export interface Scenario {
 }
 
 const REQUEST_LAPSE_TICKS = 5 * TICKS_PER_DAY;
+/** Disposition below this for three mornings running starts thoughts of leaving; above the second ends them. */
+export const LEAVING_BELOW = 0.48;
+export const STAYING_ABOVE = 0.55;
 
 export function createState(scenario: Scenario, seed: number): SimState {
   const state: SimState = {
-    version: 1,
+    version: 2,
     seed,
     tick: 0,
     width: scenario.width,
@@ -63,6 +73,7 @@ export function createState(scenario: Scenario, seed: number): SimState {
     requests: [],
     nextEpisodeId: 1,
     nextRequestId: 1,
+    story: newStoryState(seed),
   };
   for (const b of scenario.buildings) {
     const err = canPlace(state, b.type, b.x, b.y);
@@ -105,6 +116,8 @@ export function createState(scenario: Scenario, seed: number): SimState {
       disturbedBy: [],
       visitAppraised: true,
       lastScentDay: 0,
+      lastVisit: {},
+      coldUntil: -1,
       rng: deriveSeed(seed, `r:${id}`),
     };
     state.residents[id] = r;
@@ -127,7 +140,7 @@ export function createState(scenario: Scenario, seed: number): SimState {
   return state;
 }
 
-export class Simulation {
+export class Simulation implements StoryHost {
   state: SimState;
   readonly mind: Mind;
   private listeners: Array<(e: SimEvent) => void> = [];
@@ -187,6 +200,27 @@ export class Simulation {
     return { state: this.state, tick: this.state.tick, worked: this.worked, emit: this.emit, def: residentDef };
   }
 
+  // StoryHost
+  mindContext(): MindContext {
+    return this.ctx();
+  }
+
+  emitEvent(e: SimEvent): void {
+    this.emit(e);
+  }
+
+  forceExchange(a: ResidentState, b: ResidentState, kind: ExchangeKind, placeId: number | null, topic?: SubjectId): void {
+    runExchange(this.ctx(), this.mind, a, b, kind, placeId === null ? 'passing' : 'together', placeId, topic);
+  }
+
+  /** The steward answers an open dilemma. */
+  decide(dilemmaId: number, option: 'approve' | 'decline'): void {
+    const d = this.state.story.dilemmas.find((x) => x.id === dilemmaId);
+    if (!d) throw new Error(`no dilemma ${dilemmaId}`);
+    if (d.status !== 'open') throw new Error(`dilemma ${dilemmaId} is already ${d.status}`);
+    closeDilemma(this, d, option === 'approve' ? 'approved' : 'declined');
+  }
+
   /** Feed an experience straight into a resident's mind (twin tests, scripted beats). */
   perceive(id: string, p: Perception): void {
     this.mind.perceive(this.ctx(), this.resident(id), p);
@@ -210,6 +244,8 @@ export class Simulation {
       const r = state.residents[id] as ResidentState;
       if (!r.departed && r.activity?.id === 'work' && r.at === r.activity.placeId) this.worked.add(r.at);
     }
+    for (const [id, from, until] of state.story.extraShifts) if (state.tick >= from && state.tick < until) this.worked.add(id);
+    storyStep(this);
     const ctx = this.ctx();
     const minute = minuteOf(state.tick);
     if (minute === DAWN_MINUTE) this.emit({ t: state.tick, type: 'dawn', day: dayOf(state.tick) });
@@ -226,8 +262,14 @@ export class Simulation {
   // ------------------------------------------------------------------ steward commands
 
   execute(c: Command): void {
-    if (c.kind === 'build') this.build(c.type, c.x, c.y);
-    else this.remove(c.x, c.y);
+    if (c.kind === 'build') {
+      // A scheduled build whose spot has since been taken is dropped, as a player would.
+      if (canPlace(this.state, c.type, c.x, c.y) === null) this.build(c.type, c.x, c.y);
+    } else if (c.kind === 'remove') this.remove(c.x, c.y);
+    else {
+      const d = this.state.story.dilemmas.find((x) => x.type === c.dilemma && x.status === 'open');
+      if (d) this.decide(d.id, c.option);
+    }
   }
 
   build(type: string, x: number, y: number): BuildingState {
@@ -355,9 +397,16 @@ export class Simulation {
     const amb = r.at !== null || r.path.length > 0 ? ambientAt(state, tile[0], tile[1], this.worked) : emptyQualities();
 
     if (sleeping) {
-      r.sleepNoiseMax = Math.max(r.sleepNoiseMax, amb.noise);
-      if (amb.noise > sleepNoiseThreshold(def)) {
-        delta.rest = ((ACTIVITY_EFFECTS.sleep.rest ?? 0) * 0.3) / 60;
+      const builtNoise = ambientAt(state, tile[0], tile[1], this.worked, { weather: false }).noise;
+      r.sleepNoiseMax = Math.max(r.sleepNoiseMax, builtNoise);
+      if (amb.noise > sleepNoiseThreshold(def)) delta.rest = ((ACTIVITY_EFFECTS.sleep.rest ?? 0) * 0.3) / 60;
+      if (amb.noise > sleepNoiseThreshold(def) && builtNoise <= sleepNoiseThreshold(def) && !r.disturbedBy.includes(-1)) {
+        // The storm, not a building: a shared night, remembered together.
+        r.disturbedBy.push(-1);
+        const storm = [...state.story.memories].reverse().find((m) => m.kind === 'storm');
+        if (storm) this.mind.perceive(ctx, r, { subject: `m:${storm.id}`, aspect: 'kept_awake', valence: -0.4, base: 0.3, source: 'witnessed', note: 'the storm kept me up' });
+      }
+      if (builtNoise > sleepNoiseThreshold(def)) {
         const src = mainSource(state, tile[0], tile[1], 'noise', this.worked);
         if (src && !r.disturbedBy.includes(src.id)) {
           r.disturbedBy.push(src.id);
@@ -372,12 +421,16 @@ export class Simulation {
             }
           }
           if (src.placedBy === 'steward') {
-            this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'spoils_town', valence: -0.5, base: base * 0.35, source: 'witnessed', note: `put the ${name} there` });
+            this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'spoils_town', valence: -0.5, base: base * 0.55, source: 'witnessed', note: `put the ${name} there` });
           }
         }
       }
     } else if (doing) {
       delta.comfort += (0.06 * prefScore(ambientPrefs(def), amb)) / 60;
+    }
+    if (r.coldUntil > tick) {
+      delta.comfort -= 0.03 / 60;
+      delta.rest -= 0.02 / 60;
     }
     for (const n of NEEDS) r.needs[n] = clamp(r.needs[n] + delta[n]);
 
@@ -428,6 +481,7 @@ export class Simulation {
     }
     r.at = next.placeId;
     r.activity = next;
+    r.lastVisit[String(next.placeId)] = this.state.tick;
     this.mind.onArrive(ctx, r, next.placeId);
   }
 
@@ -464,7 +518,8 @@ export class Simulation {
       // Ask only about a noise that actually disturbed last night, and only once at a time.
       if (!r.disturbedBy.includes(b.id)) continue;
       if (state.requests.some((q) => q.by === r.id && q.subject === bel.subject && q.status === 'open')) continue;
-      if (rel(r, STEWARD).trust < 0.3) continue;
+      // Even a resident who has stopped trusting the steward still says so: the player must
+      // always be able to find out what is wrong (pillar 3).
       const q = { id: state.nextRequestId++, by: r.id, kind: 'quieter_home' as const, subject: bel.subject, postedTick: tick, status: 'open' as const };
       state.requests.push(q);
       this.emit({ t: tick, type: 'request_posted', request: { ...q } });
@@ -487,17 +542,18 @@ export class Simulation {
     // Disposition and the slow decision to stay or go.
     if (r.dayMoodN > 0) {
       const dayMood = r.dayMoodSum / r.dayMoodN;
-      r.disposition = 0.75 * r.disposition + 0.25 * (0.8 * dayMood + 0.2 * (0.5 + 0.5 * opinion(r, STEWARD)));
+      // How the days feel, and how the steward is treating them.
+      r.disposition = 0.75 * r.disposition + 0.25 * (0.5 * dayMood + 0.5 * (0.5 + 0.5 * rel(r, STEWARD).affinity));
     }
     r.dayMoodSum = 0;
     r.dayMoodN = 0;
     if (!r.leaving) {
-      r.lowDays = r.disposition < 0.38 ? r.lowDays + 1 : 0;
+      r.lowDays = r.disposition < LEAVING_BELOW ? r.lowDays + 1 : 0;
       if (r.lowDays >= 3) {
         r.leaving = { sinceDay: day };
         this.emit({ t: tick, type: 'thinking_of_leaving', who: r.id });
       }
-    } else if (r.disposition > 0.45) {
+    } else if (r.disposition > STAYING_ABOVE) {
       r.leaving = null;
       r.lowDays = 0;
       this.emit({ t: tick, type: 'decided_to_stay', who: r.id });
@@ -543,6 +599,14 @@ export class Simulation {
           const y = members[j] as ResidentState;
           const drive = (r: ResidentState) => unit(residentDef(r.id).traits.sociable) + (r.setpoints.company - r.needs.company);
           const [a, b] = drive(y) > drive(x) ? [y, x] : [x, y];
+          // A brewing quarrel comes out the next time the two meet.
+          const sparks = this.state.story.sparks;
+          const si = sparks.findIndex((s) => (s.a === a.id && s.b === b.id) || (s.a === b.id && s.b === a.id));
+          if (si >= 0) {
+            const spark = sparks.splice(si, 1)[0];
+            runExchange(ctx, this.mind, a, b, 'argue', setting, placeId, spark?.topic ?? undefined);
+            continue;
+          }
           if (!this.mind.wantsToInteract(ctx, a, b, setting)) continue;
           const kind = this.mind.chooseExchange(ctx, a, b, setting, placeId);
           runExchange(ctx, this.mind, a, b, kind, setting, placeId);

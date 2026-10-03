@@ -59,15 +59,20 @@ function tagsFor(x: Relationship): RelTag[] {
  * relaxes toward neutral, familiarity fades without contact. The steward's affinity and trust
  * follow the resident's opinion of the steward.
  */
-export function nightlyRelationships(ctx: MindContext, r: ResidentState): void {
+export function nightlyRelationships(ctx: MindContext, r: ResidentState, stewardEvidence = 0): void {
   for (const [other, x] of Object.entries(r.rel)) {
     if (other === STEWARD) {
+      // The steward's standing: today's dealings move it directly; settled beliefs lean on it;
+      // with nothing happening it relaxes slowly back toward a mild default.
       const op = opinion(r, STEWARD);
-      x.affinity = clamp(x.affinity + 0.3 * (clamp(0.2 + 0.8 * op, -1, 1) - x.affinity), -1, 1);
-      x.trust = clamp(x.trust + 0.3 * (clamp(0.5 + 0.5 * op) - x.trust));
+      x.affinity = clamp(x.affinity + 0.03 * (0.2 - x.affinity) + 0.6 * stewardEvidence + 0.03 * op, -1, 1);
+      x.trust = clamp(x.trust + 0.03 * (0.5 - x.trust) + 0.3 * stewardEvidence + 0.02 * op);
       continue;
     }
-    x.affinity = clamp(x.affinity * 0.99 + 0.06 * opinion(r, `r:${other}`), -1, 1);
+    // Left alone, affinity settles toward how well the two fit: kindred spirits warm, poor
+    // matches cool a little. Beliefs about the person push on top of that.
+    const baseline = (compatibility(ctx.def(r.id), ctx.def(other)) - 0.6) * 1.5;
+    x.affinity = clamp(x.affinity + 0.015 * (baseline - x.affinity) + 0.06 * opinion(r, `r:${other}`), -1, 1);
     if (x.lastContact < ctx.tick - 1440) x.familiarity *= 0.99;
     const tags = tagsFor(x);
     const added = tags.filter((t) => !x.tags.includes(t));

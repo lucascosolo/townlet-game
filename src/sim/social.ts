@@ -7,7 +7,7 @@ import type { Mind, MindContext, Setting } from './mind/mind.js';
 import { opinion } from './mind/memory.js';
 import { adjust, rel, warmth } from './mind/relationships.js';
 import { gossipTopic, sharedFondPlace } from './mind/structured.js';
-import type { ExchangeKind, ResidentState } from './types.js';
+import type { ExchangeKind, ResidentState, SubjectId } from './types.js';
 
 const WARM: ExchangeKind[] = ['chat', 'compliment', 'comfort', 'reminisce', 'tease', 'share_meal'];
 
@@ -28,6 +28,8 @@ export function runExchange(
   kind: ExchangeKind,
   setting: Setting,
   placeId: number | null,
+  /** What an argument is about, when the storyteller knows. */
+  about?: SubjectId,
 ): void {
   const tick = ctx.tick;
   const da = ctx.def(a.id);
@@ -89,10 +91,21 @@ export function runExchange(
         source: 'recalled',
         note: `told ${db.name}`,
       });
+      // Reputation: what you hear about someone colours how you see them.
+      if (belief.subject.startsWith('r:')) {
+        adjust(b, belief.subject.slice(2), { affinity: belief.valence * belief.strength * credibility * 0.08 });
+      }
       const theirs = opinion(b, belief.subject);
       if (Math.abs(theirs) > 0.1 && Math.sign(theirs) !== Math.sign(belief.valence)) {
         ok = false;
         adjust(b, a.id, { affinity: -0.03 });
+        // A clash of opinions can boil over, more readily for the excitable.
+        const heat = Math.abs(theirs) * (1 - unit(db.traits.steady)) + Math.abs(belief.valence) * (1 - unit(da.traits.steady));
+        if (chance(b, clamp(0.25 * heat))) {
+          ctx.emit({ t: tick, type: 'exchange', kind, a: a.id, b: b.id, place: placeId, ok, topic: { subject: belief.subject, aspect: belief.aspect, valence: belief.valence } });
+          runExchange(ctx, mind, b, a, 'argue', setting, placeId, belief.subject);
+          return;
+        }
       } else if (Math.abs(theirs) > 0.1) {
         both(a, b, { affinity: 0.04 }, tick);
       }
@@ -141,7 +154,9 @@ export function runExchange(
       a.told[`reminisce|${b.id}|${place}`] = tick;
       b.told[`reminisce|${a.id}|${place}`] = tick;
       for (const r of [a, b]) {
-        const bel = Object.values(r.beliefs).filter((x) => x.subject === place && x.valence > 0).sort((x, y) => y.strength - x.strength)[0];
+        const bel = Object.values(r.beliefs)
+          .filter((x) => x.subject === place && x.valence > 0)
+          .sort((x, y) => y.strength - x.strength)[0];
         if (!bel) continue;
         topic ??= { subject: bel.subject, aspect: bel.aspect, valence: bel.valence };
         mind.perceive(ctx, r, { subject: bel.subject, aspect: bel.aspect, valence: bel.valence, base: 0.1, source: 'recalled', note: 'reminisced' });
@@ -167,7 +182,8 @@ export function runExchange(
       }
       break;
     case 'argue':
-      both(a, b, { affinity: -0.08, trust: -0.04 }, tick);
+      if (about) topic = { subject: about, aspect: 'disagreement', valence: 0 };
+      both(a, b, { affinity: -0.14, trust: -0.05 }, tick);
       ab.lastArgue = tick;
       ba.lastArgue = tick;
       for (const [x, y] of [
@@ -177,8 +193,8 @@ export function runExchange(
         mind.perceive(ctx, x, {
           subject: `r:${y.id}`,
           aspect: 'argued_with_me',
-          valence: -0.6,
-          base: 0.45,
+          valence: -0.8,
+          base: 0.6,
           source: 'witnessed',
           note: `argued with ${ctx.def(y.id).name}`,
           ...(placeId !== null ? { placeId } : {}),

@@ -10,9 +10,6 @@ import { gossipTopic, sharedFondPlace } from './mind/structured.js';
 import { voiceTopic } from './mind/thoughts.js';
 import type { ExchangeKind, MindMention, ResidentState, SubjectId } from './types.js';
 
-/** Minutes since the pair last talked before a pleasant exchange counts in full. */
-const WARMTH_GAP = 240;
-
 const WARM: ExchangeKind[] = ['chat', 'compliment', 'comfort', 'reminisce', 'tease', 'share_meal'];
 
 function both(a: ResidentState, b: ResidentState, d: { affinity?: number; trust?: number }, tick: number) {
@@ -40,12 +37,9 @@ export function runExchange(
   const db = ctx.def(b.id);
   const ab = rel(a, b.id);
   const ba = rel(b, a.id);
-  // Pleasant exchanges build affinity in proportion to how well the two fit. Talk soon after
-  // the last talk counts for less, so an afternoon together is worth a visit, not ten.
+  // Pleasant exchanges build affinity in proportion to how well the two fit.
   const fit = warmth(da, db);
-  const since = tick - (a.lastExchange[b.id] ?? -Infinity);
-  const fresh = Math.min(1, since / WARMTH_GAP);
-  const warm = (amount: number) => both(a, b, { affinity: amount * fit * fresh }, tick);
+  const warm = (amount: number) => both(a, b, { affinity: amount * fit }, tick);
   a.lastExchange[b.id] = tick;
   b.lastExchange[a.id] = tick;
   adjust(a, b.id, { familiarity: kind === 'greet' ? 0.04 : 0.02 }, tick);

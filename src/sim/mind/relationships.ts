@@ -72,7 +72,7 @@ export function nightlyRelationships(ctx: MindContext, r: ResidentState, steward
     // Left alone, affinity settles toward how well the two fit: kindred spirits warm, poor
     // matches cool a little. Beliefs about the person push on top of that.
     const baseline = (compatibility(ctx.def(r.id), ctx.def(other)) - 0.6) * 1.5;
-    x.affinity = clamp(x.affinity + 0.015 * (baseline - x.affinity) + 0.06 * opinion(r, `r:${other}`), -1, 1);
+    x.affinity = clamp(x.affinity + 0.03 * (baseline - x.affinity) + 0.06 * opinion(r, `r:${other}`), -1, 1);
     if (x.lastContact < ctx.tick - 1440) x.familiarity *= 0.99;
     const tags = tagsFor(x);
     const added = tags.filter((t) => !x.tags.includes(t));

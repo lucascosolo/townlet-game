@@ -350,6 +350,14 @@ export class Narrator {
       case 'cold':
         this.announce(e.t, `${this.name(first as string)} has come down with a cold.`);
         break;
+      case 'reconcile':
+        this.live(
+          e.t,
+          e.cast[2]
+            ? `With ${this.name(e.cast[2])}'s help, ${this.name(first as string)} and ${this.name(second as string)} finally talk things through.`
+            : `${this.name(first as string)} and ${this.name(second as string)} nod to each other on the path. Time has softened things.`,
+        );
+        break;
       case 'sick_visit':
         this.live(e.t, `${this.name(second as string)} brings ${this.name(first as string)} soup and sits with ${residentDef(first as string).pronouns.obj} a while.`);
         break;

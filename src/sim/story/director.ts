@@ -339,6 +339,8 @@ const EVENTS: StoryEventDef[] = [
           const fit = compatibility(residentDef(a.id), residentDef(b.id));
           const x = rel(a, b.id);
           if (x.familiarity < 0.3 || (x.lastArgue >= 0 && state.tick - x.lastArgue < 4 * TICKS_PER_DAY)) continue;
+          // Rivals already keep out of each other's way; a fresh row needs a fresh pair.
+          if (x.tags.includes('rival') || rel(b, a.id).tags.includes('rival')) continue;
           // Poor fits squabble; pairs already on bad terms squabble more (a simmering rivalry).
           const meanAffinity = (x.affinity + rel(b, a.id).affinity) / 2;
           const friction = 0.68 - fit - 0.6 * meanAffinity;
@@ -365,6 +367,52 @@ const EVENTS: StoryEventDef[] = [
         }
       }
       state.story.sparks.push({ a: a.id, b: b.id, topic, until: state.tick + 2 * TICKS_PER_DAY });
+    },
+  },
+  {
+    id: 'reconcile',
+    slot: 'afternoon',
+    tone: 'good',
+    weight: 0.8,
+    cooldownDays: 5,
+    early: false,
+    cast: (host) => {
+      const state = host.state;
+      const people = active(state);
+      for (const a of people) {
+        for (const b of people) {
+          if (a === b || !rel(a, b.id).tags.includes('rival')) continue;
+          // A rivalry simmers for a while before anyone can talk it down.
+          const lastRow = Math.max(rel(a, b.id).lastArgue, rel(b, a.id).lastArgue);
+          if (lastRow >= 0 && state.tick - lastRow < 7 * TICKS_PER_DAY) continue;
+          // Someone both of them like enough to listen to.
+          const mediator = people
+            .filter((m) => m !== a && m !== b)
+            .map((m) => ({ m, score: Math.min(rel(a, m.id).affinity, rel(b, m.id).affinity) }))
+            .sort((x, y) => y.score - x.score)[0];
+          // With nobody to help, time alone eventually thaws it.
+          return mediator && mediator.score > 0.1 ? [a.id, b.id, mediator.m.id] : [a.id, b.id];
+        }
+      }
+      return null;
+    },
+    fire: (host, [aId, bId, mId]) => {
+      const state = host.state;
+      const a = byId(state, aId as string);
+      const b = byId(state, bId as string);
+      const ctx = host.mindContext();
+      for (const [x, y] of [
+        [a, b],
+        [b, a],
+      ] as const) {
+        host.mind.perceive(ctx, x, { subject: `r:${y.id}`, aspect: 'made_amends', valence: 0.7, base: 0.7, source: 'witnessed', note: `talked things through with ${residentDef(y.id).name}` });
+        const r = rel(x, y.id);
+        r.affinity = clamp(r.affinity + (mId ? 0.25 : 0.15), -1, 1);
+        r.lastArgue = -1;
+        // Making peace loosens the old grudges, not just the mood.
+        for (const bel of Object.values(x.beliefs)) if (bel.subject === `r:${y.id}` && bel.valence < 0) bel.strength *= 0.5;
+      }
+      host.emitEvent({ t: state.tick, type: 'story', id: 'reconcile', tone: 'good', cast: mId ? [a.id, b.id, mId] : [a.id, b.id] });
     },
   },
   {

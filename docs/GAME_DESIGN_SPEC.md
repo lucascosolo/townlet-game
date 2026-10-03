@@ -442,6 +442,28 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 7. **Spread.** In the soak, the busiest social place accounts for less than 60% of all socialising minutes, on average across runs.
 8. **No regressions.** All M1 tests still pass, and a 10-year soak on 3 seeds shows no degenerate state.
 
+**M1.5 status (2026-10-03): built; all eight criteria met.** The tests live in `test/story.test.ts`, and the soak numbers below come from `npm run soak`.
+
+1. **Early story: met.** Days 1–3 hold at least 6 notable events on seeds 1–5, with no steward at all.
+2. **Pacing: met.** The smallest gap between negative events is at least 48 hours on all 10 soak seeds.
+3. **Gentle friction: met.** On seeds 1–10 there were 0.9 rival pairs per run, an argument in 10 of 10 runs, and departures in 0 of 10. Seeds 11–20 gave the same.
+4. **Neglect versus care: met.** Neglect starts thoughts of leaving in 3–4 residents on every one of seeds 1–5, and care starts none. A separate test shows that a resident who is thinking of leaving can be won back by attention.
+5. **Shared festival memories: met.** Every attendee holds the festival memory, and attendees grow closer than in the twin town with no festival.
+6. **Values split the town: met.** For the market day, supporters rate the approving steward above the declining twin, and opponents below.
+7. **Spread: met, narrowly.** The busiest place takes 54% of socialising on seeds 1–10 and 54% on seeds 11–20. In earlier tuning runs it sat between 56% and 61%, so this criterion is sensitive.
+8. **No regressions: met.** The 10-year soak on 3 seeds shows no degenerate state, with 1.0 rival pairs per town after ten years. All M1 tests still pass, giving 24 of 24 overall.
+
+**Findings and changes made on the way:**
+- **Silent suffering.** A resident who had lost trust in the steward stopped posting requests, so a caring steward never learned about the problem. This was caught by criterion 4's caring twin. Residents now always voice complaints (pillar 3).
+- **The steward needed a running standing.** Separate grievances never added up to a belief, so even severe neglect never moved anyone. Steward-related experiences now integrate into the relationship with the steward every night, and disposition reads that standing.
+- **Grudges ratcheted over the long run.** The first 10-year soak ended with up to 14 of 30 pairs as rivals. Three causes were found and fixed: rows the residents started themselves could happen at every meeting, rivals kept getting new rows, and complaining about a rival rehearsed the grudge. The fixes are a three-day cooling-off period per pair, rivals avoiding new rows, and a reconciliation beat (with a mediator, or by time alone) that also softens the grudge beliefs. The soak now flags any town where more than a quarter of pairs are rivals.
+- **Social life is less concentrated.** Festivals have seasonal venues, visitors rotate where they stop, social places have a comfortable size, and fondness for a place counts for less in choosing where to go.
+
+**Still open, for the next chunk to weigh:**
+- Gossip about places ("the commons is where the good evenings happen") is still the commonest kind of gossip.
+- The voice templates repeat over a long read.
+- There is still no economy. Resources and civic needs (spec 4.3) haven't been built.
+
 ---
 
 ## 10. Risks

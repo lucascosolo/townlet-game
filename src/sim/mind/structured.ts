@@ -230,7 +230,8 @@ export const StructuredMind: Mind = {
         ['comfort', o.mood < 0.45 && x.affinity > 0 ? 0.3 + 1.2 * gen : 0],
         ['reminisce', sharedFondPlace(r, o, placeId, ctx.tick) ? 0.4 : 0],
         ['tease', s01 > 0.6 && x.affinity > 0.25 && def.traits.steady < 0 ? 0.4 : 0],
-        ['argue', x.affinity < -0.15 || (r.mood < 0.35 && def.traits.steady < 0) ? 0.6 - x.affinity : 0],
+        // After a row, a pair cools off for a few days before another can start.
+        ['argue', !recentlyArgued && (x.affinity < -0.15 || (r.mood < 0.35 && def.traits.steady < 0)) ? 0.6 - x.affinity : 0],
         ['apologize', recentlyArgued && gen > 0.5 ? 2 : 0],
         ['share_meal', together && r.activity?.id === 'eat' && o.activity?.id === 'eat' ? 1.5 : 0],
       );

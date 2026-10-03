@@ -169,6 +169,7 @@ export function soakRun(scenarioName: string, seed: number, days: number): RunMe
   const notablePerDay = notable / windowDays;
   if (pairs > 0 && friends / pairs > 0.85) flags.push(`everyone is friends (${friends}/${pairs} directed pairs)`);
   if (days >= 14 && friends === 0) flags.push('no friendships at all');
+  if (pairs > 0 && rivals / pairs > 0.25) flags.push(`the town is at odds (${rivals}/${pairs} directed pairs are rivals)`);
   if (notablePerDay < 1) flags.push(`story density ${notablePerDay.toFixed(1)} notable events/day in the last week`);
   if (departures > sim.state.order.length / 3) flags.push(`${departures} of ${sim.state.order.length} residents left`);
   const meanMood = moodN > 0 ? moodSum / moodN : 0;

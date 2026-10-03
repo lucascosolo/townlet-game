@@ -2,6 +2,18 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-03: M3a, how "on their mind" works, and a missed bound left standing
+
+**Chosen:**
+- **One source of truth.** Everything a resident can think or say comes from one ranked list of what is on their mind (`src/sim/mind/thoughts.ts`). It is built only from their actual state: needs below their setpoint, current feelings and who they're about, their dream's next step, a festival tomorrow, the weather, a friend not seen in a day, a recent argument or a rival, their view of the steward, a belief formed in the last two days, and an empty larder.
+- **Only the top three.** Passing thoughts, chats with content and the journal's "On their mind" all draw from the top three. A topic isn't repeated within six hours, and chat never discusses the listener in the third person.
+- **Timing.** Thoughts surface at random moments, about one every three waking hours. They are drawn per minute rather than on the hour, so they don't all land at once. They use the resident's own random stream.
+- **Narration only reads.** The narrator's line choice remains outside the simulation. The journal uses fixed labels, so looking at a resident never changes what they'll say next.
+
+**Rejected:**
+- **Changing Fen's and Marlow's plans so a do-nothing steward finishes fewer dreams.** That would have met the bound of at most 1.5, but a town where every dream hinges on the player feels like a to-do list. The miss is reported in spec 9.3, and the test is kept as an expected failure.
+- **Thinking on the hour.** It was simpler, but every thought landed at :00 and read mechanically.
+
 ## 2026-10-03: M3a, alive minds — directions chosen
 
 The owner chose these directions for the release gate (merged M2.5 first):

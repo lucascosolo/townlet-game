@@ -48,3 +48,33 @@ export const PREPOSITIONS: Record<string, string> = {
   oak: 'under',
   brook: 'by',
 };
+
+/**
+ * Narration for each aspiration stage reached, keyed `${who}:${stage}`. {partner} is the other
+ * person involved, {you} is "you" or "the steward".
+ */
+export const ASPIRATION_LINES: Record<string, string> = {
+  'ada:confide': 'Ada tells {partner} about the orchard her late sister planned. "She had every tree drawn out. I never had the heart to plant it."',
+  'ada:ask': 'Ada screws up her courage and asks {you} for an orchard.',
+  'ada:planted': 'Ada stands among the young trees for a long time. "She would have liked this."',
+  'ada:tend': 'Ada has been out in the orchard every day, staking and watering. The trees are taking.',
+  'ada:harvest': "The first apples from Ada's orchard. Ada hands them round, one each, and keeps the smallest for herself.",
+  'bram:ovens': 'Bram has ovens of his own at last.',
+  'bram:win': 'Word has got round: Bram\'s bread is worth getting up for.',
+  'bram:plan': 'Bram is planning a feast for the Harvest Supper, flour on every surface.',
+  'bram:feast': 'Bram feeds the whole valley at the Harvest Supper. He pretends not to watch everyone eat.',
+  'fen:student': 'Fen asks {partner}, gruffly, whether they want to learn to fish. {partner} says yes.',
+  'fen:lessons': 'Fen and {partner} have spent long afternoons at the jetty. Fen has said almost nothing. {partner} has learned a great deal.',
+  'fen:proud': '{partner} lands a fish alone. Fen nods once, which from Fen is a speech.',
+  'juniper:design': 'Juniper has covered the workshop wall in drawings of a glasshouse.',
+  'juniper:ask': 'Juniper asks {you} for a glasshouse. "Fourteen timber, and we eat greens all winter. Trust me."',
+  'juniper:built': 'The glasshouse goes up. Juniper keeps tapping the panes, just to hear them.',
+  'juniper:winter': "Snow outside, greens inside: Juniper's glasshouse is feeding the town through winter.",
+  'wren:love': 'Wren has filled a sketchbook with the places they love in town.',
+  'wren:sketch': 'Wren sketched the festival from the edge of the crowd. The banner design is nearly there.',
+  'wren:ask': 'Wren asks {you}, quietly, for a banner pole on the green.',
+  'wren:paint': "Wren's banner goes up. Everyone finds their own house in it.",
+  'marlow:restless': 'Marlow watches the trade cart leave again. He stands there a long time after it has gone.',
+  'marlow:decide:stay': 'Marlow lets the trade cart go without him. "Turns out I live here."',
+  'marlow:decide:leave': 'Marlow climbs onto the trade cart with his bag. He waves until the bend in the road.',
+};

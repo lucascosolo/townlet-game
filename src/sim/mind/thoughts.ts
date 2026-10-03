@@ -1,0 +1,139 @@
+// What is on a resident's mind (M3a, "talk that honestly relays their mind state"). Topics are
+// drawn only from the resident's actual state and ranked by how much each matters right now.
+// Thoughts and everyday chat are chosen from the top three, never invented.
+
+import { residentDef } from '../../content/residents.js';
+import { companyOvershoot, urgency } from '../needs.js';
+import { TICKS_PER_DAY, dayOf } from '../time.js';
+import { weighted, type RngHolder } from '../rng.js';
+import { NEEDS, STEWARD, type MindMention, type ResidentState, type SimState, type SubjectId } from '../types.js';
+import { nextStep } from '../story/aspirations.js';
+
+export interface MindTopic {
+  /** What kind of thing it is: "need:food", "feel:annoyance", "dream", "grudge"... */
+  key: string;
+  /** Who or what it is about, if anyone. */
+  about?: SubjectId;
+  /** How much it matters right now. */
+  weight: number;
+  /** Words the lines can use. */
+  vars: Record<string, string>;
+  /** Why it is on their mind, for the journal. */
+  reason: string;
+}
+
+const NAME = (id: string) => residentDef(id).name;
+
+function subjectWord(state: SimState, s: SubjectId): string {
+  if (s === STEWARD) return 'the steward';
+  if (s.startsWith('r:')) return NAME(s.slice(2));
+  if (s.startsWith('m:')) return state.story.memories.find((m) => m.id === Number(s.slice(2)))?.label ?? 'that day';
+  const b = state.buildings.find((x) => x.id === Number(s.slice(2)));
+  return b ? `the ${b.type === 'oak' ? 'old oak' : b.type}` : 'that place';
+}
+
+/** "win the town over with his bread" -> "... with my bread". */
+function firstPerson(step: string): string {
+  return step.replace(/\b(his|her|their)\b/g, 'my');
+}
+
+/** Everything on a resident's mind, most pressing first. */
+export function mindTopics(state: SimState, r: ResidentState): MindTopic[] {
+  const def = residentDef(r.id);
+  const tick = state.tick;
+  const topics: MindTopic[] = [];
+
+  if (r.leaving) topics.push({ key: 'leaving', weight: 1.2, vars: {}, reason: `thinking of leaving since day ${r.leaving.sinceDay}` });
+
+  for (const n of NEEDS) {
+    const u = urgency(r.needs[n], r.setpoints[n]);
+    if (u > 0.35) topics.push({ key: `need:${n}`, weight: 1.2 * u, vars: {}, reason: `${n} is low (${r.needs[n].toFixed(2)} of the ${r.setpoints[n].toFixed(2)} they need)` });
+  }
+  const crowd = companyOvershoot(r.needs.company, r.setpoints.company, def);
+  if (crowd > 0.1) topics.push({ key: 'need:crowded', weight: 0.8 + crowd, vars: {}, reason: 'too much company for their liking' });
+
+  for (const e of r.emotions) {
+    if (e.intensity < 0.15) continue;
+    const about = e.target;
+    topics.push({
+      key: `feel:${e.kind}`,
+      ...(about ? { about } : {}),
+      weight: 1.4 * e.intensity,
+      vars: { x: about ? subjectWord(state, about) : '' },
+      reason: `${e.kind}${about ? ` about ${subjectWord(state, about)}` : ''} (${e.intensity.toFixed(2)})`,
+    });
+  }
+
+  const step = nextStep(state, r);
+  if (step) {
+    const fresh = tick - r.aspiration.since < TICKS_PER_DAY;
+    const waiting = state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open');
+    topics.push({ key: waiting ? 'dream:waiting' : 'dream', weight: 0.45 + (fresh ? 0.3 : 0) + (waiting ? 0.25 : 0), vars: { next: firstPerson(step.charAt(0).toLowerCase() + step.slice(1)) }, reason: `their hope: ${step.toLowerCase()}` });
+  }
+
+  const festival = state.story.gatherings.find((g) => g.kind === 'festival' && g.from > tick && g.from - tick < TICKS_PER_DAY);
+  if (festival) topics.push({ key: 'festival_soon', weight: 0.35 + 0.4 * def.values.community, vars: { label: festival.label }, reason: `${festival.label} is coming` });
+
+  const w = state.story.weather;
+  if (w.kind !== 'clear' && tick < w.until) topics.push({ key: `weather:${w.kind}`, weight: w.kind === 'storm' ? 0.7 : 0.3, vars: {}, reason: `the ${w.kind}` });
+
+  // People: a friend not seen for a while, a fresh grudge.
+  for (const [id, x] of Object.entries(r.rel)) {
+    if (id === STEWARD || state.residents[id]?.departed) continue;
+    if (x.tags.includes('friend') && tick - x.lastContact > TICKS_PER_DAY) {
+      topics.push({ key: 'miss_friend', about: `r:${id}`, weight: 0.25 + 0.35 * x.affinity, vars: { x: NAME(id) }, reason: `hasn't seen ${NAME(id)} since day ${dayOf(Math.max(0, x.lastContact))}` });
+    }
+    if (x.lastArgue >= 0 && tick - x.lastArgue < 2 * TICKS_PER_DAY) {
+      topics.push({ key: 'grudge', about: `r:${id}`, weight: 0.7, vars: { x: NAME(id) }, reason: `an argument with ${NAME(id)} on day ${dayOf(x.lastArgue)}` });
+    } else if (x.tags.includes('rival')) {
+      topics.push({ key: 'grudge', about: `r:${id}`, weight: 0.4, vars: { x: NAME(id) }, reason: `not getting on with ${NAME(id)}` });
+    }
+  }
+
+  const standing = r.rel.steward?.affinity ?? 0;
+  if (Math.abs(standing) > 0.35) {
+    topics.push({ key: standing > 0 ? 'steward:+' : 'steward:-', about: STEWARD, weight: 0.2 + 0.4 * Math.abs(standing), vars: {}, reason: `their view of the steward (${standing.toFixed(2)})` });
+  }
+
+  // A belief formed in the last two days is still news to them.
+  for (const b of Object.values(r.beliefs)) {
+    // Their view of the steward has its own topic.
+    if (tick - b.formedTick > 2 * TICKS_PER_DAY || b.subject === STEWARD) continue;
+    topics.push({ key: `belief:${b.valence >= 0 ? '+' : '-'}`, about: b.subject, weight: 0.4 + 0.3 * b.strength, vars: { x: subjectWord(state, b.subject), aspect: b.aspect }, reason: `newly decided something about ${subjectWord(state, b.subject)}` });
+  }
+
+  if (state.stock.food < 3) topics.push({ key: 'larder', weight: 0.65, vars: {}, reason: 'the larder is nearly empty' });
+
+  topics.sort((a, b) => b.weight - a.weight || a.key.localeCompare(b.key));
+  return topics;
+}
+
+/** The top few: what a thought or a chat may draw on. */
+export function topOfMind(state: SimState, r: ResidentState, n = 3): MindTopic[] {
+  return mindTopics(state, r).slice(0, n);
+}
+
+
+/** Not voiced again for this long. */
+export const THOUGHT_REPEAT = 6 * 60;
+
+/**
+ * Pick something from the top three to voice, weighted by how much it matters, skipping what
+ * they voiced in the last few hours. Marks it as voiced. Null when nothing is on their mind.
+ */
+export function voiceTopic(state: SimState, r: ResidentState, listener?: string, rng: RngHolder = r): MindMention | null {
+  const recent = (r.lastThoughts ??= {});
+  const top = topOfMind(state, r, 3).map((t, rank) => ({ t, rank }));
+  // Nobody tells you, to your face, what they think of you in the third person.
+  const fresh = top.filter(({ t }) => state.tick - (recent[topicId(t)] ?? -Infinity) >= THOUGHT_REPEAT && (!listener || t.about !== `r:${listener}`));
+  const chosen = weighted(rng, fresh, ({ t }) => t.weight);
+  if (!chosen) return null;
+  recent[topicId(chosen.t)] = state.tick;
+  for (const [k, v] of Object.entries(recent)) if (state.tick - v > THOUGHT_REPEAT) delete recent[k];
+  const { t, rank } = chosen;
+  return { key: t.key, ...(t.about ? { about: t.about } : {}), vars: t.vars, rank };
+}
+
+function topicId(t: MindTopic): string {
+  return t.about ? `${t.key}|${t.about}` : t.key;
+}

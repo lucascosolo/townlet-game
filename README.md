@@ -14,6 +14,15 @@ This repository currently holds **M1 and M1.5 of the headless "radio play"**. M1
 - answer proposals on the notice board;
 - place or remove a handful of buildings.
 
+**M2.5** made you part of the town: residents ask you for things, the town makes a wish each season, and a thin economy of food and timber pays for building.
+
+**M3a** makes the minds more alive:
+- each resident pursues a personal dream in steps, some of which need you;
+- friends call on each other, walk together and sit side by side;
+- passing thoughts and small talk come only from what is really on their mind.
+
+The journal shows what someone is hoping for, their next step, and the top things on their mind with the reason for each.
+
 You are the steward.
 
 ## Running it
@@ -38,7 +47,7 @@ In the browser, URL parameters choose the town: `?scenario=bakery&seed=2&steward
 **Browser controls:**
 - **Look:** drag to move the view, right-drag or middle-drag to turn it around the town, wheel or +/- to zoom. Q/E snap by quarter turns.
 - **Time:** space pauses, 0–4 set the speed.
-- **Building:** open **Build ▾** and pick a building; each card shows its timber cost, what it gives off, and who it's likely to please. Click a free spot to place it, R rotates, Esc returns to looking.
+- **Building:** open **Build ▾** and pick a building; each card shows its timber cost, what it gives off, and who it's likely to please. Click a free spot to place it, R rotates, Esc returns to looking. The **Dreams** group holds the orchard, glasshouse and banner pole that residents' dreams ask for.
 - **Answering:** proposals pop up for a decision. The notice board, which rolls up like a scroll, shows the season's Town Wishes and what residents are asking of you. The **You** tab shows how each resident sees you, and why.
 
 Sample output from the text tools is in `docs/samples/`.

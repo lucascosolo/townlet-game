@@ -5,12 +5,13 @@
 
 import { buildingDef } from '../content/buildings.js';
 import { residentDef } from '../content/residents.js';
-import { DILEMMA_NAMES, GATHERING_START, PREPOSITIONS, PROPOSALS } from '../content/story.js';
+import { ASPIRATION_LINES, DILEMMA_NAMES, GATHERING_START, PREPOSITIONS, PROPOSALS } from '../content/story.js';
+import { MIND_LINES } from '../content/thoughts.js';
 import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
 import { chance, deriveSeed, pick, type RngHolder } from '../sim/rng.js';
 import type { Simulation } from '../sim/sim.js';
 import { DAWN_MINUTE, clock, dayOf, minuteOf, seasonOf } from '../sim/time.js';
-import type { Belief, ResidentDef, SimEvent, SimState, SubjectId } from '../sim/types.js';
+import type { Belief, MindMention, ResidentDef, SimEvent, SimState, SubjectId } from '../sim/types.js';
 import { distanceTo, sizeOf } from '../sim/world.js';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -24,7 +25,7 @@ function sentenceCase(s: string): string {
 type Person = { subj: string; obj: string; poss: string };
 const FIRST_PERSON: Person = { subj: 'I', obj: 'me', poss: 'my' };
 
-export type EntryKind = 'day' | 'board' | 'live' | 'aside' | 'note';
+export type EntryKind = 'day' | 'board' | 'live' | 'aside' | 'note' | 'thought';
 
 /** One narrated line, with who it mentions, for UIs that want more than plain text. */
 export interface NarratorEntry {
@@ -44,7 +45,12 @@ export interface NarratorOptions {
   exchangeLinesPerDay?: number;
   /** Narrate the steward's own actions as "you" (the browser, where the player is the steward). */
   stewardIsYou?: boolean;
+  /** Most passing thoughts narrated per day, town-wide. */
+  thoughtsPerDay?: number;
 }
+
+/** Most passing thoughts narrated per resident per day. */
+const THOUGHTS_PER_RESIDENT = 3;
 
 export class Narrator {
   readonly lines: string[] = [];
@@ -56,6 +62,7 @@ export class Narrator {
   private exchangesToday = 0;
   private gossipToday = 0;
   private exchangeLinesToday = 0;
+  private thoughtsToday = new Map<string, number>();
   /** `${who}|${subject}` -> day last narrated, so daily haunts don't repeat every morning. */
   private lastRecall = new Map<string, number>();
   private toldPairs = new Set<string>();
@@ -69,7 +76,7 @@ export class Narrator {
     opts: NarratorOptions = {},
   ) {
     this.rng = { rng: deriveSeed(sim.state.seed, 'narrator') };
-    this.opts = { verbose: false, exchangeLinesPerDay: 10, stewardIsYou: false, ...opts };
+    this.opts = { verbose: false, exchangeLinesPerDay: 10, stewardIsYou: false, thoughtsPerDay: 10, ...opts };
     sim.on((e) => this.handle(e));
   }
 
@@ -162,6 +169,10 @@ export class Narrator {
       .replace(/\{other\}/g, vars.other ?? '')
       .replace(/\{statement\}/g, vars.statement ?? '')
       .replace(/\{what\}/g, vars.what ?? '')
+      .replace(/\{X\}/g, cap(vars.x ?? ''))
+      .replace(/\{x\}/g, vars.x ?? '')
+      .replace(/\{next\}/g, vars.next ?? '')
+      .replace(/\{label\}/g, vars.label ?? '')
       .replace(/\{subj\}/g, person.subj)
       .replace(/\{obj\}/g, person.obj)
       .replace(/\{poss\}/g, person.poss);
@@ -275,6 +286,9 @@ export class Narrator {
       case 'exchange':
         this.exchange(e);
         break;
+      case 'thought':
+        this.thinks(e);
+        break;
       case 'belief_formed': {
         const from = e.hearsay ? e.belief.sources.find((s) => s.from)?.from : undefined;
         const n = e.belief.sources.filter((s) => s.kind === 'witnessed').length;
@@ -351,6 +365,21 @@ export class Narrator {
       case 'story':
         this.story(e);
         break;
+      case 'invite': {
+        const key = `invite|${[e.a, e.b].sort().join('|')}`;
+        const last = this.lastPair.get(key);
+        if (last !== undefined && dayOf(e.t) - last < 2 && !this.opts.verbose) break;
+        this.lastPair.set(key, dayOf(e.t));
+        this.live(e.t, `${this.name(e.a)} calls round for ${this.name(e.b)}, and they walk ${this.at(e.place).replace(/^(on|at|under|by) /, 'to ')} together.`);
+        break;
+      }
+      case 'aspiration': {
+        const line = ASPIRATION_LINES[`${e.who}:${e.stage}${e.outcome ? `:${e.outcome}` : ''}`];
+        if (!line) break;
+        const partner = e.partner ? this.name(e.partner) : 'someone';
+        this.live(e.t, line.replace(/\{partner\}/g, partner).replace(/\{you\}/g, this.you ? 'you' : 'the steward'));
+        break;
+      }
     }
   }
 
@@ -515,6 +544,10 @@ export class Narrator {
       case 'reminisce':
         if (e.topic) text = `${at}${a} and ${b} reminisce about ${this.subjectName(e.topic.subject)}.`;
         break;
+      case 'chat':
+        if (e.mind) text = `${at}${a} to ${b}: ${this.mindLine(e.a, e.mind)}`;
+        else if (this.opts.verbose) text = `${at}${a} and ${b}: chat.`;
+        break;
       default:
         if (this.opts.verbose) text = `${at}${a} and ${b}: ${e.kind.replace('_', ' ')}.`;
     }
@@ -523,6 +556,32 @@ export class Narrator {
     if (!important && !this.opts.verbose && this.exchangeLinesToday >= this.opts.exchangeLinesPerDay) return;
     this.exchangeLinesToday++;
     this.live(e.t, text);
+  }
+
+  /** What is on someone's mind, in their own voice. */
+  mindLine(who: string, m: Pick<MindMention, 'key' | 'vars'>): string {
+    return this.voice(who, MIND_LINES[m.key], m.vars);
+  }
+
+  private thinks(e: Extract<SimEvent, { type: 'thought' }>): void {
+    const mine = this.thoughtsToday.get(e.who) ?? 0;
+    const total = [...this.thoughtsToday.values()].reduce((x, y) => x + y, 0);
+    if (!this.opts.verbose && (mine >= THOUGHTS_PER_RESIDENT || total >= this.opts.thoughtsPerDay)) return;
+    this.thoughtsToday.set(e.who, mine + 1);
+    const verb = /^(grudge|feel:annoyance)$/.test(e.key)
+      ? 'mutters'
+      : /^(need:|feel:grief|feel:loneliness|feel:worry|leaving|larder)/.test(e.key)
+        ? 'sighs'
+        : pick(this.rng, ['thinks', 'muses', 'thinks to ' + this.reflexive(e.who)]);
+    const text = `${this.name(e.who)} ${verb}: ${this.mindLine(e.who, e)}`;
+    const night = minuteOf(e.t) < DAWN_MINUTE && dayOf(e.t) > 1;
+    this.out(`${clock(e.t)}${night ? '*' : ' '} ${text}`);
+    this.entry('thought', e.t, text);
+  }
+
+  private reflexive(who: string): string {
+    const p = residentDef(who).pronouns.obj;
+    return p === 'them' ? 'themself' : p === 'me' ? 'myself' : `${p}self`;
   }
 
   private dawn(day: number, t: number): void {
@@ -546,6 +605,7 @@ export class Narrator {
     this.exchangesToday = 0;
     this.gossipToday = 0;
     this.exchangeLinesToday = 0;
+    this.thoughtsToday.clear();
   }
 
   /** Text for the whole run so far. */

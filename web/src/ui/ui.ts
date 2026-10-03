@@ -21,6 +21,7 @@ export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
   { category: 'Green and decor', types: ['hedge', 'flowerbed', 'bench'] },
   { category: 'Gathering', types: ['teahouse', 'commons', 'well'] },
   { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop'] },
+  { category: 'Dreams', types: ['orchard', 'glasshouse', 'banner'] },
 ];
 export type Tool = { kind: 'select' } | { kind: 'build'; type: string } | { kind: 'remove' };
 
@@ -45,6 +46,7 @@ const QUALITY_WORDS: Record<string, [string, string]> = {
 };
 
 const ASK_TITLES: Record<Request['kind'], string> = {
+  aspiration: 'asks for help with a dream',
   quieter_home: 'asks for quieter nights',
   workplace: 'asks for a place to work',
   more_food: 'asks for more food',
@@ -54,6 +56,7 @@ const ASK_TITLES: Record<Request['kind'], string> = {
 };
 
 const ASK_HINTS: Record<Request['kind'], string> = {
+  aspiration: 'It matters a great deal to them. Find it in the Build menu.',
   quieter_home: 'A hedge between the noise and their home softens it.',
   workplace: 'Build what they need from the Build menu.',
   more_food: 'Gardens and the fishing jetty fill the larder; gardens grow little in winter.',
@@ -432,7 +435,7 @@ export class Ui {
     const row = el('div', { class: `entry ${e.kind}` });
     if (e.kind === 'day') row.textContent = e.text;
     else {
-      if (e.kind === 'live') row.appendChild(el('span', { class: 'time' }, clock(e.t)));
+      if (e.kind === 'live' || e.kind === 'thought') row.appendChild(el('span', { class: 'time' }, clock(e.t)));
       for (const n of this.nameLinks(e.text)) row.appendChild(n);
     }
     const atBottom = this.logEl.scrollTop + this.logEl.clientHeight >= this.logEl.scrollHeight - 30;
@@ -442,9 +445,9 @@ export class Ui {
 
     // A quoted line becomes a bubble over whoever speaks first in it.
     const quote = /"([^"]+)"/.exec(e.text);
-    if (quote && (e.kind === 'live' || e.kind === 'aside') && e.who.length > 0) {
+    if (quote && (e.kind === 'live' || e.kind === 'aside' || e.kind === 'thought') && e.who.length > 0) {
       const speaker = [...e.who].sort((a, b) => e.text.indexOf(residentDef(a).name) - e.text.indexOf(residentDef(b).name))[0] as string;
-      this.bubble(speaker, quote[1] as string);
+      this.bubble(speaker, quote[1] as string, e.kind === 'thought' ? 'thought' : '');
     }
     this.lastBoardKey = '';
   }
@@ -668,7 +671,21 @@ export class Ui {
     head.style.borderBottomColor = cssColor(RESIDENT_COLORS[rep.id] ?? 0x888888);
     j.appendChild(head);
     j.appendChild(el('p', { class: 'quiet' }, rep.background));
-    j.appendChild(el('p', {}, `Hopes to: ${rep.aspiration.charAt(0).toLowerCase()}${rep.aspiration.slice(1)}`));
+    if (rep.hope) {
+      const hope = el('div', { class: 'hope', 'data-testid': 'hope' });
+      hope.appendChild(el('p', {}, `Hoping to: ${rep.hope.title.charAt(0).toLowerCase()}${rep.hope.title.slice(1)}`));
+      const steps = el('span', { class: 'steps' });
+      for (let i = 0; i < rep.hope.of; i++) steps.appendChild(el('span', { class: i < rep.hope.stage || rep.hope.done ? 'step done' : 'step' }));
+      hope.appendChild(steps);
+      hope.appendChild(
+        el(
+          'p',
+          { class: 'quiet', 'data-testid': 'hope-next' },
+          rep.hope.done ? (rep.hope.outcome === 'leave' ? 'Decided to go.' : rep.hope.outcome === 'stay' ? 'Decided to stay.' : 'Done!') : `Next: ${rep.hope.next}`,
+        ),
+      );
+      j.appendChild(hope);
+    } else j.appendChild(el('p', {}, `Hopes to: ${rep.aspiration.charAt(0).toLowerCase()}${rep.aspiration.slice(1)}`));
     if (rep.departed) {
       j.appendChild(el('p', {}, 'Has left the valley.'));
       pane.appendChild(j);
@@ -676,6 +693,15 @@ export class Ui {
     }
     j.appendChild(el('p', { class: 'doing' }, `Now: ${rep.doing}`));
     if (rep.leavingSince !== null) j.appendChild(el('p', { class: 'warning' }, `Thinking of leaving (since day ${rep.leavingSince}).`));
+    j.appendChild(el('h3', {}, 'On their mind'));
+    const mind = el('ul', { class: 'mind', 'data-testid': 'on-mind' });
+    for (const m of rep.onMind.slice(0, 3)) {
+      const li = el('li', {}, m.label);
+      li.appendChild(el('span', { class: 'quiet' }, ` (${m.reason})`));
+      mind.appendChild(li);
+    }
+    if (!mind.childElementCount) mind.appendChild(el('li', { class: 'quiet' }, 'Nothing much. Content.'));
+    j.appendChild(mind);
     j.appendChild(this.meter('Mood', rep.mood));
     j.appendChild(this.meter('Settled here', rep.disposition));
 

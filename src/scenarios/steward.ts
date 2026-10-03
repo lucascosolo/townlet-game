@@ -78,6 +78,10 @@ export function answerFor(sim: Simulation, q: Request): Array<{ type: string; x:
       return q.wants ? one(q.wants, spotNear(sim, q.wants, ...townCentre(sim), 8)) : [];
     case 'more_food':
       return one('garden', spotNear(sim, 'garden', ...townCentre(sim), 8));
+    case 'aspiration':
+      // Dreams go near the dreamer's home, except the banner, which belongs on the green.
+      if (!q.wants) return [];
+      return one(q.wants, spotNear(sim, q.wants, ...(q.wants === 'banner' ? townCentre(sim) : ([hx, hy] as [number, number])), 8));
   }
 }
 

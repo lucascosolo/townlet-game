@@ -6,12 +6,12 @@
 import { buildingDef } from '../content/buildings.js';
 import { residentDef } from '../content/residents.js';
 import { DILEMMA_NAMES, GATHERING_START, PREPOSITIONS, PROPOSALS } from '../content/story.js';
-import { BELIEF_STATEMENTS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
+import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
 import { chance, deriveSeed, pick, type RngHolder } from '../sim/rng.js';
 import type { Simulation } from '../sim/sim.js';
 import { DAWN_MINUTE, clock, dayOf, minuteOf, seasonOf } from '../sim/time.js';
 import type { Belief, ResidentDef, SimEvent, SimState, SubjectId } from '../sim/types.js';
-import { distanceTo } from '../sim/world.js';
+import { distanceTo, sizeOf } from '../sim/world.js';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const INDENT = '       ';
@@ -42,6 +42,8 @@ export interface NarratorOptions {
   verbose?: boolean;
   /** Most live exchange lines per day before the rest are only counted. */
   exchangeLinesPerDay?: number;
+  /** Narrate the steward's own actions as "you" (the browser, where the player is the steward). */
+  stewardIsYou?: boolean;
 }
 
 export class Narrator {
@@ -67,7 +69,7 @@ export class Narrator {
     opts: NarratorOptions = {},
   ) {
     this.rng = { rng: deriveSeed(sim.state.seed, 'narrator') };
-    this.opts = { verbose: false, exchangeLinesPerDay: 10, ...opts };
+    this.opts = { verbose: false, exchangeLinesPerDay: 10, stewardIsYou: false, ...opts };
     sim.on((e) => this.handle(e));
   }
 
@@ -142,7 +144,7 @@ export class Narrator {
       if (!r) continue;
       const home = this.state.buildings.find((x) => x.id === r.homeId);
       if (!home) continue;
-      const [hw, hh] = buildingDef(home.type).size;
+      const [hw, hh] = sizeOf(home);
       let d = Infinity;
       for (let dx = 0; dx < hw; dx++) for (let dy = 0; dy < hh; dy++) d = Math.min(d, distanceTo(b, home.x + dx, home.y + dy));
       if (!best || d < best.d) best = { d, name: this.subjectName(`b:${home.id}`) };
@@ -159,6 +161,7 @@ export class Narrator {
       .replace(/\{s\}/g, vars.s ?? '')
       .replace(/\{other\}/g, vars.other ?? '')
       .replace(/\{statement\}/g, vars.statement ?? '')
+      .replace(/\{what\}/g, vars.what ?? '')
       .replace(/\{subj\}/g, person.subj)
       .replace(/\{obj\}/g, person.obj)
       .replace(/\{poss\}/g, person.poss);
@@ -227,10 +230,10 @@ export class Narrator {
         this.dawn(e.day, e.t);
         break;
       case 'built':
-        this.live(e.t, `The steward builds ${aOrAn(buildingDef(e.btype).name.toLowerCase())}${this.where(e.building)}.`);
+        this.live(e.t, `${this.you ? 'You build' : 'The steward builds'} ${aOrAn(buildingDef(e.btype).name.toLowerCase())}${this.where(e.building)}.`);
         break;
       case 'removed':
-        this.live(e.t, `The steward has ${this.subjectName(`b:${e.building}`)} taken down.`);
+        this.live(e.t, `${this.you ? 'You have' : 'The steward has'} ${this.subjectName(`b:${e.building}`)} taken down.`);
         break;
       case 'took_job':
         if (e.t > 0) {
@@ -244,18 +247,22 @@ export class Narrator {
         break;
       case 'reaction': {
         const b = this.state.buildings.find((x) => x.id === e.building);
-        const key = `${e.t}|${e.who}|${b?.type}`;
+        const key = `${Math.floor(e.t / 30)}|${e.who}|${b?.type}|${e.change}`;
         if (this.reactedAt.has(key)) break;
         this.reactedAt.add(key);
-        const line = this.thought(e.who, `b:${e.building}`, e.aspect, e.valence);
-        if (line) this.live(e.t, `${this.name(e.who)}, looking at ${this.subjectName(`b:${e.building}`)}: ${line}`);
+        const s = this.subjectName(`b:${e.building}`);
+        const line = REACTIONS[e.detail] ? this.voice(e.who, REACTIONS[e.detail], { s }) : this.thought(e.who, `b:${e.building}`, e.aspect, e.valence);
+        if (line) this.live(e.t, `${this.noticing(e.who, e.how, e.change, e.building)}: ${line}`);
         break;
       }
       case 'grief': {
         const line = this.thought(e.who, `b:${e.building}`, 'lost_place', -1);
-        if (line) this.aside(e.t, `${this.name(e.who)}: ${line}`);
+        if (line) this.live(e.t, `${this.noticing(e.who, e.how, 'removed', e.building)}: ${line}`);
         break;
       }
+      case 'shortage':
+        this.live(e.t, `The larder is bare. ${this.name(e.who)} makes do with a meagre meal.`);
+        break;
       case 'recall': {
         const key = `${e.who}|${e.subject}`;
         const last = this.lastRecall.get(key);
@@ -282,13 +289,29 @@ export class Narrator {
         this.board.push(() => `${this.name(e.who)} has stopped dwelling on how ${this.statement(e.who, e)}.`);
         break;
       case 'request_posted':
-        this.board.push(() => `${this.name(e.request.by)} asks: ${this.voice(e.request.by, SPEECH.request, { s: this.subjectName(e.request.subject) })}`);
-        break;
-      case 'request_closed':
         this.board.push(
-          () => `${this.name(e.request.by)}: ${this.voice(e.request.by, e.request.status === 'fulfilled' ? SPEECH.fulfilled : SPEECH.lapsed, { s: this.subjectName(e.request.subject) })}`,
+          () =>
+            `${this.name(e.request.by)} asks ${this.you ? 'you' : 'the steward'}: ${this.voice(e.request.by, ASKS[e.request.kind], { s: this.subjectName(e.request.subject), what: e.request.wants ? buildingDef(e.request.wants).name.toLowerCase() : 'place' })}`,
         );
         break;
+      case 'request_closed':
+        if (e.request.status === 'resolved') break;
+        this.board.push(
+          () => `${this.name(e.request.by)}: ${this.voice(e.request.by, e.request.status === 'fulfilled' ? (e.request.kind === 'quieter_home' ? SPEECH.fulfilled : SPEECH.thanks) : SPEECH.lapsed, { s: this.subjectName(e.request.subject) })}`,
+        );
+        break;
+      case 'wish':
+        if (e.phase === 'made') this.board.push(() => `Town Wish for the season: ${e.wish.label}. (${this.names(e.wish.supporters)} would like this.)`);
+        else if (e.phase === 'granted') this.announce(e.t, `Wish granted: ${e.wish.label.toLowerCase()}. The whole town feels it.`);
+        else this.board.push(() => `The season ended without ${e.wish.label.toLowerCase()}. ${this.names(e.wish.supporters)} had hoped for it.`);
+        break;
+      case 'standing': {
+        const why = e.reasons[0] ?? '';
+        const who = this.name(e.who);
+        const towards = this.you ? 'you' : 'the steward';
+        this.board.push(() => (e.delta > 0 ? `${who} thinks better of ${towards}: ${why}.` : `${who} thinks less of ${towards}: ${why}.`));
+        break;
+      }
       case 'relationship':
         for (const tag of e.added) {
           if (tag === 'friend') this.board.push(() => `${this.name(e.who)} now counts ${this.name(e.other)} as a friend.`);
@@ -329,6 +352,26 @@ export class Narrator {
         this.story(e);
         break;
     }
+  }
+
+  /** "Ada wakes to find a hedge by her door", "Fen hears the old oak is gone", ... */
+  private noticing(who: string, how: 'saw' | 'woke' | 'heard', change: 'built' | 'removed', building: number): string {
+    const name = this.name(who);
+    const poss = residentDef(who).pronouns.poss;
+    const b = this.state.buildings.find((x) => x.id === building);
+    const thing = b ? buildingDef(b.type).name.toLowerCase() : 'it';
+    if (change === 'built') {
+      if (how === 'woke') return `${name} wakes to find a new ${thing}${this.where(building)}`;
+      if (how === 'heard') return `${name} hears about the new ${thing}`;
+      return `${name} spots the new ${thing}`;
+    }
+    if (how === 'woke') return `${name} wakes to find the ${thing} gone from ${poss} view`;
+    if (how === 'heard') return `${name} hears the ${thing} is gone`;
+    return `${name} sees the ${thing} is gone`;
+  }
+
+  private get you(): boolean {
+    return this.opts.stewardIsYou;
   }
 
   private names(ids: string[]): string {
@@ -421,8 +464,8 @@ export class Narrator {
     const pleased = e.reactions.filter((x) => x.valence > 0 && x.who !== d.proposer).map((x) => x.who);
     const displeased = e.reactions.filter((x) => x.valence < 0 && x.who !== d.proposer).map((x) => x.who);
     let text: string;
-    if (d.status === 'approved') text = `The steward approves ${what}. ${this.name(d.proposer)} is delighted.`;
-    else if (d.status === 'declined') text = `The steward declines ${what}. ${this.name(d.proposer)} is disappointed.`;
+    if (d.status === 'approved') text = `${this.you ? 'You approve' : 'The steward approves'} ${what}. ${this.name(d.proposer)} is delighted.`;
+    else if (d.status === 'declined') text = `${this.you ? 'You decline' : 'The steward declines'} ${what}. ${this.name(d.proposer)} is disappointed.`;
     else text = `${cap(what)} went unanswered. ${this.name(d.proposer)} takes it badly.`;
     if (pleased.length > 0) text += ` ${this.names(pleased)} ${pleased.length > 1 ? 'are' : 'is'} glad.`;
     if (displeased.length > 0) text += ` ${this.names(displeased)} ${displeased.length > 1 ? 'are' : 'is'} not pleased.`;

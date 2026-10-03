@@ -22,7 +22,7 @@ type Handle = {
 };
 
 async function open(page: Page, query: string): Promise<void> {
-  await page.goto(`/?${query}`);
+  await page.goto(`/?intro=0&${query}`);
   await page.waitForFunction(() => (window as unknown as { __townlet?: Handle }).__townlet !== undefined);
 }
 
@@ -93,7 +93,8 @@ test('criterion 3: clicking each resident in the town opens a journal with needs
 test('criterion 4a: approving a proposal from the notice board pleases the proposer and is logged', async ({ page }) => {
   await open(page, 'scenario=quiet&seed=1&speed=0');
   await runTo(page, at(1, 6, 30));
-  await page.getByTestId('tab-board').click();
+  // The proposal arrives as a popup.
+  await expect(page.getByTestId('decision')).toBeVisible();
   const approve = page.locator('[data-testid^="approve-"]').first();
   await expect(approve).toBeVisible();
   const proposer = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.sim.state.story.dilemmas.find((d: { status: string }) => d.status === 'open').proposer as string);
@@ -102,7 +103,7 @@ test('criterion 4a: approving a proposal from the notice board pleases the propo
   await approve.click();
   await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.runTicks(1440));
   const log = await logText(page, t0);
-  expect(log).toContain('The steward approves');
+  expect(log).toContain('You approve');
   expect(log).toContain('is delighted');
   const after = await page.evaluate((p) => (window as unknown as { __townlet: Handle }).__townlet.game.sim.state.residents[p].rel.steward.affinity as number, proposer);
   expect(after).toBeGreaterThan(before);
@@ -113,15 +114,19 @@ test('criterion 4b: placing a hedge from the palette builds it and residents rea
   await runTo(page, at(1, 9));
   await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.focus(5, 7));
   await page.waitForTimeout(300);
+  // A proposal popup may be waiting; put it off.
+  if (await page.getByTestId('decision').isVisible()) await page.locator('[data-testid^="later-"]').click();
+  await page.getByTestId('open-build').click();
   await page.getByTestId('tool-build-hedge').click();
   const p = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.tileScreen(5, 8));
   const t0 = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.sim.tick);
   await page.mouse.move(p.x, p.y);
   await page.mouse.click(p.x, p.y);
-  await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.runTicks(2));
+  // Residents react once they see it (M2.5): give them an hour.
+  await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.runTicks(60));
   const log = await logText(page, t0);
-  expect(log).toContain('The steward builds a hedge');
-  expect(log).toMatch(/looking at the hedge/);
+  expect(log).toContain('You build a hedge');
+  expect(log).toMatch(/(spots|hears about) the new hedge/);
 });
 
 test('criterion 4c: removing a loved place from the palette brings grief', async ({ page }) => {
@@ -148,7 +153,8 @@ test('criterion 4c: removing a loved place from the palette brings grief', async
   const t0 = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.sim.tick);
   await page.mouse.move(p!.x, p!.y);
   await page.mouse.click(p!.x, p!.y);
-  await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.runTicks(2));
+  // Grief comes when they see it is gone, or hear: give it a day.
+  await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.runTicks(1440));
   const removed = await page.evaluate((id) => (window as unknown as { __townlet: Handle }).__townlet.game.sim.state.buildings.find((b: { id: number }) => b.id === id).removed, target.id);
   expect(removed).toBe(true);
   const grieving = await page.evaluate(

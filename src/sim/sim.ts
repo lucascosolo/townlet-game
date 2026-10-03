@@ -18,13 +18,20 @@ import type { Mind, MindContext, Perception } from './mind/mind.js';
 import { attachment, decayEmotions, emotionBalance, opinion } from './mind/memory.js';
 import { newRelationship, rel } from './mind/relationships.js';
 import { StructuredMind } from './mind/structured.js';
+import { ASK_KINDS, ASK_LAPSE_DAYS, assess } from './asks.js';
 import { runExchange } from './social.js';
 import { activeGatherings, newStoryState, storyStep, type StoryHost } from './story/director.js';
 import { closeDilemma } from './story/dilemmas.js';
-import { DAWN_MINUTE, TICKS_PER_DAY, dayOf, minuteOf } from './time.js';
+import { DAWN_MINUTE, TICKS_PER_DAY, dayOf, minuteOf, seasonOf } from './time.js';
 import {
   NEEDS,
+  QUALITIES,
   STEWARD,
+  type ActivityState,
+  type Quality,
+  type Request,
+  type Resource,
+  type Unseen,
   type BuildingState,
   type DilemmaType,
   type ExchangeKind,
@@ -35,10 +42,10 @@ import {
   type SimEvent,
   type SimState,
 } from './types.js';
-import { ambientAt, canPlace, emptyQualities, getBuilding, liveBuildings, mainSource, placeTile, route } from './world.js';
+import { ambientAt, canPlace, distanceTo, emptyQualities, getBuilding, liveBuildings, mainSource, placeTile, route, sizeOf } from './world.js';
 
 export type Command =
-  | { at: number; kind: 'build'; type: string; x: number; y: number }
+  | { at: number; kind: 'build'; type: string; x: number; y: number; rot?: number }
   | { at: number; kind: 'remove'; x: number; y: number }
   /** Answer the open dilemma of this type, if there is one. */
   | { at: number; kind: 'decide'; dilemma: DilemmaType; option: 'approve' | 'decline' };
@@ -55,6 +62,63 @@ export interface Scenario {
 }
 
 const REQUEST_LAPSE_TICKS = 5 * TICKS_PER_DAY;
+/** How far a resident can see a change to the town, in tiles. */
+export const SIGHT = 6;
+/** News of a change reaches anyone awake this long after it happened. */
+export const WORD_OF_MOUTH = 8 * 60;
+/** Food one meal takes from the town's stores. */
+export const MEAL = 0.5;
+export const STOCK_CAP: Record<Resource, number> = { food: 80, timber: 100 };
+export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
+/** Gardens grow little in winter and plenty at harvest. */
+const GARDEN_SEASON: Record<ReturnType<typeof seasonOf>, number> = { spring: 0.8, summer: 1.1, autumn: 1.3, winter: 0.25 };
+
+/** What a change in one ambient quality means to the person noticing it. */
+function detailFor(q: Quality, change: number): string {
+  switch (q) {
+    case 'noise':
+      return change < 0 ? 'quieter' : 'noisier';
+    case 'green':
+      return change > 0 ? 'greener' : 'barer';
+    case 'bustle':
+      return change > 0 ? 'busier' : 'calmer';
+    case 'scent':
+      return change > 0 ? 'scent' : 'scentless';
+    case 'water':
+      return change > 0 ? 'water' : 'dry';
+  }
+}
+
+/** How often a resident's asks of this kind went ignored in the last fortnight. */
+function lapsesOf(state: SimState, who: string, kind: Request['kind'], tick: number): number {
+  return state.requests.filter((q) => q.by === who && q.kind === kind && q.status === 'lapsed' && (q.closedTick ?? 0) > tick - 14 * TICKS_PER_DAY).length;
+}
+
+const ASK_THANKS: Record<Request['kind'], string> = {
+  quieter_home: 'a quiet night at last',
+  workplace: 'a proper place to work',
+  more_food: 'food on the table again',
+  somewhere_to_sit: 'somewhere to sit near home',
+  more_green: 'green by my door',
+  place_to_gather: 'another place to gather',
+};
+
+export const DETAIL_NOTES: Record<string, string> = {
+  quieter: 'quieter at home now',
+  noisier: 'noisier at home now',
+  greener: 'greener by my door',
+  barer: 'barer by my door',
+  busier: 'busier round my way',
+  calmer: 'calmer round my way',
+  scent: 'smells lovely by my door',
+  scentless: 'the smell has gone',
+  water: 'water nearby',
+  dry: 'further from the water',
+  gather: 'somewhere to gather',
+  sit: 'somewhere to sit',
+  pretty: 'makes the town prettier',
+  work: 'good, honest work for the town',
+};
 /** Disposition below this for three mornings running starts thoughts of leaving; above the second ends them. */
 export const LEAVING_BELOW = 0.48;
 export const STAYING_ABOVE = 0.55;
@@ -74,6 +138,8 @@ export function createState(scenario: Scenario, seed: number): SimState {
     nextEpisodeId: 1,
     nextRequestId: 1,
     story: newStoryState(seed),
+    stock: { ...START_STOCK },
+    lastShortageDay: 0,
   };
   for (const b of scenario.buildings) {
     const err = canPlace(state, b.type, b.x, b.y);
@@ -118,6 +184,7 @@ export function createState(scenario: Scenario, seed: number): SimState {
       lastScentDay: 0,
       lastVisit: {},
       coldUntil: -1,
+      unseen: [],
       rng: deriveSeed(seed, `r:${id}`),
     };
     state.residents[id] = r;
@@ -263,8 +330,9 @@ export class Simulation implements StoryHost {
 
   execute(c: Command): void {
     if (c.kind === 'build') {
-      // A scheduled build whose spot has since been taken is dropped, as a player would.
-      if (canPlace(this.state, c.type, c.x, c.y) === null) this.build(c.type, c.x, c.y);
+      // A scheduled build whose spot has since been taken, or that the town can no longer
+      // afford, is dropped, as a player would.
+      if (canPlace(this.state, c.type, c.x, c.y, c.rot ?? 0) === null && this.canAfford(c.type)) this.build(c.type, c.x, c.y, c.rot ?? 0);
     } else if (c.kind === 'remove') this.remove(c.x, c.y);
     else {
       const d = this.state.story.dilemmas.find((x) => x.type === c.dilemma && x.status === 'open');
@@ -272,66 +340,153 @@ export class Simulation implements StoryHost {
     }
   }
 
-  build(type: string, x: number, y: number): BuildingState {
+  /** Can the town afford this building right now? */
+  canAfford(type: string): boolean {
+    return (buildingDef(type).cost ?? 0) <= this.state.stock.timber + 1e-9;
+  }
+
+  build(type: string, x: number, y: number, rot = 0): BuildingState {
     const state = this.state;
-    const err = canPlace(state, type, x, y);
+    const err = canPlace(state, type, x, y, rot);
     if (err) throw new Error(`cannot build ${type} at ${x},${y}: ${err}`);
-    const b: BuildingState = { id: state.nextBuildingId++, type, x, y, placedTick: state.tick, placedBy: 'steward', removed: false };
-    // Each resident weighs how the new building changes the feel of home, before and after.
-    const before = new Map<string, number>();
-    for (const r of this.activeResidents()) before.set(r.id, this.homeFeel(r));
+    if (!this.canAfford(type)) throw new Error(`cannot afford ${type}: needs ${buildingDef(type).cost} timber, have ${Math.floor(state.stock.timber)}`);
+    state.stock.timber -= buildingDef(type).cost ?? 0;
+    const b: BuildingState = { id: state.nextBuildingId++, type, x, y, placedTick: state.tick, placedBy: 'steward', removed: false, ...(rot ? { rot: rot % 4 } : {}) };
     state.buildings.push(b);
     this.emit({ t: state.tick, type: 'built', building: b.id, btype: type, by: 'steward' });
-    const ctx = this.ctx();
-    const bdef = buildingDef(type);
-    for (const r of this.activeResidents()) {
-      const def = residentDef(r.id);
-      const delta = this.homeFeel(r) - (before.get(r.id) ?? 0);
-      const valueMatch =
-        bdef.kind === 'social' ? def.values.community : bdef.kind === 'decor' || bdef.kind === 'nature' ? Math.max(def.values.beauty, def.values.nature) : bdef.kind === 'work' ? def.values.craft : 0;
-      if (Math.abs(delta) >= 0.04) {
-        const sign = Math.sign(delta);
-        const aspect = sign > 0 ? 'nice_addition' : 'unwelcome_addition';
-        this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect, valence: 0.6 * sign, base: clamp(Math.abs(delta) * 3), source: 'witnessed', note: sign > 0 ? 'makes home nicer' : 'spoils home' });
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: sign > 0 ? 'improves_town' : 'spoils_town', valence: 0.5 * sign, base: clamp(Math.abs(delta) * 2), source: 'witnessed', note: `built the ${bdef.name.toLowerCase()}` });
-        this.emit({ t: state.tick, type: 'reaction', who: r.id, building: b.id, aspect, valence: sign });
-      } else if (valueMatch >= 0.6) {
-        this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect: 'nice_addition', valence: 0.5, base: 0.3 * valueMatch, source: 'witnessed', note: 'good for the town' });
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'improves_town', valence: 0.4, base: 0.25 * valueMatch, source: 'witnessed', note: `built the ${bdef.name.toLowerCase()}` });
-        this.emit({ t: state.tick, type: 'reaction', who: r.id, building: b.id, aspect: 'nice_addition', valence: 1 });
-      }
-    }
+    // Nobody reacts yet: each resident notices when they see it, wake near it, or hear of it.
+    for (const r of this.activeResidents()) r.unseen.push({ building: b.id, kind: 'built', tick: state.tick });
     this.assignJobs();
     return b;
   }
 
   remove(x: number, y: number): BuildingState {
     const b = liveBuildings(this.state).find((bb) => {
-      const [w, h] = buildingDef(bb.type).size;
+      const [w, h] = sizeOf(bb);
       return x >= bb.x && x < bb.x + w && y >= bb.y && y < bb.y + h;
     });
     if (!b) throw new Error(`nothing to remove at ${x},${y}`);
-    if (buildingDef(b.type).kind === 'home') throw new Error('removing homes is not supported in M1');
-    const ctx = this.ctx();
+    if (buildingDef(b.type).kind === 'home') throw new Error('homes cannot be removed');
     b.removed = true;
+    this.state.stock.timber = Math.min(STOCK_CAP.timber, this.state.stock.timber + Math.floor((buildingDef(b.type).cost ?? 0) / 2));
     this.emit({ t: this.state.tick, type: 'removed', building: b.id, btype: b.type, by: 'steward' });
     for (const r of this.activeResidents()) {
-      if (r.at === b.id || r.pending?.placeId === b.id) {
+      const there = r.at === b.id;
+      if (there || r.pending?.placeId === b.id) {
         r.activity = null;
         r.pending = null;
         r.path = [];
         r.at = null;
       }
       if (r.jobId === b.id) r.jobId = null;
-      const op = attachment(r, `b:${b.id}`);
-      if (op > 0.15) {
-        this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect: 'lost_place', valence: -0.8, base: 0.7 + 0.8 * op, source: 'witnessed', note: `the ${buildingDef(b.type).name.toLowerCase()} is gone` });
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'destroyed_place', valence: -0.7, base: 0.3 + 0.6 * op, source: 'witnessed', note: `took away the ${buildingDef(b.type).name.toLowerCase()}` });
-        this.emit({ t: this.state.tick, type: 'grief', who: r.id, building: b.id, btype: b.type });
-      }
+      r.unseen.push({ building: b.id, kind: 'removed', tick: this.state.tick });
     }
     this.assignJobs();
     return b;
+  }
+
+  /**
+   * A resident takes in a change to the town: how it alters the feel of home for them, what
+   * it means to their values, or the loss of a place they loved.
+   */
+  private notice(ctx: MindContext, r: ResidentState, change: Unseen, how: 'saw' | 'woke' | 'heard'): void {
+    const state = this.state;
+    const b = getBuilding(state, change.building);
+    const def = residentDef(r.id);
+    const bdef = buildingDef(b.type);
+    const name = bdef.name.toLowerCase();
+    const heard = how === 'heard' ? 0.6 : 1;
+    const source = how === 'heard' ? ('told' as const) : ('witnessed' as const);
+    // How home feels with and without it, quality by quality.
+    const prefs = ambientPrefs(def);
+    const [hx, hy] = placeTile(getBuilding(state, r.homeId));
+    const wasRemoved = b.removed;
+    b.removed = false;
+    const withIt = ambientAt(state, hx, hy, new Set(), { weather: false });
+    b.removed = true;
+    const without = ambientAt(state, hx, hy, new Set(), { weather: false });
+    b.removed = wasRemoved;
+    const sign = change.kind === 'built' ? 1 : -1;
+    let total = 0;
+    let detail: string | null = null;
+    let strongest = 0;
+    for (const q of QUALITIES) {
+      const c = prefs[q] * (withIt[q] - without[q]) * sign;
+      total += c;
+      if (Math.abs(c) > strongest && Math.abs(withIt[q] - without[q]) > 0.02) {
+        strongest = Math.abs(c);
+        detail = detailFor(q, (withIt[q] - without[q]) * sign);
+      }
+    }
+
+    if (change.kind === 'removed') {
+      const op = attachment(r, `b:${b.id}`);
+      if (op > 0.15) {
+        this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect: 'lost_place', valence: -0.8, base: (0.7 + 0.8 * op) * heard, source, note: `the ${name} is gone` });
+        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'destroyed_place', valence: -0.7, base: (0.3 + 0.6 * op) * heard, source, note: `took away the ${name}` });
+        this.emit({ t: state.tick, type: 'grief', who: r.id, building: b.id, btype: b.type, how });
+        return;
+      }
+    }
+    if (Math.abs(total) >= 0.04 && detail) {
+      const s = Math.sign(total);
+      const aspect = s > 0 ? 'nice_addition' : 'unwelcome_addition';
+      if (change.kind === 'built') {
+        this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect, valence: 0.6 * s, base: clamp(Math.abs(total) * 3) * heard, source, note: `${DETAIL_NOTES[detail] ?? 'changes home'}` });
+      }
+      this.mind.perceive(ctx, r, { subject: STEWARD, aspect: s > 0 ? 'improves_town' : 'spoils_town', valence: 0.5 * s, base: clamp(Math.abs(total) * 2) * heard, source, note: `${change.kind === 'built' ? 'built' : 'took away'} the ${name}` });
+      this.emit({ t: state.tick, type: 'reaction', who: r.id, building: b.id, aspect, valence: s, detail, how, change: change.kind });
+      return;
+    }
+    if (change.kind !== 'built') return;
+    // Nothing changes at home, but it may still matter for what they care about.
+    const match: Array<[string, number]> =
+      bdef.kind === 'social'
+        ? [['gather', def.values.community]]
+        : b.type === 'bench'
+          ? [['sit', Math.max(def.values.community, unit(def.traits.sociable) * 0.8)]]
+          : bdef.kind === 'decor' || bdef.kind === 'nature'
+            ? [['pretty', Math.max(def.values.beauty, def.values.nature)]]
+            : bdef.kind === 'work'
+              ? [['work', Math.max(def.values.craft, def.values.prosperity)]]
+              : [];
+    const [what, value] = match[0] ?? ['', 0];
+    if (value >= 0.6) {
+      this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect: 'nice_addition', valence: 0.5, base: 0.3 * value * heard, source, note: DETAIL_NOTES[what] ?? 'good for the town' });
+      this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'improves_town', valence: 0.4, base: 0.25 * value * heard, source, note: `built the ${name}` });
+      this.emit({ t: state.tick, type: 'reaction', who: r.id, building: b.id, aspect: 'nice_addition', valence: 1, detail: what, how, change: 'built' });
+    }
+  }
+
+  /** Changes a resident hasn't taken in yet: noticed on sight, on waking nearby, or by word of mouth once awake for long enough. */
+  private checkUnseen(ctx: MindContext, r: ResidentState, waking: boolean): void {
+    if (r.unseen.length === 0) return;
+    const state = this.state;
+    const keep: Unseen[] = [];
+    for (const u of r.unseen) {
+      const b = state.buildings.find((x) => x.id === u.building);
+      if (!b) continue;
+      const near = distanceTo(b, r.x, r.y) <= SIGHT;
+      if (near) this.notice(ctx, r, u, waking ? 'woke' : 'saw');
+      else if (state.tick - u.tick >= WORD_OF_MOUTH) this.notice(ctx, r, u, 'heard');
+      else keep.push(u);
+    }
+    r.unseen = keep;
+  }
+
+  /** Start a meal: it draws on the town's food, and a bare larder makes it meagre. */
+  private serveMeal(r: ResidentState, act: ActivityState): void {
+    const state = this.state;
+    if (state.stock.food >= MEAL) {
+      state.stock.food -= MEAL;
+      return;
+    }
+    act.meagre = true;
+    const day = dayOf(state.tick);
+    if (state.lastShortageDay !== day) {
+      state.lastShortageDay = day;
+      this.emit({ t: state.tick, type: 'shortage', resource: 'food', who: r.id });
+    }
   }
 
   // ------------------------------------------------------------------ internals
@@ -391,7 +546,7 @@ export class Simulation implements StoryHost {
     const delta = {} as Record<Need, number>;
     for (const n of NEEDS) {
       delta[n] = sleeping && n === 'rest' ? 0 : BASE_DECAY[n] / 60;
-      if (doing) delta[n] += (ACTIVITY_EFFECTS[doing][n] ?? 0) / 60;
+      if (doing) delta[n] += ((ACTIVITY_EFFECTS[doing][n] ?? 0) * (doing === 'eat' && n === 'food' && act?.meagre ? 0.35 : 1)) / 60;
     }
     const tile: [number, number] = r.at !== null ? placeTile(getBuilding(state, r.at)) : [r.x, r.y];
     const amb = r.at !== null || r.path.length > 0 ? ambientAt(state, tile[0], tile[1], this.worked) : emptyQualities();
@@ -434,6 +589,20 @@ export class Simulation implements StoryHost {
     }
     for (const n of NEEDS) r.needs[n] = clamp(r.needs[n] + delta[n]);
 
+    // Work makes things for the town's stores; a cheerful worker makes more.
+    if (doing === 'work' && r.at !== null) {
+      const made = buildingDef(getBuilding(state, r.at).type).produces;
+      if (made) {
+        for (const [res, rate] of Object.entries(made) as Array<[Resource, number]>) {
+          const season = res === 'food' && getBuilding(state, r.at).type === 'garden' ? GARDEN_SEASON[seasonOf(tick)] : 1;
+          state.stock[res] = Math.min(STOCK_CAP[res], state.stock[res] + (rate / 60) * season * (0.5 + 0.5 * r.mood));
+        }
+      }
+    }
+
+    // Changes to the town are taken in only by someone awake to see them.
+    if (!sleeping && tick % 5 === 0) this.checkUnseen(ctx, r, false);
+
     // Walking.
     if (r.path.length > 0) {
       const [x, y] = r.path.shift() as [number, number];
@@ -451,7 +620,12 @@ export class Simulation implements StoryHost {
       (act.id !== 'sleep' && act.id !== 'eat' && r.needs.food < 0.12) ||
       (act.id !== 'sleep' && act.id !== 'work' && minute === def.sleep);
     if (!needDecide) return;
-    if (act?.id === 'sleep' && act.night && tick >= act.until) this.wake(ctx, r);
+    if (act?.id === 'sleep' && act.night && tick >= act.until) {
+      this.wake(ctx, r);
+      // Out of bed first, then take in what changed overnight.
+      r.activity = null;
+      this.checkUnseen(ctx, r, true);
+    }
     const next = this.mind.decide(ctx, r);
     if (next.night && !(act?.id === 'sleep' && act.night)) {
       r.sleepNoiseMax = 0;
@@ -459,6 +633,7 @@ export class Simulation implements StoryHost {
     }
     if (next.placeId === r.at) {
       r.activity = next;
+      if (next.id === 'eat') this.serveMeal(r, next);
       return;
     }
     r.at = null;
@@ -482,6 +657,7 @@ export class Simulation implements StoryHost {
     r.at = next.placeId;
     r.activity = next;
     r.lastVisit[String(next.placeId)] = this.state.tick;
+    if (next.id === 'eat') this.serveMeal(r, next);
     this.mind.onArrive(ctx, r, next.placeId);
   }
 
@@ -493,36 +669,39 @@ export class Simulation implements StoryHost {
 
     this.mind.consolidate(ctx, r);
 
-    // Close or lapse open requests.
+    // Asks: close the ones dealt with, lapse the ignored, and voice at most one new one.
     for (const q of state.requests) {
       if (q.by !== r.id || q.status !== 'open') continue;
-      const id = Number(q.subject.slice(2));
-      const b = state.buildings.find((x) => x.id === id);
-      if (!b || b.removed || r.sleepNoiseMax <= sleepNoiseThreshold(def)) {
-        q.status = 'fulfilled';
+      const a = assess(state, r, q.kind, q.postedTick);
+      const stewardActed = q.kind === 'quieter_home' || state.buildings.some((b) => b.placedBy === 'steward' && b.placedTick >= q.postedTick);
+      if (a.met) {
+        q.status = stewardActed ? 'fulfilled' : 'resolved';
         q.closedTick = tick;
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'listens_to_me', valence: 1, base: 1.3, source: 'witnessed', note: 'a quiet night at last' });
+        if (stewardActed) {
+          this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'listens_to_me', valence: 1, base: 1.3, source: 'witnessed', note: ASK_THANKS[q.kind] });
+        }
         this.emit({ t: tick, type: 'request_closed', request: { ...q } });
-      } else if (tick - q.postedTick > REQUEST_LAPSE_TICKS) {
+      } else if (tick - q.postedTick > ASK_LAPSE_DAYS[q.kind] * TICKS_PER_DAY) {
+        // Being ignored hurts most the first time; after that it is disappointment, not news.
+        const before = lapsesOf(state, r.id, q.kind, tick);
         q.status = 'lapsed';
         q.closedTick = tick;
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'ignores_me', valence: -0.7, base: 0.6, source: 'witnessed', note: 'nothing was done' });
+        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'ignores_me', valence: -0.7, base: before === 0 ? 0.6 : 0.3, source: 'witnessed', note: 'nothing was done' });
         this.emit({ t: tick, type: 'request_closed', request: { ...q } });
       }
     }
-    // Post new requests about strong night-noise beliefs.
-    for (const bel of Object.values(r.beliefs)) {
-      if (bel.aspect !== 'noisy_at_night' || !bel.subject.startsWith('b:') || bel.strength < 0.35) continue;
-      const b = state.buildings.find((x) => `b:${x.id}` === bel.subject);
-      if (!b || b.removed) continue;
-      // Ask only about a noise that actually disturbed last night, and only once at a time.
-      if (!r.disturbedBy.includes(b.id)) continue;
-      if (state.requests.some((q) => q.by === r.id && q.subject === bel.subject && q.status === 'open')) continue;
-      // Even a resident who has stopped trusting the steward still says so: the player must
-      // always be able to find out what is wrong (pillar 3).
-      const q = { id: state.nextRequestId++, by: r.id, kind: 'quieter_home' as const, subject: bel.subject, postedTick: tick, status: 'open' as const };
+    // Even a resident who has stopped trusting the steward still says so: the player must
+    // always be able to find out what is wrong (pillar 3).
+    for (const kind of ASK_KINDS) {
+      if (state.requests.some((q) => q.by === r.id && q.kind === kind && (q.status === 'open' || (q.closedTick ?? 0) > tick - 3 * TICKS_PER_DAY))) continue;
+      // Ignored twice lately, they stop asking for a while.
+      if (lapsesOf(state, r.id, kind, tick) >= 2) continue;
+      const a = assess(state, r, kind);
+      if (!a.want) continue;
+      const q: Request = { id: state.nextRequestId++, by: r.id, kind, subject: a.subject, postedTick: tick, status: 'open', ...(a.wants ? { wants: a.wants } : {}) };
       state.requests.push(q);
       this.emit({ t: tick, type: 'request_posted', request: { ...q } });
+      break;
     }
 
     // Morning smells.

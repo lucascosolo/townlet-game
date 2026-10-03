@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { buildingDef } from '../../../src/content/buildings.js';
 import { minuteOf, seasonOf, type Season } from '../../../src/sim/time.js';
 import type { BuildingState, ResidentState } from '../../../src/sim/types.js';
-import { placeTile } from '../../../src/sim/world.js';
+import { footprint, placeTile, sizeOf } from '../../../src/sim/world.js';
 import type { Game } from '../game.js';
 import { buildingMesh, glow, mat, residentMesh } from './meshes.js';
 
@@ -31,7 +31,8 @@ export class TownView {
   readonly camera: THREE.OrthographicCamera;
   private readonly game: Game;
   private readonly target = new THREE.Vector3();
-  private azimuthStep = 0;
+  /** Where the camera is turning to, and where it is now (radians around the town). */
+  private azimuthGoal = Math.PI / 4;
   private azimuth = Math.PI / 4;
   private readonly sun = new THREE.DirectionalLight(0xffffff, 1.4);
   private readonly hemi = new THREE.HemisphereLight(0xdfefff, 0x6b5a3a, 0.6);
@@ -110,8 +111,22 @@ export class TownView {
     this.camera.updateProjectionMatrix();
   }
 
+  /** Snap to the next quarter turn (Q/E and the buttons). */
   rotate(dir: 1 | -1): void {
-    this.azimuthStep = (this.azimuthStep + dir + 4) % 4;
+    const q = Math.PI / 2;
+    const offset = Math.PI / 4;
+    const k = Math.round((this.azimuthGoal - offset) / q);
+    this.azimuthGoal = offset + (k + dir) * q;
+  }
+
+  /** Turn freely, following a mouse drag in pixels. */
+  orbit(dx: number): void {
+    this.azimuthGoal -= dx * 0.008;
+    this.azimuth = this.azimuthGoal;
+  }
+
+  get yaw(): number {
+    return this.azimuth;
   }
 
   zoom(factor: number): void {
@@ -137,10 +152,7 @@ export class TownView {
   }
 
   private placeCamera(dt: number): void {
-    const goal = Math.PI / 4 + this.azimuthStep * (Math.PI / 2);
-    let diff = goal - this.azimuth;
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    this.azimuth += diff * Math.min(1, dt * 8);
+    this.azimuth += (this.azimuthGoal - this.azimuth) * Math.min(1, dt * 8);
     const dist = 60;
     this.camera.position.set(
       this.target.x + Math.sin(this.azimuth) * Math.cos(CAMERA_TILT) * dist,
@@ -165,8 +177,9 @@ export class TownView {
       }
       if (existing) continue;
       const g = buildingMesh(b.type);
-      const [w, d] = buildingDef(b.type).size;
+      const [w, d] = sizeOf(b);
       g.position.set(b.x + w / 2, 0, b.y + d / 2);
+      g.rotation.y = -(b.rot ?? 0) * (Math.PI / 2);
       g.userData.buildingId = b.id;
       g.traverse((o) => {
         if (o instanceof THREE.Mesh && o.name === 'canopy') o.material = this.leafMat;
@@ -182,13 +195,13 @@ export class TownView {
     if (r.at === null) return new THREE.Vector3(r.x + 0.5, 0, r.y + 0.5);
     const b = state.buildings.find((x) => x.id === r.at) as BuildingState;
     const def = buildingDef(b.type);
+    const [w, d] = sizeOf(b);
     // Indoors at home for the night, or resting: out of sight.
     if (def.kind === 'home' && (r.activity?.id === 'sleep' || r.activity?.id === 'rest')) return null;
     const [tx, ty] = placeTile(b);
     const here = index.get(b.id) ?? [r.id];
     const i = here.indexOf(r.id);
     const n = here.length;
-    const [w, d] = def.size;
     const radius = Math.max(w, d) / 2 + 0.25;
     const angle = (i / Math.max(n, 1)) * Math.PI * 2 + 0.6;
     const cx = b.x + w / 2;
@@ -288,7 +301,7 @@ export class TownView {
       if (state.tick < g.from || state.tick >= g.until) continue;
       const b = state.buildings.find((x) => x.id === g.placeId);
       if (!b) continue;
-      const [w, d] = buildingDef(b.type).size;
+      const [w, d] = sizeOf(b);
       const n = g.kind === 'festival' ? 14 : 6;
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2;
@@ -301,7 +314,7 @@ export class TownView {
 
   // ---------------------------------------------------------------- build tool visuals
 
-  setGhost(type: string | null, tile: [number, number] | null, valid: boolean): void {
+  setGhost(type: string | null, tile: [number, number] | null, valid: boolean, rot = 0): void {
     if (type !== this.ghostType) {
       if (this.ghost) this.scene.remove(this.ghost);
       this.ghost = null;
@@ -320,8 +333,9 @@ export class TownView {
     if (!this.ghost || !type) return;
     this.ghost.visible = tile !== null;
     if (!tile) return;
-    const [w, d] = buildingDef(type).size;
+    const [w, d] = footprint(type, rot);
     this.ghost.position.set(tile[0] + w / 2, 0.01, tile[1] + d / 2);
+    this.ghost.rotation.y = -rot * (Math.PI / 2);
     this.ghost.traverse((o) => {
       if (o instanceof THREE.Mesh) (o.material as THREE.MeshBasicMaterial).color.setHex(valid ? 0x6fcf6f : 0xe05050);
     });

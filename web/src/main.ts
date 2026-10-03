@@ -3,7 +3,7 @@
 
 import { buildingDef } from '../../src/content/buildings.js';
 import { STEWARD_POLICIES, type StewardPolicy } from '../../src/scenarios/steward.js';
-import { canPlace } from '../../src/sim/world.js';
+import { canPlace, footprint } from '../../src/sim/world.js';
 import { Game } from './game.js';
 import { Ui } from './ui/ui.js';
 import { TownView } from './view/scene.js';
@@ -21,31 +21,37 @@ if (params.has('speed')) game.speedIndex = Number(params.get('speed'));
 const app = document.getElementById('app') as HTMLElement;
 const stage = document.getElementById('stage') as HTMLElement;
 const view = new TownView(stage, game);
-const ui = new Ui(app, game, view);
+const ui = new Ui(app, game, view, { intro: params.get('intro') !== '0' });
 // Start with the town centred in the space left of the side panel.
 if (window.innerWidth > 760) view.pan(-180, 0);
 
 // ------------------------------------------------------------------ input
 
 const canvas = view.renderer.domElement;
-let down: { x: number; y: number; moved: boolean } | null = null;
+// Left-drag moves the view; right- or middle-drag turns it around the town.
+let down: { x: number; y: number; moved: boolean; turn: boolean } | null = null;
+let lastHover: [number, number] | null = null;
+
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 canvas.addEventListener('pointerdown', (e) => {
-  down = { x: e.clientX, y: e.clientY, moved: false };
+  down = { x: e.clientX, y: e.clientY, moved: false, turn: e.button === 1 || e.button === 2 };
   canvas.setPointerCapture(e.pointerId);
 });
 
 canvas.addEventListener('pointermove', (e) => {
   if (down && (down.moved || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6)) {
     if (!down.moved) down.moved = true;
-    view.pan(e.movementX, e.movementY);
+    if (down.turn) view.orbit(e.movementX);
+    else view.pan(e.movementX, e.movementY);
     return;
   }
+  lastHover = [e.clientX, e.clientY];
   hover(e.clientX, e.clientY);
 });
 
 canvas.addEventListener('pointerup', (e) => {
-  const wasClick = down && !down.moved;
+  const wasClick = down && !down.moved && !down.turn;
   down = null;
   if (wasClick) click(e.clientX, e.clientY);
 });
@@ -56,7 +62,7 @@ canvas.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 function footprintAt(type: string, x: number, y: number): [number, number] {
-  const [w, d] = buildingDef(type).size;
+  const [w, d] = footprint(type, ui.rotation);
   return [x - Math.floor((w - 1) / 2), y - Math.floor((d - 1) / 2)];
 }
 
@@ -65,7 +71,7 @@ function hover(cx: number, cy: number): void {
   if (tool.kind === 'build') {
     const tile = view.tileAt(cx, cy);
     const at = tile ? footprintAt(tool.type, tile[0], tile[1]) : null;
-    view.setGhost(tool.type, at, at !== null && canPlace(game.sim.state, tool.type, at[0], at[1]) === null);
+    view.setGhost(tool.type, at, at !== null && canPlace(game.sim.state, tool.type, at[0], at[1], ui.rotation) === null && game.sim.canAfford(tool.type), ui.rotation);
   } else if (tool.kind === 'remove') {
     const p = view.pick(cx, cy);
     view.highlightBuilding(p?.kind === 'building' ? p.id : null);
@@ -78,13 +84,17 @@ function click(cx: number, cy: number): void {
     const tile = view.tileAt(cx, cy);
     if (!tile) return;
     const [x, y] = footprintAt(tool.type, tile[0], tile[1]);
-    const err = canPlace(game.sim.state, tool.type, x, y);
+    const err = canPlace(game.sim.state, tool.type, x, y, ui.rotation);
     if (err) {
       ui.status(`Can't build there: ${err.replace(/ #\d+/, '')}.`);
       return;
     }
-    game.command({ kind: 'build', type: tool.type, x, y });
-    ui.status(`${buildingDef(tool.type).name} placed. Click again to place another; Esc to stop.`);
+    if (!game.sim.canAfford(tool.type)) {
+      ui.status(`Not enough timber (${buildingDef(tool.type).cost} needed). The woodlot makes more.`);
+      return;
+    }
+    game.command({ kind: 'build', type: tool.type, x, y, ...(ui.rotation ? { rot: ui.rotation } : {}) });
+    ui.status(`${buildingDef(tool.type).name} placed. Click again for another · R rotates · Esc stops.`);
     return;
   }
   const p = view.pick(cx, cy);
@@ -107,7 +117,10 @@ function click(cx: number, cy: number): void {
 window.addEventListener('keydown', (e) => {
   if ((e.target as HTMLElement).tagName === 'INPUT') return;
   const k = e.key.toLowerCase();
-  if (k === 'q') view.rotate(-1);
+  if (k === 'r' && ui.tool.kind === 'build') {
+    ui.rotate();
+    if (lastHover) hover(lastHover[0], lastHover[1]);
+  } else if (k === 'q') view.rotate(-1);
   else if (k === 'e') view.rotate(1);
   else if (k === ' ') {
     e.preventDefault();
@@ -154,4 +167,5 @@ window.__townlet = {
   buildingScreen: (id: number) => view.buildingScreen(id),
   tileScreen: (x: number, y: number) => view.tileScreen(x, y),
   focus: (x: number, y: number) => view.focusOn(x, y),
+  yaw: () => view.yaw,
 };

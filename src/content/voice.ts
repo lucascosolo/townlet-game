@@ -35,6 +35,7 @@ export const BELIEF_STATEMENTS: Record<string, string> = {
   decided_well: 'the steward makes good decisions',
   decided_badly: 'the steward makes poor decisions',
   turned_me_down: 'the steward turned {obj} down',
+  granted_wish: 'the steward makes wishes come true',
 };
 
 /** Thoughts and speech, keyed by aspect and sign ("+" or "-"). */
@@ -141,6 +142,13 @@ export const SPEECH: Record<string, Lines> = {
     chatty: ['Slept like a log! You are a marvel, steward!'],
     dreamy: ['The night was quiet again. Thank you.'],
   },
+  thanks: {
+    plain: ['That helps. Thanks.'],
+    formal: ['Thank you, steward. It is just what was needed.'],
+    warm: ['Oh, thank you! That is exactly what I hoped for.'],
+    chatty: ['You did it! Marvellous!'],
+    dreamy: ['It came true. Thank you.'],
+  },
   lapsed: {
     plain: ['Asked. Nothing happened.'],
     formal: ['I did ask. Evidently it was not a priority.'],
@@ -196,5 +204,150 @@ export const SPEECH: Record<string, Lines> = {
     warm: ["I'm staying. This is home."],
     chatty: ['Who was I kidding? I am staying!'],
     dreamy: ['The town held on to me.'],
+  },
+};
+
+/**
+ * Reactions to a change in the town, by what changed for that resident. Each works whether
+ * something was built or taken away; {s} is the building.
+ */
+export const REACTIONS: Record<string, Lines> = {
+  quieter: {
+    plain: ['Quieter. Good.', 'Hear that? Nothing. Good.'],
+    formal: ['One can hear oneself think again.', 'A welcome hush, I must say.'],
+    warm: ['Oh, it is so much quieter now.', 'I might actually sleep tonight.'],
+    chatty: ['Peace and quiet! Who knew I missed it?'],
+    dreamy: ['The air has gone soft and still.'],
+  },
+  noisier: {
+    plain: ['Loud. Right by my door.', 'Noise. Great.'],
+    formal: ['That will be a racket, I fear.', 'I am not sure my nerves will stand it.'],
+    warm: ['Oh dear. That will be loud, won\'t it?'],
+    chatty: ['Clang, bang, all day long, is it?'],
+    dreamy: ['The quiet I liked has a hole in it now.'],
+  },
+  greener: {
+    plain: ['Bit of green. Nice.', 'Green by the door.'],
+    formal: ['A touch of green does wonders.', 'Greenery, at last, near my door.'],
+    warm: ['Something green to look at in the morning!', 'Oh, I love that.'],
+    chatty: ['Green! Lovely green! Right there!'],
+    dreamy: ['Something green is growing where I live.'],
+  },
+  barer: {
+    plain: ['Bare out there now.'],
+    formal: ['The view is rather the poorer for it.'],
+    warm: ['It looks so bare out my window now.'],
+    chatty: ['Where did all the green go?'],
+    dreamy: ['The window looks out on less than it did.'],
+  },
+  busier: {
+    plain: ['Busy round here now.'],
+    formal: ['There will be rather more coming and going, I see.'],
+    warm: ['More people about. That could be nice.', 'Lively round here now.'],
+    chatty: ['Folk coming and going! Now that is a town!'],
+    dreamy: ['Footsteps, everywhere, all day.'],
+  },
+  calmer: {
+    plain: ['Calmer now.'],
+    formal: ['Rather more peaceful, I find.'],
+    warm: ['It feels calmer round here.'],
+    chatty: ['Bit quiet round here now, isn\'t it?'],
+    dreamy: ['The lane has gone still.'],
+  },
+  scent: {
+    plain: ['Smells good.'],
+    formal: ['A pleasant smell carries to my door.'],
+    warm: ['I can smell it from my doorstep. Lovely.'],
+    chatty: ['Smell that! Right to my door!'],
+    dreamy: ['The air smells like a memory now.'],
+  },
+  scentless: {
+    plain: ['The smell is gone.'],
+    formal: ['I find I miss the smell.'],
+    warm: ['I miss that smell in the mornings.'],
+    chatty: ['No more nice smell? Shame!'],
+    dreamy: ['The air forgot something.'],
+  },
+  water: {
+    plain: ['Water close by. Good.'],
+    formal: ['Water near at hand. Sensible.'],
+    warm: ['Lovely to have water so close.'],
+    chatty: ['Water! Handy!'],
+    dreamy: ['I can hear water from here.'],
+  },
+  dry: {
+    plain: ['Further to the water now.'],
+    formal: ['Water is rather further off now.'],
+    warm: ['I will have to walk further for water.'],
+    chatty: ['A long walk for water now!'],
+    dreamy: ['The water went away.'],
+  },
+  gather: {
+    plain: ['Somewhere to meet. Good.'],
+    formal: ['A proper place to gather. The town needed one.', 'This will bring people together.'],
+    warm: ['Somewhere for everyone to meet! Oh, that is lovely.', 'We can all get together there.'],
+    chatty: ['A place to meet! Evenings sorted!'],
+    dreamy: ['A place for everyone to drift towards.'],
+  },
+  sit: {
+    plain: ['Somewhere to sit. Good.', 'A bench. I will use that.'],
+    formal: ['A place to sit and watch the world. Most civilised.'],
+    warm: ['Somewhere to sit! My feet thank you.', 'I can just picture an evening there.'],
+    chatty: ['A bench! Perfect for a natter!'],
+    dreamy: ['A bench, for watching clouds.'],
+  },
+  pretty: {
+    plain: ['Pretty.', 'Looks nice.'],
+    formal: ['It does lift the place, I must admit.'],
+    warm: ['Oh, that makes the town so much prettier.'],
+    chatty: ['Now that is a sight!'],
+    dreamy: ['The town is wearing something pretty.'],
+  },
+  work: {
+    plain: ['Good. More work for the town.'],
+    formal: ['Honest work. The town is growing up.'],
+    warm: ['A proper place of work! That bodes well.'],
+    chatty: ['Work! Trade! Things are happening!'],
+    dreamy: ['Somewhere to make things. I wonder what.'],
+  },
+};
+
+/** What each kind of ask sounds like. {s} is the subject (a noisy building), {what} a wanted building. */
+export const ASKS: Record<string, Lines> = {
+  quieter_home: SPEECH.request as Lines,
+  workplace: {
+    plain: ['A {what}. That is all I need.'],
+    formal: ['Might the town have a {what}? I would put it to good use.'],
+    warm: ["If we had a {what}, I'd finally feel useful here."],
+    chatty: ['Give me a {what} and I will show you what I can do!'],
+    dreamy: ['I keep dreaming of a {what}.'],
+  },
+  more_food: {
+    plain: ['The larder is empty. We need food.'],
+    formal: ['The larder is bare, steward. Something must be done.'],
+    warm: ["We're running out of food. Could we grow more?"],
+    chatty: ['Empty plates all round! More gardens, more fish, anything!'],
+    dreamy: ['My stomach has opinions about the larder.'],
+  },
+  somewhere_to_sit: {
+    plain: ['Somewhere to sit near my place. A bench, say.'],
+    formal: ['A bench near my home would be a great kindness.'],
+    warm: ['Could there be somewhere to sit near me? A bench, maybe?'],
+    chatty: ['A bench by mine! For chatting! Please!'],
+    dreamy: ['If there were a bench by my door, I would watch the evenings.'],
+  },
+  more_green: {
+    plain: ['Something green by my door.'],
+    formal: ['A few flowers near my home would lift my spirits.'],
+    warm: ['Could we have some flowers near my place?'],
+    chatty: ['Flowers! Hedges! Something green round mine!'],
+    dreamy: ['My doorstep wants something growing.'],
+  },
+  place_to_gather: {
+    plain: ['Too crowded. We need another place to sit together.'],
+    formal: ['Our one gathering place is overrun. Another would help.'],
+    warm: ["It's always packed. Somewhere else to meet would be lovely."],
+    chatty: ['Elbow to elbow every evening! Another place to meet!'],
+    dreamy: ['We need more than one place to be together.'],
   },
 };

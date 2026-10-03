@@ -36,9 +36,10 @@ npm run typecheck
 In the browser, URL parameters choose the town: `?scenario=bakery&seed=2&steward=considerate&speed=1`. The default is the quiet town with no stand-in steward, so you answer everything yourself.
 
 **Browser controls:**
-- **Look:** drag to pan, wheel or +/- to zoom, Q/E to rotate by quarter turns.
+- **Look:** drag to move the view, right-drag or middle-drag to turn it around the town, wheel or +/- to zoom. Q/E snap by quarter turns.
 - **Time:** space pauses, 0–4 set the speed.
-- **Building:** pick a building from the palette and click a free spot. Esc returns to looking.
+- **Building:** open **Build ▾** and pick a building; each card shows its timber cost, what it gives off, and who it's likely to please. Click a free spot to place it, R rotates, Esc returns to looking.
+- **Answering:** proposals pop up for a decision. The notice board, which rolls up like a scroll, shows the season's Town Wishes and what residents are asking of you. The **You** tab shows how each resident sees you, and why.
 
 Sample output from the text tools is in `docs/samples/`.
 

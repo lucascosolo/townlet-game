@@ -84,13 +84,13 @@ export interface Scenario {
   residents: Record<string, number>;
   relationships?: Array<{ a: string; b: string; affinity: number; familiarity: number; trust: number }>;
   commands?: Command[];
-  /** Tiles of wild land beyond the settled valley to the east and south, in 8x8 plots (M3c). Default 16; 0 for none. */
+  /** Tiles of wild land beyond the settled valley to the east and south, in 8x8 plots (M3c). Default 24; 0 for none. */
   wild?: number;
 }
 
 /** The size of a wild plot, in tiles. */
 export const PLOT = 8;
-const DEFAULT_WILD = 16;
+const DEFAULT_WILD = 24;
 /** Someone moves into an empty home this long after it is built. */
 const NEWCOMER_DELAY = 2 * 60;
 /** The valley's limit, for now: the sim and the screen stay comfortable. */

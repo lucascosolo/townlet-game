@@ -8,7 +8,7 @@ import { Narrator } from '../narrate/narrator.js';
 import { topicLabel } from '../content/thoughts.js';
 import { opinion } from '../sim/mind/memory.js';
 import { mindTopics } from '../sim/mind/thoughts.js';
-import { ASPIRATIONS, nextStep } from '../sim/story/aspirations.js';
+import { dreamOf, dreamTitle, nextStep } from '../sim/story/aspirations.js';
 import type { Simulation } from '../sim/sim.js';
 import { clock, dayOf } from '../sim/time.js';
 import { NEEDS, type Need, type ResidentState } from '../sim/types.js';
@@ -59,6 +59,7 @@ const round = (v: number) => Math.round(v * 100) / 100;
 export function residentReport(sim: Simulation, id: string, names: Narrator = new Narrator(sim.clone())): ResidentReport {
   const r: ResidentState = sim.resident(id);
   const def = residentDef(id);
+  const dream = dreamOf(sim.state, r);
   const place = (pid: number | null) => (pid === null ? 'on the path' : names.subjectName(`b:${pid}`));
   const doing = r.activity
     ? `${r.activity.id} at ${place(r.activity.placeId)} until ${clock(r.activity.until)}`
@@ -75,11 +76,11 @@ export function residentReport(sim: Simulation, id: string, names: Narrator = ne
     age: def.age,
     background: def.background,
     aspiration: def.aspiration,
-    hope: ASPIRATIONS[id]
+    hope: dream
       ? {
-          title: ASPIRATIONS[id].title,
-          stage: Math.min(r.aspiration.stage, ASPIRATIONS[id].stages.length),
-          of: ASPIRATIONS[id].stages.length,
+          title: dreamTitle(sim.state, r) as string,
+          stage: Math.min(r.aspiration.stage, dream.stages.length),
+          of: dream.stages.length,
           next: nextStep(sim.state, r),
           done: r.aspiration.done,
           ...(r.aspiration.outcome ? { outcome: r.aspiration.outcome } : {}),

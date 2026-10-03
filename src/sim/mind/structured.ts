@@ -159,7 +159,7 @@ export const StructuredMind: Mind = {
       const pull = aspirationPull(ctx.state, r);
       if (pull) {
         for (const b of liveBuildings(ctx.state)) {
-          if (b.type !== pull.type) continue;
+          if (b.type !== pull.type || (pull.placeId !== undefined && b.id !== pull.placeId)) continue;
           if (buildingDef(b.type).activities.includes('stroll')) add('stroll', b.id, pull.weight);
         }
       }

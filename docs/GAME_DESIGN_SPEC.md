@@ -488,7 +488,20 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - A hedge placed from the palette is logged, and residents react.
    - Removing the place residents are most attached to logs "taken down", and at least one resident records a `lost_place` memory.
 5. **Performance budget: met.** Sim stepping at 10× costs 0.38–0.47 ms per frame on average in headless Chromium. Frame rate was 17–27 fps under software rendering in the container, recorded for information only.
-6. **Legibility: open.** This is the owner's playtest.
+6. **Legibility: playtested 2026-10-03.** The owner's playtest led to M2.5 (see DECISIONS.md). The headline finding was "fun to poke for ten minutes, but it feels detached from my actions; I don't really need to be here". The site is deployed at https://lucascosolo.github.io/townlet-game/, so criterion 1 is now fully met.
+
+**M2.5 criteria (predeclared 2026-10-03, before any M2.5 code).**
+
+1. **Introduction and voice.** On first load, an introduction states that the player is the steward. In the browser, live narration of the player's own actions uses "you". This is checked in an end-to-end test.
+2. **Camera.** Right-dragging changes the view's yaw continuously, and Q/E snap to quarter turns. This is checked in an end-to-end test.
+3. **Seeing before reacting.** No resident reacts to a building change while asleep. A resident asleep at the time reacts on waking or when they first see the change, and anyone else reacts by word of mouth within 24 hours. Across a 28-day soak, every reaction line names what changed for that resident, and at least 12 distinct reaction lines appear.
+4. **Rotation.** A rotated workshop occupies its swapped footprint in the sim, and R rotates the placement ghost in the browser.
+5. **Menus.** The build menu is closed by default and opens from one button. Its cards show each building's cost and what it gives off. The scroll panel collapses and expands. These are checked in an end-to-end test.
+6. **Being needed.** Over 28 days on seeds 1–5, comparing a do-nothing steward with a responsive stand-in steward (the considerate policy, extended to the new asks):
+   - the responsive steward ends with a mean standing at least 0.3 higher and a mean disposition at least 0.08 higher;
+   - in the first 7 days with a do-nothing steward, residents make at least 3 distinct asks on every seed.
+7. **Thin economy.** Building costs timber, and a build that can't be afforded is refused. With the responsive steward, food runs short on no more than 10% of days across 10 seeds × 28 days. With the do-nothing steward, shortages are allowed but nobody's Food need sits below 0.1 for more than 25% of waking hours (the existing soak check).
+8. **No regressions.** All earlier unit and browser tests still pass, adjusted only where M2.5 deliberately changes timing (reactions now wait until residents see things), and a 10-year soak on 3 seeds shows no degenerate state.
 
 **Still open, for the next chunk to weigh:**
 - Gossip about places ("the commons is where the good evenings happen") is still the commonest kind of gossip.

@@ -2,6 +2,31 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-03: After the first playtest — M2.5, polish and agency
+
+The owner playtested the deployed greybox. This chunk responds to that feedback, and the owner chose "both, wishes first" for agency.
+
+**Camera: free yaw with the mouse.** The diorama tilt stays fixed. Holding the right or middle mouse button and dragging orbits the view around the town; left-drag still moves the view, and Q/E still snap by quarter turns.
+- *Supersedes* the earlier "rotate in quarter turns" choice, which felt stuck in one view.
+
+**You are the steward.** An introduction on first load explains that the player is the steward everyone talks about. In the browser, narration addresses the player in the second person ("You build a hedge"), while residents keep saying "the steward".
+
+**Residents react when they see a change, not when it happens.** Sleepers notice new or missing buildings when they wake, people elsewhere notice when they pass by, and word of mouth reaches the rest within a day. Reactions name what changed for that person (quieter, greener, busier, the smell, somewhere to sit) instead of one generic line.
+
+**Building UI:**
+- R rotates a building while placing it, with real rotated footprints in the sim.
+- A build menu, opened from one button, replaces the always-visible row of buttons. It is grouped by category and shows what each building gives off, what it costs, and who might care.
+- The notice board and log panel rolls up and unrolls like a scroll.
+
+**Agency: making the steward needed.** Wishes come first, in this order:
+1. Residents ask the steward for specific things more often: somewhere to sit near home, more green, another place to gather, a place to work.
+2. Seasonal Town Wishes gather those asks, with visible progress.
+3. Changes in a resident's view of the steward are shown on screen, and a "How the town sees you" page explains them.
+4. A thin economy: **food and timber** only. Gardens, the jetty and the bakery make food, and meals eat it. The woodlot makes timber, and buildings cost it.
+
+- *Rejected:* agency without any economy, as too weightless.
+- *Rejected:* the full economy now, as too big a chunk. Wares, coin, the trade cart's buying and selling, and tiers come later.
+
 ## 2026-10-03: After M1.5 — M2 greybox, scope, preview hosting, camera
 
 These were decided by the owner after reviewing M1.5's results (spec 9.3, "M1.5 status").

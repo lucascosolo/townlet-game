@@ -563,11 +563,11 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - The journal shows the plan, a step bar and the next step (browser test).
 2. **Marlow's choice: met.** Marlow decides on day 23 on every seed. In the twin test on seeds 1–5, the natural town (two or three friends, disposition about 0.9) has him stay. The same town on the same day, with his friendships stripped and disposition at 0.5, has him leave, and he departs.
 3. **Friends keep company: met.**
-   - Counting directed pairs, friends spend 16.3% of pair-minutes together, against 6.9% for neutral pairs (2.37×).
-   - Rival pairs spend 2.2% together.
-   - There are 3.8 invitations per resident per week.
-   - With the random stand-in steward, the friend ratio is 2.25×.
-   - With no steward at all it is 1.96× in the quiet town and 1.90× in the bakery town, just under 2×. Unhappy towns spend more time at the few shared places whoever is there, which narrows the gap. This was not part of the declared criterion, but it is worth knowing.
+   - Counting directed pairs, friends spend 16.4% of pair-minutes together, against 7.2% for neutral pairs (2.27×).
+   - Rival pairs spend 1.9% together.
+   - There are 3.9 invitations per resident per week.
+   - With the random stand-in steward, the friend ratio is 2.19×.
+   - With no steward at all, the quiet town's friend ratio is 1.90×, and rivals spend slightly more time together than neutral pairs (11.6% against 9.9%). Unhappy towns crowd into the few shared places whoever is there. This was not part of the declared criterion, but it is worth knowing.
 4. **Honest, varied talk: met.**
    - Every passing thought was checked against the resident's state at the moment it fired, and was one of their top three topics.
    - Every chat with content draws on the speaker's top three, and never talks about the listener in the third person.
@@ -579,10 +579,14 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 6. **No regressions: met.**
    - All 30 earlier unit tests pass unchanged, alongside 8 new ones plus the expected failure.
    - All 12 browser tests pass. The earlier browser tests needed one harness change: thoughts draw on residents' random streams, so a proposal popup now happens to be open at the moment test 4c clicks. The test now puts it off first.
-   - The one-year soak (10 seeds, bakery town) shows 1.2 rival pairs per run, no departures, the busiest place at 58%, and no degenerate state.
-   - SOAK10Y
+   - The one-year soak (10 seeds, bakery town) shows 1.7 rival pairs per run, one departure in ten towns, the busiest place at 55%, and no degenerate state.
+   - The 10-year soak (3 seeds) shows no degenerate state: 18, 18 and 14 friend pairs, no rivals, and mean mood 0.89. One resident left town in one of the three towns.
+   - It took three tries to get there (see below).
 
 **Found and fixed on the way:**
+- **Friendships saturated over ten years.** The first 10-year soak after M3a flagged one town with 26 of 30 directed pairs as friends. Invitations and walking together meant more pleasant talk, and each talk added warmth.
+  - Damping talk that came soon after the last talk tipped the same town into the opposite flag: 11 rival pairs, "at odds".
+  - The fix that held was to pull relationships back toward how well the pair fits twice as hard (0.03 a day instead of 0.015). That keeps both extremes away.
 - **Remove mode let a passing resident swallow the click.** A resident standing in front of a building could catch the click when you tried to remove it. Remove mode now looks past people.
 - **Small talk spoke of the listener in the third person** ("Something went sour between me and Ada", said to Ada). Chat now skips topics about the person being spoken to.
 - **Next steps were written in the third person** ("win the town over with his bread"). Spoken aloud, they now become "my".
@@ -592,7 +596,7 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 - **Gossip.** Gossip about places ("the commons is where the good evenings happen") is still the commonest kind of gossip.
 - **Voice.** Rarer topics have one or two lines per voice, which will show over a season's read.
 - **Aspirations are authored once.** Each resident has one six-stage-or-shorter plan. When it is done, nothing replaces it.
-- **No steward, smaller friend gap.** In unhappy towns the gap between friends' and others' time together narrows to just under 2×.
+- **No steward, smaller friend gap.** In unhappy towns the gap between friends' and others' time together narrows to just under 2×, and rivals stop avoiding each other.
 - **Civic needs.** The economy is thin (food and timber). Civic needs (spec 4.3) haven't been built.
 
 ---

@@ -226,6 +226,48 @@ export function buildingMesh(type: string): THREE.Group {
       }
       break;
     }
+    case 'orchard': {
+      g = new THREE.Group();
+      g.add(box(w * 0.9, 0.04, d * 0.9, mat(PALETTE.hedge), 0, 0.02));
+      const fruit = mat(0xd9534f);
+      for (const [x, z] of [
+        [-0.5, -0.5],
+        [0.5, -0.5],
+        [-0.5, 0.5],
+        [0.5, 0.5],
+      ] as const) {
+        const t = tree(x, z, 0.9, mat(0x7fb069));
+        for (let i = 0; i < 3; i++) {
+          const apple = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), fruit);
+          apple.position.set(Math.cos(i * 2.1) * 0.28, 0.62, Math.sin(i * 2.1) * 0.28);
+          t.add(apple);
+        }
+        g.add(t);
+      }
+      break;
+    }
+    case 'glasshouse': {
+      g = new THREE.Group();
+      const glass = new THREE.MeshLambertMaterial({ color: 0xcfe8e4, transparent: true, opacity: 0.45, emissive: new THREE.Color(0x2a3a30) });
+      const frame = mat(PALETTE.wall);
+      g.add(box(w * 0.85, 0.05, d * 0.85, mat(PALETTE.stone), 0, 0.025));
+      const pane = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, 0.6, d * 0.8), glass);
+      pane.position.y = 0.35;
+      g.add(pane);
+      g.add(pyramidRoof(w * 0.82, d * 0.82, 0.35, glass, 0.65));
+      for (const x of [-1, 1]) for (const z of [-1, 1]) g.add(box(0.05, 0.65, 0.05, frame, (x * w * 0.8) / 2, 0.325, (z * d * 0.8) / 2));
+      for (let i = 0; i < 4; i++) g.add(box(0.12, 0.18, 0.12, mat(PALETTE.leaf), -0.45 + i * 0.3, 0.14, 0));
+      break;
+    }
+    case 'banner': {
+      g = new THREE.Group();
+      g.add(box(0.06, 1.4, 0.06, mat(PALETTE.darkWood)));
+      const cloth = box(0.45, 0.32, 0.02, mat(0xc94f4f), 0.25, 1.18);
+      g.add(cloth);
+      g.add(box(0.2, 0.06, 0.03, mat(0xf2c14e), 0.25, 1.18, 0.01));
+      g.add(lanternPost(0.3, 0.25));
+      break;
+    }
     default:
       g = new THREE.Group();
       g.add(box(w * 0.8, 0.5, d * 0.8, mat(0xcccccc)));

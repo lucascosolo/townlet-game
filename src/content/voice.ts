@@ -350,4 +350,11 @@ export const ASKS: Record<string, Lines> = {
     chatty: ['Elbow to elbow every evening! Another place to meet!'],
     dreamy: ['We need more than one place to be together.'],
   },
+  aspiration: {
+    plain: ['I have a favour to ask. A {what}. It would mean a lot.'],
+    formal: ['I have thought long about this. Might the town have a {what}?'],
+    warm: ["I've been dreaming of a {what}. Could we, do you think?"],
+    chatty: ['A {what}! Picture it! Could we? Please?'],
+    dreamy: ['I keep seeing a {what} here, as if it already were.'],
+  },
 };

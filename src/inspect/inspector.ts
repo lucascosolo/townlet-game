@@ -5,7 +5,10 @@
 import { buildingDef } from '../content/buildings.js';
 import { residentDef } from '../content/residents.js';
 import { Narrator } from '../narrate/narrator.js';
+import { topicLabel } from '../content/thoughts.js';
 import { opinion } from '../sim/mind/memory.js';
+import { mindTopics } from '../sim/mind/thoughts.js';
+import { ASPIRATIONS, nextStep } from '../sim/story/aspirations.js';
 import type { Simulation } from '../sim/sim.js';
 import { clock, dayOf } from '../sim/time.js';
 import { NEEDS, type Need, type ResidentState } from '../sim/types.js';
@@ -30,6 +33,10 @@ export interface ResidentReport {
   age: number;
   background: string;
   aspiration: string;
+  /** Their personal plan (M3a): how far along, and what comes next. */
+  hope: { title: string; stage: number; of: number; next: string | null; done: boolean; outcome?: string } | null;
+  /** What is on their mind, most pressing first: the only things they think or chat about. */
+  onMind: Array<{ key: string; label: string; reason: string; weight: number }>;
   traits: Array<[string, number]>;
   values: Array<[string, number]>;
   departed: boolean;
@@ -68,6 +75,21 @@ export function residentReport(sim: Simulation, id: string, names: Narrator = ne
     age: def.age,
     background: def.background,
     aspiration: def.aspiration,
+    hope: ASPIRATIONS[id]
+      ? {
+          title: ASPIRATIONS[id].title,
+          stage: Math.min(r.aspiration.stage, ASPIRATIONS[id].stages.length),
+          of: ASPIRATIONS[id].stages.length,
+          next: nextStep(sim.state, r),
+          done: r.aspiration.done,
+          ...(r.aspiration.outcome ? { outcome: r.aspiration.outcome } : {}),
+        }
+      : null,
+    onMind: r.departed
+      ? []
+      : mindTopics(sim.state, r)
+          .slice(0, 5)
+          .map((t) => ({ key: t.key, label: topicLabel(t.key, t.vars), reason: t.reason, weight: round(t.weight) })),
     traits: Object.entries(def.traits),
     values: Object.entries(def.values).filter(([, v]) => v >= 0.5),
     departed: r.departed,
@@ -138,6 +160,7 @@ export function inspectResident(sim: Simulation, id: string): string {
   const out: string[] = [];
   out.push(`${rep.name}, ${rep.age}. ${rep.background}`);
   out.push(`  Aspiration: ${rep.aspiration}`);
+  if (rep.hope) out.push(`  Hoping to: ${rep.hope.title} (${rep.hope.done ? `done${rep.hope.outcome ? `: ${rep.hope.outcome}` : ''}` : `step ${rep.hope.stage + 1} of ${rep.hope.of}; next: ${rep.hope.next}`})`);
   out.push(`  Traits: ${rep.traits.map(([k, v]) => `${k} ${signed(v)}`).join(', ')}`);
   out.push(`  Values: ${rep.values.map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ')}`);
   if (rep.departed) {
@@ -146,6 +169,10 @@ export function inspectResident(sim: Simulation, id: string): string {
   }
   out.push(`  Now: ${rep.doing}`);
   out.push(`  Mood ${rep.mood.toFixed(2)}, disposition ${rep.disposition.toFixed(2)}${rep.leavingSince !== null ? `, THINKING OF LEAVING since day ${rep.leavingSince}` : ''}`);
+  out.push('');
+  out.push('On their mind:');
+  if (rep.onMind.length === 0) out.push('  Nothing much.');
+  for (const m of rep.onMind) out.push(`  ${m.label} (${m.reason}, ${m.weight.toFixed(2)})`);
   out.push('');
   out.push('Needs (level / setpoint):');
   for (const n of rep.needs) out.push(`  ${n.need.padEnd(8)} ${bar(n.level)} ${n.level.toFixed(2)} / ${n.setpoint.toFixed(2)}`);

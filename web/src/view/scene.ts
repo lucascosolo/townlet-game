@@ -25,6 +25,22 @@ export function nightness(minute: number): number {
   return 1;
 }
 
+/**
+ * Order residents around a place so friends are adjacent: start from the first and keep adding
+ * whoever likes the last one placed best. Rivals end up as far apart as the ring allows.
+ */
+export function seatingOrder(state: { residents: Record<string, ResidentState> }, ids: string[]): string[] {
+  if (ids.length <= 2) return ids;
+  const left = [...ids];
+  const order = [left.shift() as string];
+  while (left.length) {
+    const last = state.residents[order[order.length - 1] as string] as ResidentState;
+    left.sort((a, b) => (last.rel[b]?.affinity ?? 0) - (last.rel[a]?.affinity ?? 0));
+    order.push(left.shift() as string);
+  }
+  return order;
+}
+
 export class TownView {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -49,6 +65,15 @@ export class TownView {
   private readonly raycaster = new THREE.Raycaster();
   private readonly festoon = new THREE.Group();
   private season: Season = 'spring';
+  /** Who is talking to whom, for a few seconds after an exchange. */
+  private readonly talking = new Map<string, { with: string; until: number }>();
+
+  /** Called for each exchange: the two turn to face each other. */
+  facePair(a: string, b: string): void {
+    const until = performance.now() + 4000;
+    this.talking.set(a, { with: b, until });
+    this.talking.set(b, { with: a, until });
+  }
 
   constructor(container: HTMLElement, game: Game) {
     this.game = game;
@@ -218,6 +243,8 @@ export class TownView {
       const r = state.residents[id] as ResidentState;
       if (r.at !== null) index.set(r.at, [...(index.get(r.at) ?? []), id]);
     }
+    // Around a place, friends sit side by side and rivals end up on opposite sides.
+    for (const [place, ids] of index) index.set(place, seatingOrder(state, ids));
     for (const id of state.order) {
       const r = state.residents[id] as ResidentState;
       let g = this.residents.get(id);
@@ -238,6 +265,12 @@ export class TownView {
         const moving = g.position.distanceTo(t) > 0.02;
         g.position.y = moving ? Math.abs(Math.sin(performance.now() / 90)) * 0.05 : 0;
         if (moving) g.rotation.y = Math.atan2(t.x - g.position.x, t.z - g.position.z);
+        else {
+          // Face whoever they are talking to.
+          const talk = this.talking.get(id);
+          const other = talk && performance.now() < talk.until ? this.residents.get(talk.with) : undefined;
+          if (other) g.rotation.y = Math.atan2(other.position.x - g.position.x, other.position.z - g.position.z);
+        }
       }
     }
   }
@@ -357,9 +390,10 @@ export class TownView {
     return new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
   }
 
-  pick(clientX: number, clientY: number): Pick | null {
+  /** What is under the pointer. With people: false, residents don't get in the way (removing). */
+  pick(clientX: number, clientY: number, opts: { people?: boolean } = {}): Pick | null {
     this.raycaster.setFromCamera(this.ndc(clientX, clientY), this.camera);
-    const people = [...this.residents.values()].filter((g) => g.visible);
+    const people = opts.people === false ? [] : [...this.residents.values()].filter((g) => g.visible);
     const hitPerson = this.raycaster.intersectObjects(people, true)[0];
     if (hitPerson) {
       let o: THREE.Object3D | null = hitPerson.object;

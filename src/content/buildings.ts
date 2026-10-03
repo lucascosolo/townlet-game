@@ -196,6 +196,45 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
 };
 
+// Buildings residents dream of (M3a aspirations). They appear in the build menu once asked for.
+Object.assign(BUILDINGS, {
+  orchard: {
+    type: 'orchard',
+    name: 'Orchard',
+    kind: 'nature',
+    size: [2, 2],
+    emits: { green: 0.7, scent: 0.2 },
+    radius: 2,
+    activities: ['stroll'],
+    cost: 6,
+    blurb: 'Young fruit trees. Apples come at harvest.',
+    passive: { food: 0.15 },
+  },
+  glasshouse: {
+    type: 'glasshouse',
+    name: 'Glasshouse',
+    kind: 'work',
+    size: [2, 2],
+    emits: { green: 0.4 },
+    radius: 1,
+    activities: ['stroll'],
+    cost: 14,
+    blurb: 'Grows food even in winter.',
+    passive: { food: 0.35 },
+  },
+  banner: {
+    type: 'banner',
+    name: 'Town banner',
+    kind: 'decor',
+    size: [1, 1],
+    emits: { green: 0 },
+    radius: 0,
+    activities: ['stroll'],
+    cost: 2,
+    blurb: "A banner for the town, if someone will paint it.",
+  },
+} satisfies Record<string, BuildingDef>);
+
 export function buildingDef(type: string): BuildingDef {
   const def = BUILDINGS[type];
   if (!def) throw new Error(`unknown building type: ${type}`);

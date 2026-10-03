@@ -6,14 +6,15 @@ import { buildingDef } from '../content/buildings.js';
 import { residentDef } from '../content/residents.js';
 import { sleepNoiseThreshold, urgency } from './needs.js';
 import { dayOf } from './time.js';
-import type { ResidentState, SimState, SubjectId } from './types.js';
+import type { RequestKind, ResidentState, SimState, SubjectId } from './types.js';
 import { ambientAt, distanceTo, getBuilding, liveBuildings, placeTile } from './world.js';
 
 export const ASK_KINDS = ['quieter_home', 'workplace', 'more_food', 'somewhere_to_sit', 'more_green', 'place_to_gather'] as const;
 export type AskKind = (typeof ASK_KINDS)[number];
 
 /** Days before an unanswered ask lapses. */
-export const ASK_LAPSE_DAYS: Record<AskKind, number> = {
+export const ASK_LAPSE_DAYS: Record<RequestKind, number> = {
+  aspiration: 10,
   quieter_home: 5,
   workplace: 7,
   more_food: 4,
@@ -45,11 +46,16 @@ function builtSince(state: SimState, since: number, pred: (type: string) => bool
   return state.buildings.some((b) => !b.removed && b.placedBy === 'steward' && b.placedTick >= since && pred(b.type));
 }
 
-export function assess(state: SimState, r: ResidentState, kind: AskKind, since = -1): AskAssessment {
+export function assess(state: SimState, r: ResidentState, kind: RequestKind, since = -1, wants?: string): AskAssessment {
   const def = residentDef(r.id);
   const [hx, hy] = homeTile(state, r);
   const self: SubjectId = `r:${r.id}`;
   switch (kind) {
+    case 'aspiration': {
+      // Asked for by the aspiration engine, not by this loop: met once the dream is built.
+      const met = !!wants && liveBuildings(state).some((b) => b.type === wants);
+      return { want: false, met, subject: self, ...(wants ? { wants } : {}) };
+    }
     case 'quieter_home': {
       const bel = Object.values(r.beliefs).find((b) => b.aspect === 'noisy_at_night' && b.subject.startsWith('b:') && b.strength >= 0.35);
       const b = bel ? state.buildings.find((x) => `b:${x.id}` === bel.subject) : undefined;
@@ -88,7 +94,8 @@ export function assess(state: SimState, r: ResidentState, kind: AskKind, since =
   }
 }
 
-export const WISH_LABELS: Record<AskKind, string> = {
+export const WISH_LABELS: Record<RequestKind, string> = {
+  aspiration: 'A dream come true',
   quieter_home: 'Quieter nights',
   workplace: 'Proper places to work',
   more_food: 'A fuller larder',

@@ -6,7 +6,7 @@ import { STEWARD_POLICIES, type StewardPolicy } from '../../src/scenarios/stewar
 import { canPlace, footprint } from '../../src/sim/world.js';
 import { Game } from './game.js';
 import { Ui } from './ui/ui.js';
-import { TownView } from './view/scene.js';
+import { TownView, seatingOrder } from './view/scene.js';
 
 const params = new URLSearchParams(location.search);
 const stewardParam = params.get('steward') as StewardPolicy | null;
@@ -22,6 +22,9 @@ const app = document.getElementById('app') as HTMLElement;
 const stage = document.getElementById('stage') as HTMLElement;
 const view = new TownView(stage, game);
 const ui = new Ui(app, game, view, { intro: params.get('intro') !== '0' });
+game.onEvent((e) => {
+  if (e.type === 'exchange') view.facePair(e.a, e.b);
+});
 // Start with the town centred in the space left of the side panel.
 if (window.innerWidth > 760) view.pan(-180, 0);
 
@@ -97,7 +100,7 @@ function click(cx: number, cy: number): void {
     ui.status(`${buildingDef(tool.type).name} placed. Click again for another · R rotates · Esc stops.`);
     return;
   }
-  const p = view.pick(cx, cy);
+  const p = view.pick(cx, cy, { people: tool.kind !== 'remove' });
   if (tool.kind === 'remove') {
     if (p?.kind !== 'building') return;
     const b = game.sim.state.buildings.find((x) => x.id === p.id);
@@ -168,4 +171,8 @@ window.__townlet = {
   tileScreen: (x: number, y: number) => view.tileScreen(x, y),
   focus: (x: number, y: number) => view.focusOn(x, y),
   yaw: () => view.yaw,
+  seating: (placeId: number) => {
+    const ids = game.sim.state.order.filter((id) => game.sim.resident(id).at === placeId);
+    return seatingOrder(game.sim.state, ids);
+  },
 };

@@ -2,6 +2,46 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-03: M3a, how "on their mind" works, and a missed bound left standing
+
+**Chosen:**
+- **One source of truth.** Everything a resident can think or say comes from one ranked list of what is on their mind (`src/sim/mind/thoughts.ts`). It is built only from their actual state: needs below their setpoint, current feelings and who they're about, their dream's next step, a festival tomorrow, the weather, a friend not seen in a day, a recent argument or a rival, their view of the steward, a belief formed in the last two days, and an empty larder.
+- **Only the top three.** Passing thoughts, chats with content and the journal's "On their mind" all draw from the top three. A topic isn't repeated within six hours, and chat never discusses the listener in the third person.
+- **Timing.** Thoughts surface at random moments, about one every three waking hours. They are drawn per minute rather than on the hour, so they don't all land at once. They use the resident's own random stream.
+- **Narration only reads.** The narrator's line choice remains outside the simulation. The journal uses fixed labels, so looking at a resident never changes what they'll say next.
+
+**Rejected:**
+- **Changing Fen's and Marlow's plans so a do-nothing steward finishes fewer dreams.** That would have met the bound of at most 1.5, but a town where every dream hinges on the player feels like a to-do list. The miss is reported in spec 9.3, and the test is kept as an expected failure.
+- **Thinking on the hour.** It was simpler, but every thought landed at :00 and read mechanically.
+
+## 2026-10-03: M3a, alive minds — directions chosen
+
+The owner chose these directions for the release gate (merged M2.5 first):
+
+**1. Residents pursue their aspirations.** Each resident's aspiration becomes an authored plan of 3–5 stages. Each stage has conditions on the state of the sim, so the simulation decides when and whether it advances; the writing gives it quality.
+- Ada plants her sister's orchard.
+- Bram bakes for the whole valley at the Harvest Supper.
+- Fen teaches someone to fish.
+- Juniper builds a glasshouse for winter food.
+- Wren paints the town's banner.
+- Marlow decides whether to stay or leave with the trade cart. This is the one aspiration that can end in a departure caused by the story, not by neglect, and friendships and the steward can change it.
+
+Some stages need the steward: a building, a decision, timber. So aspirations are also something the player can help along or neglect. The journal shows each resident's plan and their next step.
+
+**2. Relationships you can see.**
+- Friends invite each other along and walk together.
+- At a gathering place, friends sit side by side and rivals keep apart.
+- People face each other when they talk.
+- Residents avoid places where their rivals are.
+
+**3. Varied, contextual talk that honestly reflects their state** (the owner's own wording).
+- Residents have a running "what's on my mind", chosen from their actual state: their most pressing need, their strongest current feeling and what it's about, their aspiration's next step, an upcoming event, the weather, a friend or a rival, or the steward.
+- It appears as bubbles and in the journal, with the reason it's on their mind.
+- Ordinary chats now carry that content, so what they say comes from what they feel, not from a stock line.
+- Many more lines per voice.
+
+- *Not chosen this time:* inner thoughts as a separate feature (folded into 3), and memories resurfacing in talk (partly covered by 3; a later chunk).
+
 ## 2026-10-03: Release gate — the minds must feel alive
 
 The owner: "I definitely would prefer the minds to be more alive before we release."

@@ -2,7 +2,7 @@
 
 import { buildingDef } from '../content/buildings.js';
 import { residentDef } from '../content/residents.js';
-import { deriveSeed } from './rng.js';
+import { chance, deriveSeed } from './rng.js';
 import {
   ACTIVITY_EFFECTS,
   BASE_DECAY,
@@ -16,11 +16,13 @@ import {
 } from './needs.js';
 import type { Mind, MindContext, Perception } from './mind/mind.js';
 import { attachment, decayEmotions, emotionBalance, opinion } from './mind/memory.js';
-import { newRelationship, rel } from './mind/relationships.js';
+import { adjust, newRelationship, rel } from './mind/relationships.js';
 import { StructuredMind } from './mind/structured.js';
 import { ASK_KINDS, ASK_LAPSE_DAYS, assess } from './asks.js';
+import { voiceTopic } from './mind/thoughts.js';
 import { runExchange } from './social.js';
-import { activeGatherings, newStoryState, storyStep, type StoryHost } from './story/director.js';
+import { aspirationMinute, aspirationMorning, type AspirationHost } from './story/aspirations.js';
+import { activeGatherings, newStoryState, storyStep } from './story/director.js';
 import { closeDilemma } from './story/dilemmas.js';
 import { DAWN_MINUTE, TICKS_PER_DAY, dayOf, minuteOf, seasonOf } from './time.js';
 import {
@@ -63,13 +65,20 @@ export interface Scenario {
 
 const REQUEST_LAPSE_TICKS = 5 * TICKS_PER_DAY;
 /** How far a resident can see a change to the town, in tiles. */
-export const SIGHT = 6;
+export /** Chance per waking hour of a passing thought. */
+const THOUGHT_CHANCE = 0.35;
+const SIGHT = 6;
 /** News of a change reaches anyone awake this long after it happened. */
 export const WORD_OF_MOUTH = 8 * 60;
 /** Food one meal takes from the town's stores. */
 export const MEAL = 0.5;
 export const STOCK_CAP: Record<Resource, number> = { food: 80, timber: 100 };
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
+/** Seasonal yield of buildings that grow food on their own. */
+const PASSIVE_SEASON: Record<string, Record<ReturnType<typeof seasonOf>, number>> = {
+  orchard: { spring: 0.2, summer: 0.6, autumn: 2, winter: 0 },
+  glasshouse: { spring: 0.5, summer: 0.5, autumn: 0.7, winter: 1 },
+};
 /** Gardens grow little in winter and plenty at harvest. */
 const GARDEN_SEASON: Record<ReturnType<typeof seasonOf>, number> = { spring: 0.8, summer: 1.1, autumn: 1.3, winter: 0.25 };
 
@@ -95,6 +104,7 @@ function lapsesOf(state: SimState, who: string, kind: Request['kind'], tick: num
 }
 
 const ASK_THANKS: Record<Request['kind'], string> = {
+  aspiration: 'helped me with my dream',
   quieter_home: 'a quiet night at last',
   workplace: 'a proper place to work',
   more_food: 'food on the table again',
@@ -185,6 +195,7 @@ export function createState(scenario: Scenario, seed: number): SimState {
       lastVisit: {},
       coldUntil: -1,
       unseen: [],
+      aspiration: { stage: 0, since: 0, minutes: 0, done: false },
       rng: deriveSeed(seed, `r:${id}`),
     };
     state.residents[id] = r;
@@ -207,7 +218,7 @@ export function createState(scenario: Scenario, seed: number): SimState {
   return state;
 }
 
-export class Simulation implements StoryHost {
+export class Simulation implements AspirationHost {
   state: SimState;
   readonly mind: Mind;
   private listeners: Array<(e: SimEvent) => void> = [];
@@ -313,6 +324,7 @@ export class Simulation implements StoryHost {
     }
     for (const [id, from, until] of state.story.extraShifts) if (state.tick >= from && state.tick < until) this.worked.add(id);
     storyStep(this);
+    if (minuteOf(state.tick) === 6 * 60 + 5) aspirationMorning(this);
     const ctx = this.ctx();
     const minute = minuteOf(state.tick);
     if (minute === DAWN_MINUTE) this.emit({ t: state.tick, type: 'dawn', day: dayOf(state.tick) });
@@ -602,6 +614,12 @@ export class Simulation implements StoryHost {
 
     // Changes to the town are taken in only by someone awake to see them.
     if (!sleeping && tick % 5 === 0) this.checkUnseen(ctx, r, false);
+    if (!sleeping) aspirationMinute(state, r);
+    // Now and then something on their mind surfaces as a passing thought.
+    if (!sleeping && chance(r, THOUGHT_CHANCE / 60)) {
+      const m = voiceTopic(state, r);
+      if (m) ctx.emit({ t: tick, type: 'thought', who: r.id, ...m });
+    }
 
     // Walking.
     if (r.path.length > 0) {
@@ -641,7 +659,42 @@ export class Simulation implements StoryHost {
     r.visitAppraised = false;
     r.pending = next;
     r.path = route([r.x, r.y], placeTile(getBuilding(state, next.placeId)));
+    if (next.id === 'socialize' || next.id === 'stroll') this.maybeInvite(r, next);
     if (r.path.length === 0) this.arrive(ctx, r);
+  }
+
+  /**
+   * Going out? Call on a friend first. The inviter walks to the friend's door, the friend waits
+   * there, and they walk the rest of the way together, step for step.
+   */
+  private maybeInvite(r: ResidentState, next: ActivityState): void {
+    const state = this.state;
+    const def = residentDef(r.id);
+    if (!chance(r, 0.35 * (0.5 + unit(def.traits.sociable)))) return;
+    const free = (o: ResidentState) =>
+      !o.departed && o.path.length === 0 && !o.pending && o.coldUntil < state.tick && (!o.activity || o.activity.id === 'rest' || o.activity.id === 'stroll' || o.activity.id === 'socialize');
+    const friends = Object.entries(r.rel)
+      .filter(([id, x]) => id !== STEWARD && (x.tags.includes('friend') || x.affinity >= 0.35))
+      .map(([id]) => state.residents[id] as ResidentState)
+      .filter((o) => o && free(o) && !(o.activity && o.at === next.placeId))
+      .sort((a, b) => rel(r, b.id).affinity - rel(r, a.id).affinity);
+    const friend = friends[0];
+    if (!friend) return;
+    const fx = rel(friend, r.id);
+    const lonely = Math.max(0, friend.setpoints.company - friend.needs.company);
+    if (!chance(r, clamp(0.3 + 0.5 * fx.affinity + 0.6 * lonely))) return;
+    const target = placeTile(getBuilding(state, next.placeId));
+    const toFriend = route([r.x, r.y], [friend.x, friend.y]);
+    const together = route([friend.x, friend.y], target);
+    r.path = [...toFriend, ...together];
+    friend.at = null;
+    friend.activity = null;
+    friend.visitAppraised = false;
+    friend.pending = { ...next };
+    friend.path = [...toFriend.map(() => [friend.x, friend.y] as [number, number]), ...together];
+    adjust(r, friend.id, { familiarity: 0.02 }, state.tick);
+    adjust(friend, r.id, { familiarity: 0.02 }, state.tick);
+    this.emit({ t: state.tick, type: 'invite', a: r.id, b: friend.id, place: next.placeId });
   }
 
   private arrive(ctx: MindContext, r: ResidentState): void {
@@ -672,7 +725,7 @@ export class Simulation implements StoryHost {
     // Asks: close the ones dealt with, lapse the ignored, and voice at most one new one.
     for (const q of state.requests) {
       if (q.by !== r.id || q.status !== 'open') continue;
-      const a = assess(state, r, q.kind, q.postedTick);
+      const a = assess(state, r, q.kind, q.postedTick, q.wants);
       const stewardActed = q.kind === 'quieter_home' || state.buildings.some((b) => b.placedBy === 'steward' && b.placedTick >= q.postedTick);
       if (a.met) {
         q.status = stewardActed ? 'fulfilled' : 'resolved';
@@ -737,17 +790,41 @@ export class Simulation implements StoryHost {
       r.lowDays = 0;
       this.emit({ t: tick, type: 'decided_to_stay', who: r.id });
     } else if (day - r.leaving.sinceDay >= 7) {
-      r.departed = true;
-      r.at = null;
-      r.activity = null;
-      r.pending = null;
-      r.path = [];
-      r.jobId = null;
-      this.emit({ t: tick, type: 'left_town', who: r.id });
+      this.depart(r);
     }
   }
 
+  /** A resident packs up and leaves the valley. */
+  depart(r: ResidentState): void {
+    r.departed = true;
+    r.at = null;
+    r.activity = null;
+    r.pending = null;
+    r.path = [];
+    r.jobId = null;
+    this.emit({ t: this.state.tick, type: 'left_town', who: r.id });
+  }
+
+  /** A resident asks the steward for something outside the usual asks (a dream, for now). */
+  ask(r: ResidentState, kind: Request['kind'], wants?: string): Request {
+    const state = this.state;
+    const q: Request = { id: state.nextRequestId++, by: r.id, kind, subject: `r:${r.id}`, postedTick: state.tick, status: 'open', ...(wants ? { wants } : {}) };
+    state.requests.push(q);
+    this.emit({ t: state.tick, type: 'request_posted', request: { ...q } });
+    return q;
+  }
+
   private hourly(): void {
+    // Orchards and glasshouses grow on their own, by season.
+    const season = seasonOf(this.state.tick);
+    for (const b of liveBuildings(this.state)) {
+      const passive = buildingDef(b.type).passive;
+      if (!passive) continue;
+      const factor = PASSIVE_SEASON[b.type]?.[season] ?? 1;
+      for (const [res, rate] of Object.entries(passive) as Array<[Resource, number]>) {
+        this.state.stock[res] = Math.min(STOCK_CAP[res], this.state.stock[res] + rate * factor);
+      }
+    }
     for (const r of this.activeResidents()) {
       const def = residentDef(r.id);
       decayEmotions(r);

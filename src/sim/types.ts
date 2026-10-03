@@ -56,6 +56,8 @@ export interface BuildingDef {
   produces?: Partial<Record<Resource, number>>;
   /** One line for the build menu. */
   blurb?: string;
+  /** Made each hour whether or not anyone works here (a glasshouse grows on its own). */
+  passive?: Partial<Record<Resource, number>>;
 }
 
 export const RESOURCES = ['food', 'timber'] as const;
@@ -179,6 +181,20 @@ export interface Relationship {
   tags: RelTag[];
 }
 
+export interface AspirationState {
+  /** Stages completed so far. */
+  stage: number;
+  /** Tick the current stage began. */
+  since: number;
+  /** Minutes spent on the current stage's activity. */
+  minutes: number;
+  /** Who else is part of it (Fen's student). */
+  partner?: string;
+  done: boolean;
+  /** How it ended, where it can end more than one way (Marlow). */
+  outcome?: string;
+}
+
 /** A change to the town a resident hasn't taken in yet. */
 export interface Unseen {
   building: number;
@@ -231,10 +247,22 @@ export interface ResidentState {
   /** Tick until which the resident has a cold, or -1. */
   coldUntil: number;
   unseen: Unseen[];
+  /** Progress through their personal aspiration (M3a). */
+  aspiration: AspirationState;
+  /** Mind topic key -> tick it was last thought or said, so they don't repeat themselves. */
+  lastThoughts?: Record<string, number>;
   rng: number;
 }
 
-export type RequestKind = 'quieter_home' | 'workplace' | 'more_food' | 'somewhere_to_sit' | 'more_green' | 'place_to_gather';
+/** A mind topic as it was voiced: see mind/thoughts.ts. */
+export interface MindMention {
+  key: string;
+  about?: SubjectId;
+  vars: Record<string, string>;
+  rank: number;
+}
+
+export type RequestKind = 'quieter_home' | 'workplace' | 'more_food' | 'somewhere_to_sit' | 'more_green' | 'place_to_gather' | 'aspiration';
 
 export interface Request {
   id: number;
@@ -378,6 +406,8 @@ export type SimEvent =
       place: number | null;
       ok: boolean;
       topic?: { subject: SubjectId; aspect: string; valence: number };
+      /** For a chat: what was on the speaker's mind (M3a). */
+      mind?: MindMention;
     }
   | { t: number; type: 'recall'; who: string; subject: SubjectId; aspect: string; valence: number; cue: SubjectId }
   | { t: number; type: 'belief_formed'; who: string; belief: Belief; hearsay: boolean }
@@ -401,6 +431,11 @@ export type SimEvent =
   | { t: number; type: 'grief'; who: string; building: number; btype: string; how: 'saw' | 'woke' | 'heard' }
   | { t: number; type: 'shortage'; resource: Resource; who: string }
   | { t: number; type: 'wish'; phase: 'made' | 'granted' | 'missed'; wish: Wish }
+  /** One resident calls on a friend and they walk somewhere together. */
+  | { t: number; type: 'invite'; a: string; b: string; place: number }
+  /** Something on a resident's mind surfaced as a passing thought (M3a). Always one of their top three. */
+  | { t: number; type: 'thought'; who: string; key: string; about?: SubjectId; vars: Record<string, string>; rank: number }
+  | { t: number; type: 'aspiration'; who: string; stage: string; index: number; done: boolean; partner?: string; outcome?: string }
   /** A resident's view of the steward moved overnight, and why. */
   | { t: number; type: 'standing'; who: string; delta: number; reasons: string[] }
   | { t: number; type: 'thinking_of_leaving'; who: string }

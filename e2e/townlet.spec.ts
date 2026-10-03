@@ -34,6 +34,15 @@ async function runTo(page: Page, tick: number): Promise<void> {
   await page.waitForTimeout(250);
 }
 
+/** A proposal that came up along the way is put off, so its popup doesn't cover the town. */
+async function putOffDecisions(page: Page): Promise<void> {
+  const later = page.locator('[data-testid^="later-"]');
+  while ((await later.count()) > 0) {
+    await later.first().click();
+    await page.waitForTimeout(50);
+  }
+}
+
 async function logText(page: Page, since = 0): Promise<string> {
   return page.evaluate((s) => (window as unknown as { __townlet: Handle }).__townlet.game.narrator.entries.filter((e) => e.t >= s).map((e) => e.text).join('\n'), since);
 }
@@ -132,6 +141,7 @@ test('criterion 4b: placing a hedge from the palette builds it and residents rea
 test('criterion 4c: removing a loved place from the palette brings grief', async ({ page }) => {
   await open(page, 'scenario=quiet&seed=1&speed=0');
   await runTo(page, at(8, 10));
+  await putOffDecisions(page);
   const target = await page.evaluate(() => {
     const h = (window as unknown as { __townlet: Handle }).__townlet;
     const s = h.game.sim.state;

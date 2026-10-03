@@ -20,6 +20,7 @@ import { ambientAt, liveBuildings, placeTile, walkDistance } from '../world.js';
 import type { Mind, MindContext, Perception, Setting } from './mind.js';
 import { addEmotion, beliefsAbout, consolidate, opinion, perceive } from './memory.js';
 import { nightlyRelationships, rel } from './relationships.js';
+import { aspirationPull } from '../story/aspirations.js';
 import { gatheringPull } from '../story/director.js';
 
 export function presentAt(state: SimState, placeId: number, except?: string): ResidentState[] {
@@ -129,6 +130,8 @@ export const StructuredMind: Mind = {
         for (const o of others) {
           const x = rel(r, o.id);
           pull += 0.4 * x.affinity + 0.1 * x.familiarity;
+          // Somewhere a rival is sitting is somewhere else to be.
+          if (x.tags.includes('rival')) pull -= 0.5;
         }
         score += clamp(pull, -0.5, 0.5) - 0.1 * others.length * (1 - s01);
         // Past its comfortable number a place feels crowded, to everyone.
@@ -152,6 +155,14 @@ export const StructuredMind: Mind = {
         }
       }
       const evening = inWindow(minute, 17 * 60, def.sleep);
+      // A dream pulls them to where it happens (or a student to their teacher).
+      const pull = aspirationPull(ctx.state, r);
+      if (pull) {
+        for (const b of liveBuildings(ctx.state)) {
+          if (b.type !== pull.type) continue;
+          if (buildingDef(b.type).activities.includes('stroll')) add('stroll', b.id, pull.weight);
+        }
+      }
       // Festivals, visitors and markets: a reason to be somewhere now, or soon.
       for (const g of ctx.state.story.gatherings) {
         if (tick < g.from - 45 || tick >= g.until - 20) continue;

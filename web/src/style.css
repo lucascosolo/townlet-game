@@ -122,6 +122,14 @@ button.primary { background: var(--ink); color: var(--paper); border-color: var(
 }
 .bubble.up { background: #f1fbea; }
 .bubble.down { background: #fdeeee; }
+.bubble.thought { border-style: dashed; font-style: italic; background: #f7f5ff; }
+.entry.thought { font-style: italic; opacity: 0.85; }
+.hope .steps { display: inline-flex; gap: 4px; margin: 0 0 4px; }
+.hope .step { width: 14px; height: 6px; border-radius: 3px; background: rgba(120, 90, 50, 0.2); }
+.hope .step.done { background: var(--accent); }
+.hope p { margin: 4px 0; }
+ul.mind { margin: 4px 0 8px; padding-left: 18px; }
+ul.mind .quiet { font-size: 12px; }
 
 @media (max-width: 760px) {
   .scroll { top: auto; left: 8px; right: 8px; bottom: 60px; width: auto; }

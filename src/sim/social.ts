@@ -7,7 +7,8 @@ import type { Mind, MindContext, Setting } from './mind/mind.js';
 import { opinion } from './mind/memory.js';
 import { adjust, rel, warmth } from './mind/relationships.js';
 import { gossipTopic, sharedFondPlace } from './mind/structured.js';
-import type { ExchangeKind, ResidentState, SubjectId } from './types.js';
+import { voiceTopic } from './mind/thoughts.js';
+import type { ExchangeKind, MindMention, ResidentState, SubjectId } from './types.js';
 
 const WARM: ExchangeKind[] = ['chat', 'compliment', 'comfort', 'reminisce', 'tease', 'share_meal'];
 
@@ -48,6 +49,7 @@ export function runExchange(
 
   let ok = true;
   let topic: { subject: string; aspect: string; valence: number } | undefined;
+  let said: MindMention | undefined;
 
   switch (kind) {
     case 'greet':
@@ -60,6 +62,8 @@ export function runExchange(
         bump(a, 'delight', 0.02);
         bump(b, 'delight', 0.02);
       }
+      // Small talk is about whatever is really on the speaker's mind.
+      said = voiceTopic(ctx.state, a, b.id) ?? undefined;
       break;
     case 'share_opinion': {
       const t = gossipTopic(a, b, tick);
@@ -244,6 +248,6 @@ export function runExchange(
     }
   }
 
-  ctx.emit({ t: tick, type: 'exchange', kind, a: a.id, b: b.id, place: placeId, ok, ...(topic ? { topic } : {}) });
+  ctx.emit({ t: tick, type: 'exchange', kind, a: a.id, b: b.id, place: placeId, ok, ...(topic ? { topic } : {}), ...(said ? { mind: said } : {}) });
 }
 

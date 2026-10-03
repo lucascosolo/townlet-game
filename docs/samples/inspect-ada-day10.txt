@@ -1,0 +1,72 @@
+Day 11 00:00, seed 1
+  Ada      mood 0.82  disposition 0.74  beliefs 2  sleep @ Cottage
+  Bram     mood 0.89  disposition 0.80  beliefs 1  sleep @ Cottage
+  Fen      mood 0.83  disposition 0.72  beliefs 1  sleep @ Tent
+  Juniper  mood 0.73  disposition 0.82  beliefs 1  sleep @ Cottage
+  Marlow   mood 0.78  disposition 0.71  beliefs 1  sleep @ Cottage
+  Wren     mood 0.86  disposition 0.78  beliefs 3  sleep @ Cottage
+
+------------------------------------------------------------------------
+Ada, 68. Retired schoolteacher who came to the valley with her late sister.
+  Aspiration: Plant the orchard her sister planned.
+  Traits: sociable -0.50, steady +0.80, curious +0.10, generous +0.40, tidy +0.70
+  Values: beauty 0.6, quiet 0.9, nature 0.8
+  Now: sleep at Ada's cottage until 06:30
+  Mood 0.82, disposition 0.74
+
+Needs (level / setpoint):
+  rest     #########. 0.94 / 0.75
+  food     ########.. 0.83 / 0.70
+  comfort  ########## 1.00 / 0.68
+  company  ###....... 0.31 / 0.40
+  purpose  ########.. 0.76 / 0.65
+  delight  ########.. 0.80 / 0.61
+
+Feeling:
+  annoyance about Juniper (0.29)
+
+Opinions, and why:
+  the steward: +0.58
+    "the steward listens"  strength 0.58, formed day 7 06:30
+      <- day 6 06:30 witnessed: a quiet night at last (+0.99)
+      <- day 7 13:01 recalled: told Wren (+0.06)
+      <- day 7 18:06 recalled: told Fen (+0.06)
+      <- day 8 13:03 recalled: told Wren (+0.06)
+      <- day 8 19:25 recalled: told Fen (+0.06)
+  the bakery: -0.47
+    "the bakery keeps her up at night"  strength 0.59, formed day 5 06:30
+      <- day 3 04:27 witnessed: the bakery woke her (-0.44)
+      <- day 4 04:26 witnessed: the bakery woke her (-0.44)
+      <- day 5 04:25 witnessed: the bakery woke her (-1.01)
+      <- day 5 13:01 recalled: told Wren (-0.05)
+      <- day 5 13:57 recalled: told Fen (-0.05)
+  Still forming:
+    "the old oak was a lovely spot"  evidence +0.26 of 0.90 needed
+    "the brook is a lovely spot"  evidence +0.44 of 0.90 needed
+    "the flower bed is a lovely spot"  evidence +0.32 of 0.90 needed
+    "the commons is where the good evenings happen"  evidence +0.63 of 0.90 needed
+    "the fishing jetty is a lovely spot"  evidence +0.50 of 0.90 needed
+    "the steward makes good decisions"  evidence +0.21 of 0.90 needed
+    "the town isn't the same without the old oak"  evidence -0.57 of 0.90 needed
+    "the steward doesn't care what matters here"  evidence -0.26 of 0.90 needed
+
+Relationships (affinity / familiarity / trust):
+  Fen          +0.77 / 0.96 / 0.70  [friend, close_friend]
+  the steward  +0.43 / 0.50 / 0.63
+  Wren         +0.22 / 0.58 / 0.40
+  Bram         +0.17 / 0.56 / 0.50
+  Marlow       +0.14 / 0.40 / 0.40
+  Juniper      -0.18 / 0.41 / 0.30
+
+Requests to the steward:
+  #1 quieter_home about the bakery: fulfilled (posted day 5 06:30)
+
+Memorable moments (most recent last):
+  day 8 13:28 compliment with Fen [the old oak, good_times, +0.22]
+  day 8 17:19 a lovely spot [the fishing jetty, peaceful_spot, +0.23]
+  day 8 18:07 a lovely spot [the brook, peaceful_spot, +0.23]
+  day 9 08:42 a lovely spot [the flower bed, peaceful_spot, +0.17]
+  day 9 10:00 the old oak is gone [the old oak, lost_place, -0.57]
+  day 9 10:00 took away the old oak [the steward, destroyed_place, -0.26]
+  day 9 13:38 chat with Bram [the commons, good_times, +0.22]
+  day 9 13:43 chat with Fen [the commons, good_times, +0.22]

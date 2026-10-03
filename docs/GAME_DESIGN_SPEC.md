@@ -1,8 +1,8 @@
 # Townlet — High-Level Game Design Specification
 
-Version 0.1, 2026-10-03. Status: first draft for discussion. Nothing here is locked; section 11 lists the questions that most change what gets built next.
+Version 0.2, 2026-10-03. Status: draft. The first four open questions (platform, AI approach, next milestone, team) were answered on 2026-10-03 and are recorded in [DECISIONS.md](DECISIONS.md); sections 4.6, 8.2 and 11 reflect them. Everything else is still open.
 
-Working title: **Townlet** (townlet.app). Genre: cozy-to-light management simulation. Target for the first release: a vertical slice on PC (Windows, Steam Deck), with a browser demo as a stretch goal.
+Working title: **Townlet** (townlet.app). Genre: cozy-to-light management simulation. Target for the first release: a vertical slice playable in the browser at townlet.app, wrapped for desktop (Windows, Steam Deck) later.
 
 ---
 
@@ -243,7 +243,7 @@ This section answers the brief's question about options for the residents other 
 | **D. B + small local LM as a "voice" layer** | B decides everything, and an on-device small model only paraphrases B's structured lines for variety | More varied phrasing with state still authoritative | Model size on disk (~0.5–1 GB+), GPU/CPU cost, localisation, review burden; inZOI's on-device Smart Zoi showed the performance and acceptance costs | Post-slice experiment, optional toggle |
 | **E. Spiking-network minds (brain-sim)** | Each resident runs a biologically grounded spiking network that learns from a sensory stream | Genuinely novel; memories as measurable physical changes; fits "inspectable mind" | Not yet ready: see 4.6.3 | Research track, gated |
 
-**Recommendation: build B, described as "brain-inspired, not brain-simulated".** It is the only option that meets every pillar on modest hardware with no per-player running cost, and it is the option where the design (what residents remember and how they feel about it) is directly authorable and testable. Option D stays open as a later experiment that can't change game state. Option E should be pursued as a research track with an explicit gate, described below.
+**Decision (2026-10-03): build B now, with fuller brain-sim minds as the long-term direction.** B is "brain-inspired, not brain-simulated". It is the only option that meets every pillar on modest hardware with no per-player running cost, and it is the option where the design (what residents remember and how they feel about it) is directly authorable and testable. Option D stays open as a later experiment that can't change game state. Option E is the long-term direction for the residents themselves, not only for a single creature. It is pursued as a research track with explicit gates (below). To keep that path open, the sim core reaches every resident's cognition through a `Mind` interface (perceive, decide, choose a social exchange, consolidate overnight). The structured mind is the first implementation, and a brain-sim-backed mind can replace it one resident at a time.
 
 #### 4.6.2 What brain-sim lends to the design today
 
@@ -270,6 +270,8 @@ brain-sim's current state, from its SPEC.md and the 2026-10-03 recovery notes:
 On that basis, **brain-sim can't drive 15 residents in the slice.** Running 15 brains at 2,600 neurons in real time alongside a game on consumer hardware is outside its current performance envelope. Memories that fade in seconds can't support relationships that last a season. Without sequence memory or language there is no way for a resident to form plans or speak.
 
 **There is a contained way to use it after the slice: one creature, not the residents.** One small non-speaking creature, such as the town cat, a hedgehog under the commons or a heron at the brook, could run a real brain-sim network. Its sense-nerve would carry a few town channels (who is nearby, time of day, food, noise), and its learned assemblies would bias a small set of behaviours (approach, avoid, follow, wait). A "look inside" view, which builds on brain-sim's existing viewer and its "make change visible" intent, would let curious players watch what it has learned, labelled honestly. This fits both projects. Townlet gets a unique, true hook ("one creature in this town has a working spiking brain"), and brain-sim gets a live sensory environment richer than four fixed patterns. The creature stays off the critical path: if it doesn't work, the game is unaffected.
+
+**The path from one creature to the residents.** The creature is the first rung. A brain-sim mind could then sit *beside* the structured mind for one resident, supplying recall and association signals while the structured mind still handles speech and plans. Full replacement would come only after brain-sim's Stage 2 (sequences) and a way to read out symbols exist. Each rung has its own gate, and the game never waits on the next one.
 
 **Proposed gate for the creature** (to be agreed with brain-sim's owner, in brain-sim's own kill-test style):
 1. An episode-recall criterion owner-accepted for this use, met on all seeds. This doesn't require the official K1.1 size clause, but the trained-minus-twin margin must hold.
@@ -338,14 +340,16 @@ Four options for the slice's single biome, a **temperate riverside valley** (bro
 
 ### 8.2 Recommended starting stack
 
-**Godot 4 (4.7 is the current stable release, from June 2026) with GDScript.**
+**Decision (2026-10-03): web-first TypeScript.** The sim core is plain TypeScript with no DOM or engine dependencies, so it runs headless under Node for tests, soak runs and the M1 "radio play", and the same code runs in the browser. The presentation layer (from M2) is Three.js, built with Vite, and Tauri wraps it for desktop. The Godot option is kept below for reference.
+
+**Previously recommended: Godot 4 (4.7 is the current stable release, from June 2026) with GDScript.**
 - It is free and open source with no royalties. It is strong for small 3D and 2D games, ships to Windows, Linux and Steam Deck, and exports to the web for the townlet.app demo.
 - **GDScript rather than C#**, because C# web export in Godot is still experimental. At 15 agents performance isn't the constraint, and GDScript's iteration speed matters more. Performance-sensitive parts, if any appear, can move to a GDExtension later.
 - The sim core is written as pure GDScript classes (no Node dependencies). A headless runner (`godot --headless`) drives tests and multi-year soak simulations.
 - Dialogue and storylets use **an in-house lightweight storylet and grammar format in JSON** rather than a third-party narrative plugin. The needs are narrow (preconditions on sim state, weighted selection, templated lines with voice substitution), and this avoids plugin-maintenance and C#-only dependencies. Ink or Yarn Spinner can be reconsidered later if writers need more tooling.
 - Testing uses GUT or gdUnit4 for unit tests, plus the headless soak harness.
 
-**The alternative, if web-first matters more than Steam (Q1),** is TypeScript, Three.js and Vite, wrapped with Tauri for desktop. It gives the best browser experience and the fastest web deploys, but no editor, so more custom tooling, and the desktop and console path is weaker. It also fits brain-sim's existing vanilla-JS UI if the creature's "look inside" viewer is ever reused directly.
+**The chosen option,** web-first TypeScript, Three.js and Vite, wrapped with Tauri for desktop. It gives the best browser experience and the fastest web deploys, but no editor, so more custom tooling, and the desktop and console path is weaker. It also fits brain-sim's existing vanilla-JS UI if the creature's "look inside" viewer is ever reused directly.
 
 ### 8.3 Tooling that is part of the design, not an afterthought
 
@@ -406,10 +410,90 @@ Grammar-generated dialogue is the hardest thing to localise, because of gender a
 |---|---|---|
 | **M0: Paper and spreadsheet sim** (2–3 wk) | Ambient qualities, needs, a toy memory model on paper and in a spreadsheet | The bakery example from section 3 can be played through by hand |
 | **M1: Headless "radio play"** (4–6 wk) | Sim core with 6 residents, a text-only event log and an inspector; no graphics | Read a 3-day text log cold: at least 3 moments are worth retelling, twin tests pass for memory and gossip, a 10-year soak shows no degenerate state |
+| **M1.5: Storyteller and friction** (headless) | Event director (seasons, festivals, visitors, weather, personal events, dilemmas); gentle friction; less dominance by one gathering place | See "M1.5 criteria" below |
 | **M2: Greybox playable** (6–8 wk) | Grid, building, paths, residents walking, notice board, one season | A first-time player can explain *why* one resident is unhappy, using only in-game UI |
 | **M3: Vertical slice** (3–4 mo) | Full slice content, art pass, audio | A playtest group finishes the year; most can name three residents and retell one story unprompted |
 
 M1 is the most important de-risking step: **if the town isn't interesting as text, graphics won't save it.**
+
+**M1 status (2026-10-03): built.** Measured against the three predeclared criteria:
+
+- **Twin tests: met.** They pass on seeds 1–5 (`test/twins.test.ts`).
+  - Night noise from a bakery next door becomes a belief and a request, and the same bakery across town produces neither.
+  - Answering the request earns the steward trust, and ignoring it costs trust.
+  - A grievance planted in one resident reaches others as hearsay, and nobody hears it in the twin without the grievance.
+  - A fond memory of the bench draws Fen back to it.
+- **10-year soak: met.** Five seeds × 280 days, with a steward who builds and removes things at random, showed no degenerate state. Mean mood was 0.82–0.84, the minimum disposition was 0.72, there were 14–25 of 30 directed friend pairs, and the last week had 4–14 notable events per day.
+- **Radio-play read: partly met.** The bakery arc reads well end to end: three bad nights, a request, the hedge, gratitude, and then Ada telling people that the steward listens. Grief and reminiscing about the felled oak come out of the sim unscripted. But the first three days are thin, and the in-between text leans on compliments and nostalgia for the teahouse.
+
+**Findings that shape the next chunk:**
+- **Too little friction.** Across all soaks there were 2 rival pairs in total, no departures and no "thinking of leaving". The structured mind is stable, but too gentle to generate its own drama.
+- **Stories need a push.** Story density depends heavily on steward actions. The storyteller and events (spec 4.4) are needed for pacing, especially early in the game.
+- **One dominant gathering place.** The teahouse becomes the social centre in almost every seed, because of a positive feedback loop between fond beliefs and place choice. Layout doesn't yet do enough to spread social life around the town.
+
+**M1.5 criteria (predeclared 2026-10-03, before any M1.5 code).** M1.5 passes only if all of these hold. A failure gets reported as a failure, not redefined.
+
+1. **Early story.** In the `quiet` scenario (no scripted steward actions), days 1–3 contain at least 6 notable events on each of seeds 1–5. Notable means a story event, a belief formed, a request, a relationship change, an argument, comfort, an apology, a reminiscence, or gossip.
+2. **Pacing.** The director never fires two negative events within 48 hours of each other, on any of the soak seeds.
+3. **Gentle friction.** Across 10 seeds × 28 days of the soak (random steward), the mean number of rival pairs per run is between 0.5 and 4. At least 7 of 10 runs contain an argument. No more than 1 run has a departure.
+4. **Neglect versus care (twin).** In a neglect scenario, where requests are ignored, places residents love are removed and noisy buildings are put beside homes, at least one resident starts thinking of leaving within 28 days on at least 4 of seeds 1–5. In the caring twin, nobody does on any seed.
+5. **Festivals leave shared memories.** Every resident who attends a festival holds a town memory of it, and attendees' affinity for each other rises compared with a twin with no festival.
+6. **Dilemmas split the town by values.** Approving a proposal raises the steward's standing with residents who share the proposal's values and lowers it with those who oppose them, relative to the declining twin, on seeds 1–5.
+7. **Spread.** In the soak, the busiest social place accounts for less than 60% of all socialising minutes, on average across runs.
+8. **No regressions.** All M1 tests still pass, and a 10-year soak on 3 seeds shows no degenerate state.
+
+**M1.5 status (2026-10-03): built; all eight criteria met.** The tests live in `test/story.test.ts`, and the soak numbers below come from `npm run soak`.
+
+1. **Early story: met.** Days 1–3 hold at least 6 notable events on seeds 1–5, with no steward at all.
+2. **Pacing: met.** The smallest gap between negative events is at least 48 hours on all 10 soak seeds.
+3. **Gentle friction: met.** On seeds 1–10 there were 0.9 rival pairs per run, an argument in 10 of 10 runs, and departures in 0 of 10. Seeds 11–20 gave the same.
+4. **Neglect versus care: met.** Neglect starts thoughts of leaving in 3–4 residents on every one of seeds 1–5, and care starts none. A separate test shows that a resident who is thinking of leaving can be won back by attention.
+5. **Shared festival memories: met.** Every attendee holds the festival memory, and attendees grow closer than in the twin town with no festival.
+6. **Values split the town: met.** For the market day, supporters rate the approving steward above the declining twin, and opponents below.
+7. **Spread: met, narrowly.** The busiest place takes 54% of socialising on seeds 1–10 and 54% on seeds 11–20. In earlier tuning runs it sat between 56% and 61%, so this criterion is sensitive.
+8. **No regressions: met.** The 10-year soak on 3 seeds shows no degenerate state, with 1.0 rival pairs per town after ten years. All M1 tests still pass, giving 24 of 24 overall.
+
+**Findings and changes made on the way:**
+- **Silent suffering.** A resident who had lost trust in the steward stopped posting requests, so a caring steward never learned about the problem. This was caught by criterion 4's caring twin. Residents now always voice complaints (pillar 3).
+- **The steward needed a running standing.** Separate grievances never added up to a belief, so even severe neglect never moved anyone. Steward-related experiences now integrate into the relationship with the steward every night, and disposition reads that standing.
+- **Grudges ratcheted over the long run.** The first 10-year soak ended with up to 14 of 30 pairs as rivals. Three causes were found and fixed: rows the residents started themselves could happen at every meeting, rivals kept getting new rows, and complaining about a rival rehearsed the grudge. The fixes are a three-day cooling-off period per pair, rivals avoiding new rows, and a reconciliation beat (with a mediator, or by time alone) that also softens the grudge beliefs. The soak now flags any town where more than a quarter of pairs are rivals.
+- **Social life is less concentrated.** Festivals have seasonal venues, visitors rotate where they stop, social places have a comfortable size, and fondness for a place counts for less in choosing where to go.
+
+**M2 criteria (predeclared 2026-10-03, before any M2 code).** The greybox passes only if all of these hold:
+
+1. **It ships.** `npm run build` produces a static site, and a GitHub Actions workflow deploys it to GitHub Pages from `main`. CI runs the typecheck and the unit tests on every push.
+2. **The sim is the same sim.** Given the same seed and the same commands, the sim produces an identical event stream in the browser and under Node. The UI changes the town only through sim commands (build, remove, decide) and never edits state directly.
+3. **Every resident can be inspected.** In an end-to-end browser test, clicking each of the six residents opens a journal that shows needs, feelings and at least one opinion with its "why" chain, by day 6 of the bakery scenario.
+4. **The player can respond.**
+   - An end-to-end test approves a proposal from the notice board and sees the town react: the proposer is pleased, and the decision appears in the log.
+   - It places a hedge and sees reactions in the log.
+   - It removes a building and sees grief or reactions where residents were attached to it.
+5. **Performance budget.** Sim stepping at 10× speed costs under 2 ms per frame on average in the browser test, measured on this container's headless Chromium. Frame rate is recorded for information only; the container renders in software, so it isn't a pass/fail measure.
+6. **Legibility (owner playtest, not automated).** A first-time player can explain *why* one resident is unhappy using only the in-game UI. The owner runs this test, and it is recorded here when done.
+
+**M2 status (2026-10-03): built.** Criteria 2–5 are met in automated browser tests. Criterion 1 is met locally and awaits its first deploy. Criterion 6 is the owner's playtest.
+
+1. **It ships: met locally.**
+   - `npm run build` produces the static site.
+   - `.github/workflows/ci.yml` runs the typecheck, the unit tests and the browser tests on every push.
+   - `.github/workflows/pages.yml` deploys `main` to GitHub Pages.
+   - The first deploy needs Pages turned on, with "GitHub Actions" as the source, in the repository settings, and the branch merged to `main`.
+2. **The same sim: met.** A browser session with two player commands produces the same event count and event hash as the Node sim fed the same command log (`e2e/townlet.spec.ts`). The UI changes the town only through `Game.command`.
+3. **Every resident can be inspected: met, with an interpretation.** Clicking each resident in the 3D town opens a journal with eight meters (mood, settled, and the six needs), feelings, and an opinion whose "why" list is non-empty.
+   - On day 6 of the bakery scenario, Fen held only *forming* opinions, not yet any settled ones. The journal now shows forming opinions with their why chains too, and the test accepts either kind, recording which one each resident relied on.
+   - This reads "opinion" as "settled or forming". It is stated here rather than silently widened.
+   - It reflects a real finding: by day 6, most residents have 0–3 settled beliefs and 5–10 still forming. Residents are slow to make up their minds early on.
+4. **The player can respond: met.**
+   - Approving from the notice board logs "The steward approves…", the proposer "is delighted", and their standing with the steward rises.
+   - A hedge placed from the palette is logged, and residents react.
+   - Removing the place residents are most attached to logs "taken down", and at least one resident records a `lost_place` memory.
+5. **Performance budget: met.** Sim stepping at 10× costs 0.38–0.47 ms per frame on average in headless Chromium. Frame rate was 17–27 fps under software rendering in the container, recorded for information only.
+6. **Legibility: open.** This is the owner's playtest.
+
+**Still open, for the next chunk to weigh:**
+- Gossip about places ("the commons is where the good evenings happen") is still the commonest kind of gossip.
+- The voice templates repeat over a long read.
+- There is still no economy. Resources and civic needs (spec 4.3) haven't been built.
 
 ---
 
@@ -427,7 +511,7 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 | **Localisation of generated text** | Grammar output breaks in other languages | Per-language grammar rules from day one; budget for it before the 1.0 decision |
 | **Scope creep** | Generations, multi-town and LLM voice are all tempting | Section 9.1's "not in the slice" list is binding; new ideas go to 9.2 |
 | **Coupling to research** | Waiting on brain-sim stalls the game | The creature is post-slice and off the critical path; its gate is explicit (4.6.3) |
-| **Godot 3D web export performance** | The browser demo may be heavier than desktop | Keep the web demo optional; it doesn't block release |
+| **Browser 3D performance** | Three.js on integrated GPUs and in the Tauri webview may be heavier than a native engine | Low-poly art direction (section 6), instancing, a performance budget from M2, measured on a low-end laptop |
 
 ---
 
@@ -435,15 +519,15 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 
 These are ordered by how much each answer changes what gets built next.
 
-1. **Platform priority.** Should development aim at Steam/desktop first with an optional web demo (Godot), or web-first on townlet.app (TypeScript and Three.js)? This decides the stack.
-2. **AI ambition for 1.0.** Is it a structured cognitive sim only, or should the local LM voice layer be in 1.0? Should the brain-sim creature be a 1.0 goal or a post-launch experiment?
+1. ~~**Platform priority.**~~ Decided 2026-10-03: web-first TypeScript (see DECISIONS.md).
+2. **AI ambition for 1.0.** Partly decided 2026-10-03: a structured sim now, with fuller brain-sim minds as the long-term direction. Still open: whether the brain-sim creature is a 1.0 goal or a post-launch experiment, and whether the local LM voice layer is ever wanted.
 3. **"No generative AI" stance.** Should the game commit publicly to no generative models, which closes off option D, or keep that door open?
 4. **Embodiment.** Is the steward an avatar walking the town, which is more intimate, allows conversations in place and suits gamepads, or a disembodied cursor and camera, which is simpler and closer to a builder?
 5. **Life cycle.** Do residents age, have children or pass away in the base game, or is time "seasonal but timeless" (as in the slice)?
 6. **Resident agency over layout.** Can residents ever act on the town themselves (plant a garden, rearrange decor, build a shed) or only react to it?
 7. **Grid.** Square grid with auto-joining (recommended), hex, or Townscaper-style irregular grid?
 8. **Conversation depth.** Should talking to residents remain choice-based, or is any freeform input (typed or keyword-based) wanted eventually?
-9. **Team and timeline.** Who is building this (solo, small team, contracted art) and by when? This sets the slice's content numbers.
+9. ~~**Team and timeline.**~~ Decided 2026-10-03: solo plus Claude, no deadline. The slice keeps 15 residents as the target but proves the format with 6 first (M1).
 10. **Art direction.** Which option from section 6, and is there budget for a technical artist?
 11. **End of the slice.** After the charter, does the game end with the Almanac and a "new town" button, or carry on as an open-ended sandbox?
 12. **The creature.** If brain-sim does reach its gate, which creature should it be, and what can players see when they look inside?

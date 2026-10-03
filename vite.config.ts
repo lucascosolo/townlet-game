@@ -1,0 +1,11 @@
+import { defineConfig } from 'vite';
+
+// The browser build lives in web/ and imports the sim core from src/ directly. A relative base
+// lets the same build serve from GitHub Pages' /townlet-game/ path or from a domain root.
+export default defineConfig({
+  root: 'web',
+  base: './',
+  build: { outDir: '../dist', emptyOutDir: true, target: 'es2022', chunkSizeWarningLimit: 900 },
+  server: { port: 5173 },
+  preview: { port: 4173 },
+});

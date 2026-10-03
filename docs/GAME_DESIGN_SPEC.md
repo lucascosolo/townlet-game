@@ -634,6 +634,36 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - A reminiscence appears as a bubble.
 6. **No regressions.** All earlier tests pass, adjusted only where M3b deliberately changes behaviour. The one-year and 10-year soaks show no degenerate state, and 7-day radio plays still have at least 80 distinct lines with none above 4%.
 
+
+**M3c criteria: agency (predeclared 2026-10-03, before any M3c code).** Measured in the quiet town on seeds 1–5 over 28 days unless stated. A failure is reported as a failure, not redefined. A scripted "favour-asking steward" stands in for the player in headless tests. It asks one favour a day of whoever is most likely to agree, and builds homes when it can.
+
+1. **Favours.**
+   - The talk panel offers favours: cut timber, bring in a catch, work the garden, clear a plot, visit someone, make up with someone.
+   - Every answer, yes or no, comes from state, and a refusal names its reason. A unit test checks the reason against the state: tired, unwell, asked too often, a poor view of you, or not on speaking terms.
+   - An accepted favour is actually done. The resident walks there and spends the time, and the stores change by what was produced. Timber can be earned only through work.
+   - With the favour-asking steward, timber income is at least 10 a week, against at most 3 a week with no favours.
+   - **Twin test:** the same resident asked 5 favours in 5 days, against 1 in 5 days. The first ends with a lower view of the steward on every seed.
+2. **A growing valley.**
+   - The settled land at the start is the current 24×24. The map has at least twice that area in wild plots around it.
+   - Plots open as the town thrives, and a plot becomes buildable only once residents have cleared it, which yields timber.
+   - With the favour-asking steward over one year (112 days), at least 2 plots are cleared on every seed. The steward never runs out of room to place a cottage.
+3. **More residents.**
+   - Cottages can be built.
+   - A newcomer arrives only when a home is free, food is at least 15, and mean disposition is at least 0.6. A unit test checks that none arrives otherwise.
+   - With the favour-asking steward over one year, at least 3 newcomers arrive on every seed.
+   - Two-thirds of newcomers, or more, count someone as a friend within 28 days of arriving.
+   - Newcomers have voices, form dreams and appear in the journal like everyone else.
+4. **Talking to a resident** (M3b criterion 4) holds as declared there. Favours live in the same panel.
+5. **In the browser.**
+   - An end-to-end test opens the talk panel, asks a favour, and sees it accepted or refused with its reason.
+   - On acceptance, the resident walks to the work and the stock rises.
+   - Clearing a plot through the UI opens new buildable land.
+   - The sim still steps at 10× in under 2 ms per frame, with 12 residents.
+6. **No regressions.**
+   - Earlier tests pass, adjusted only where M3c deliberately changes behaviour.
+   - The one-year and 10-year soaks, run with newcomers, show no degenerate state.
+   - The log's default view stays readable: in a 7-day browser run, the Story filter shows at most 40 lines a day on average.
+
 ---
 
 ## 10. Risks

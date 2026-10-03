@@ -641,7 +641,7 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - The talk panel offers favours: cut timber, bring in a catch, work the garden, clear a plot, visit someone, make up with someone.
    - Every answer, yes or no, comes from state, and a refusal names its reason. A unit test checks the reason against the state: tired, unwell, asked too often, a poor view of you, or not on speaking terms.
    - An accepted favour is actually done. The resident walks there and spends the time, and the stores change by what was produced. Timber can be earned only through work.
-   - With the favour-asking steward, timber income is at least 10 a week, against at most 3 a week with no favours.
+   - With the favour-asking steward, timber income is at least double the income with no favours. (Corrected before any M3c code: the first draft said "at least 10 a week, against at most 3 with no favours". A baseline check then showed timber already grows about 10 a week from Marlow's woodlot shifts, which the playtester hadn't noticed.)
    - **Twin test:** the same resident asked 5 favours in 5 days, against 1 in 5 days. The first ends with a lower view of the steward on every seed.
 2. **A growing valley.**
    - The settled land at the start is the current 24×24. The map has at least twice that area in wild plots around it.

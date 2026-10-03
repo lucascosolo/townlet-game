@@ -2,6 +2,34 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-03: M3a, alive minds — directions chosen
+
+The owner chose these directions for the release gate (merged M2.5 first):
+
+**1. Residents pursue their aspirations.** Each resident's aspiration becomes an authored plan of 3–5 stages. Each stage has conditions on the state of the sim, so the simulation decides when and whether it advances; the writing gives it quality.
+- Ada plants her sister's orchard.
+- Bram bakes for the whole valley at the Harvest Supper.
+- Fen teaches someone to fish.
+- Juniper builds a glasshouse for winter food.
+- Wren paints the town's banner.
+- Marlow decides whether to stay or leave with the trade cart. This is the one aspiration that can end in a departure caused by the story, not by neglect, and friendships and the steward can change it.
+
+Some stages need the steward: a building, a decision, timber. So aspirations are also something the player can help along or neglect. The journal shows each resident's plan and their next step.
+
+**2. Relationships you can see.**
+- Friends invite each other along and walk together.
+- At a gathering place, friends sit side by side and rivals keep apart.
+- People face each other when they talk.
+- Residents avoid places where their rivals are.
+
+**3. Varied, contextual talk that honestly reflects their state** (the owner's own wording).
+- Residents have a running "what's on my mind", chosen from their actual state: their most pressing need, their strongest current feeling and what it's about, their aspiration's next step, an upcoming event, the weather, a friend or a rival, or the steward.
+- It appears as bubbles and in the journal, with the reason it's on their mind.
+- Ordinary chats now carry that content, so what they say comes from what they feel, not from a stock line.
+- Many more lines per voice.
+
+- *Not chosen this time:* inner thoughts as a separate feature (folded into 3), and memories resurfacing in talk (partly covered by 3; a later chunk).
+
 ## 2026-10-03: Release gate — the minds must feel alive
 
 The owner: "I definitely would prefer the minds to be more alive before we release."

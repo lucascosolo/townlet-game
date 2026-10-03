@@ -536,6 +536,24 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 
 **Release gate (owner, 2026-10-03):** the minds must feel more alive before release. See DECISIONS.md.
 
+**M3a criteria: alive minds (predeclared 2026-10-03, before any M3a code).**
+
+1. **Aspirations progress, with the steward's help.** Over 28 days in the quiet town on seeds 1–5:
+   - with the considerate stand-in steward, at least 3 of 6 aspirations reach their final stage on average;
+   - with a do-nothing steward, at most 1.5 on average;
+   - every stage change is narrated, and the journal shows the current plan and the next step.
+2. **Marlow's choice depends on his life.** Marlow's decision resolves within the year on every seed. In a twin test, giving Marlow strong friendships and a good standing with the steward makes him stay, and isolating him makes him go, on seeds 1–5.
+3. **Friends keep company.** Over 28 days on seeds 1–5:
+   - each directed friend pair spends at least twice as many minutes together, per pair, as non-friend pairs;
+   - rival pairs spend fewer minutes together than neutral pairs;
+   - at least 2 invitations ("walk together") happen per resident per week on average.
+4. **Talk is honest and varied.**
+   - A thought is emitted only for a topic that is among that resident's top three salient items at that moment; this is checked against state in a unit test.
+   - Planting a grievance against a resident makes the victim think or speak about that person within a day.
+   - In a 7-day radio play, distinct lines of speech and thought number at least 80, and no single line is more than 4% of them.
+5. **In the browser.** The journal shows "On their mind" with its reason, and "Hoping to" with the next step. At a gathering place, friends are drawn next to each other. Both are checked in an end-to-end test.
+6. **No regressions.** All earlier tests pass, adjusted only where M3a deliberately changes behaviour, and the one-year and 10-year soaks show no degenerate state.
+
 **Still open, for the next chunk to weigh:**
 - Gossip about places ("the commons is where the good evenings happen") is still the commonest kind of gossip.
 - The voice templates repeat over a long read.

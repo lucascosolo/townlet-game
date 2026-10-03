@@ -459,6 +459,18 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 - **Grudges ratcheted over the long run.** The first 10-year soak ended with up to 14 of 30 pairs as rivals. Three causes were found and fixed: rows the residents started themselves could happen at every meeting, rivals kept getting new rows, and complaining about a rival rehearsed the grudge. The fixes are a three-day cooling-off period per pair, rivals avoiding new rows, and a reconciliation beat (with a mediator, or by time alone) that also softens the grudge beliefs. The soak now flags any town where more than a quarter of pairs are rivals.
 - **Social life is less concentrated.** Festivals have seasonal venues, visitors rotate where they stop, social places have a comfortable size, and fondness for a place counts for less in choosing where to go.
 
+**M2 criteria (predeclared 2026-10-03, before any M2 code).** The greybox passes only if all of these hold:
+
+1. **It ships.** `npm run build` produces a static site, and a GitHub Actions workflow deploys it to GitHub Pages from `main`. CI runs the typecheck and the unit tests on every push.
+2. **The sim is the same sim.** Given the same seed and the same commands, the sim produces an identical event stream in the browser and under Node. The UI changes the town only through sim commands (build, remove, decide) and never edits state directly.
+3. **Every resident can be inspected.** In an end-to-end browser test, clicking each of the six residents opens a journal that shows needs, feelings and at least one opinion with its "why" chain, by day 6 of the bakery scenario.
+4. **The player can respond.**
+   - An end-to-end test approves a proposal from the notice board and sees the town react: the proposer is pleased, and the decision appears in the log.
+   - It places a hedge and sees reactions in the log.
+   - It removes a building and sees grief or reactions where residents were attached to it.
+5. **Performance budget.** Sim stepping at 10× speed costs under 2 ms per frame on average in the browser test, measured on this container's headless Chromium. Frame rate is recorded for information only; the container renders in software, so it isn't a pass/fail measure.
+6. **Legibility (owner playtest, not automated).** A first-time player can explain *why* one resident is unhappy using only the in-game UI. The owner runs this test, and it is recorded here when done.
+
 **Still open, for the next chunk to weigh:**
 - Gossip about places ("the commons is where the good evenings happen") is still the commonest kind of gossip.
 - The voice templates repeat over a long read.

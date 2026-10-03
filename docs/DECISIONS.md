@@ -2,6 +2,30 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-03: After M1.5 — M2 greybox, scope, preview hosting, camera
+
+These were decided by the owner after reviewing M1.5's results (spec 9.3, "M1.5 status").
+
+**Next chunk: the M2 greybox in the browser.** It is built with Vite and Three.js on the existing sim core, in the low-poly lantern-light direction.
+- *Rejected for now:* building the economy first (headless), and growing the cast and content depth first. Both remain on the list.
+
+**Scope of the first browser build: watch and respond.** The player can:
+- watch the town live, with time controls;
+- click any resident to read their journal (needs, feelings, opinions and why);
+- answer requests and approve or decline proposals on the notice board;
+- place or remove a small set of buildings.
+
+There is no economy, land clearing or tiers yet.
+- *Rejected:* a watch-only viewer, as too small a step.
+- *Rejected:* the full build loop, as too large a chunk.
+
+**Preview hosting: GitHub Pages**, through a GitHub Actions workflow in this repository. townlet.app can point at it later.
+- *Rejected for now:* Cloudflare Pages, and staying local-only.
+
+**Camera: isometric**, with a fixed diorama tilt, rotation in quarter turns, pan and zoom. It keeps the town readable and suits the cozy diorama look.
+- *Rejected:* free orbit, which is harder to keep readable.
+- *Rejected:* top-down, which has less charm.
+
 ## 2026-10-03: After M1 — next chunk, friction, steward, art direction
 
 These were decided by the owner after reviewing M1's results (spec 9.3, "M1 status").

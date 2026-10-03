@@ -24,6 +24,19 @@ function sentenceCase(s: string): string {
 type Person = { subj: string; obj: string; poss: string };
 const FIRST_PERSON: Person = { subj: 'I', obj: 'me', poss: 'my' };
 
+export type EntryKind = 'day' | 'board' | 'live' | 'aside' | 'note';
+
+/** One narrated line, with who it mentions, for UIs that want more than plain text. */
+export interface NarratorEntry {
+  t: number;
+  kind: EntryKind;
+  text: string;
+  /** Residents named in the text. */
+  who: string[];
+}
+
+const MAX_ENTRIES = 3000;
+
 export interface NarratorOptions {
   /** Narrate every exchange instead of the notable ones. */
   verbose?: boolean;
@@ -33,6 +46,8 @@ export interface NarratorOptions {
 
 export class Narrator {
   readonly lines: string[] = [];
+  readonly entries: NarratorEntry[] = [];
+  private entryListeners: Array<(e: NarratorEntry) => void> = [];
   /** Notice-board items, rendered at dawn so they read right as of the morning. */
   private board: Array<() => string> = [];
   private rng: RngHolder;
@@ -64,10 +79,28 @@ export class Narrator {
     this.lines.push(line);
   }
 
+  onEntry(listener: (e: NarratorEntry) => void): void {
+    this.entryListeners.push(listener);
+  }
+
+  private entry(kind: EntryKind, t: number, text: string): void {
+    const who = this.state.order.filter((id) => new RegExp(`\\b${this.name(id)}\\b`).test(text));
+    const e: NarratorEntry = { t, kind, text, who };
+    this.entries.push(e);
+    if (this.entries.length > MAX_ENTRIES) this.entries.splice(0, this.entries.length - MAX_ENTRIES);
+    for (const l of this.entryListeners) l(e);
+  }
+
+  private aside(t: number, text: string): void {
+    this.out(`${INDENT}${text}`);
+    this.entry('aside', t, text);
+  }
+
   /** The log runs dawn to dawn; small hours are marked so they don't read as the evening before. */
   private live(t: number, text: string): void {
     const night = minuteOf(t) < DAWN_MINUTE && dayOf(t) > 1;
     this.out(`${clock(t)}${night ? '*' : ' '} ${text}`);
+    this.entry('live', t, text);
   }
 
   // ---------------------------------------------------------------- naming
@@ -203,7 +236,7 @@ export class Narrator {
         if (e.t > 0) {
           this.live(e.t, `${this.name(e.who)} takes up work at ${this.subjectName(`b:${e.building}`)}.`);
           const line = this.thought(e.who, `b:${e.building}`, 'my_workplace', 1);
-          if (line) this.out(`${INDENT}${this.name(e.who)}: ${line}`);
+          if (line) this.aside(e.t, `${this.name(e.who)}: ${line}`);
         }
         break;
       case 'disturbed_sleep':
@@ -220,7 +253,7 @@ export class Narrator {
       }
       case 'grief': {
         const line = this.thought(e.who, `b:${e.building}`, 'lost_place', -1);
-        if (line) this.out(`${INDENT}${this.name(e.who)}: ${line}`);
+        if (line) this.aside(e.t, `${this.name(e.who)}: ${line}`);
         break;
       }
       case 'recall': {
@@ -450,12 +483,21 @@ export class Narrator {
   }
 
   private dawn(day: number, t: number): void {
-    if (day > 1) this.out(`${INDENT}(${this.exchangesToday} conversations yesterday, ${this.gossipToday} of them gossip.)`);
+    if (day > 1) {
+      const note = `(${this.exchangesToday} conversations yesterday, ${this.gossipToday} of them gossip.)`;
+      this.out(`${INDENT}${note}`);
+      this.entry('note', t, note);
+    }
     this.out('');
     this.out(`=== Day ${day} · ${cap(seasonOf(t))} ===`);
+    this.entry('day', t, `Day ${day} · ${cap(seasonOf(t))}`);
     this.out('Notice board:');
     if (this.board.length === 0) this.out('  - Nothing new.');
-    for (const item of this.board) this.out(`  - ${item()}`);
+    for (const item of this.board) {
+      const text = item();
+      this.out(`  - ${text}`);
+      this.entry('board', t, text);
+    }
     this.out('');
     this.board = [];
     this.exchangesToday = 0;

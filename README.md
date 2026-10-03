@@ -8,7 +8,13 @@ This repository currently holds **M1 and M1.5 of the headless "radio play"**. M1
 - quarrels that brew and boil over;
 - proposals the steward approves or declines.
 
-There are no graphics yet. The point is to check whether the town is interesting as text before building anything visual.
+**M2** is the first browser build: a low-poly isometric greybox of the same sim. You can:
+- watch the town with time controls;
+- click anyone to read their journal and the "why" behind their opinions;
+- answer proposals on the notice board;
+- place or remove a handful of buildings.
+
+You are the steward.
 
 ## Running it
 
@@ -16,6 +22,9 @@ Node 22.12 or later.
 
 ```sh
 npm install
+npm run dev                                               # the browser greybox at http://localhost:5173
+npm run build && npm run preview                          # the production build
+npm run e2e                                               # browser tests (Playwright, headless Chromium)
 npm run radio -- --scenario bakery --seed 1 --days 12    # the radio play
 npm run radio -- --scenario quiet --steward neglectful --days 28   # the same town, badly looked after
 npm run inspect -- --scenario bakery --days 10 --resident ada   # one mind, with its "Why?" chains
@@ -24,7 +33,14 @@ npm test                                                  # determinism, memory,
 npm run typecheck
 ```
 
-Sample output is in `docs/samples/`.
+In the browser, URL parameters choose the town: `?scenario=bakery&seed=2&steward=considerate&speed=1`. The default is the quiet town with no stand-in steward, so you answer everything yourself.
+
+**Browser controls:**
+- **Look:** drag to pan, wheel or +/- to zoom, Q/E to rotate by quarter turns.
+- **Time:** space pauses, 0–4 set the speed.
+- **Building:** pick a building from the palette and click a free spot. Esc returns to looking.
+
+Sample output from the text tools is in `docs/samples/`.
 
 **Scenarios:**
 - `bakery`: the worked example from spec section 3. A bakery goes up beside Ada's cottage, the steward later plants a hedge, then the old oak comes down.
@@ -51,7 +67,10 @@ Sample output is in `docs/samples/`.
 | `src/inspect/` | Resident inspector |
 | `src/soak/` | Soak runs and degeneracy checks |
 | `src/scenarios/` | Starting towns, scripted steward actions, and stand-in steward policies (`steward.ts`) |
-| `test/` | Vitest suites |
+| `web/` | The browser greybox: `game.ts` (clock, commands, replay log), `view/` (Three.js scene and meshes), `ui/` (notice board, log, journal, palette) |
+| `test/` | Vitest suites (sim) |
+| `e2e/` | Playwright suites (browser, M2 criteria) |
+| `.github/workflows/` | CI (typecheck, unit and browser tests) and the GitHub Pages deploy from `main` |
 
 ## How it fits together
 

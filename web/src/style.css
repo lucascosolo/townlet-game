@@ -1,0 +1,95 @@
+:root {
+  --paper: #f6efdf;
+  --paper-edge: #e3d6b8;
+  --ink: #3b3226;
+  --ink-soft: #7a6c58;
+  --accent: #b5653e;
+  --good: #5f9e4f;
+  --warn: #c0503c;
+  --shadow: 0 6px 18px rgba(40, 30, 15, 0.25);
+  font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  color: var(--ink);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #9db8c8; }
+#app { position: fixed; inset: 0; }
+#stage { position: absolute; inset: 0; }
+#stage canvas { display: block; touch-action: none; }
+.paper {
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fffaf0;
+  border: 1px solid var(--paper-edge);
+  border-radius: 6px;
+  padding: 4px 9px;
+  cursor: pointer;
+}
+button:hover { background: #fff3da; }
+button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+.hud { position: absolute; top: 12px; left: 12px; padding: 8px 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.hud .title { font-weight: bold; letter-spacing: 0.04em; }
+.hud .clock { min-width: 190px; font-variant-numeric: tabular-nums; }
+.speeds { display: flex; gap: 3px; }
+
+.side { position: absolute; top: 12px; right: 12px; bottom: 76px; width: 360px; display: flex; flex-direction: column; overflow: hidden; }
+.tabs { display: flex; gap: 4px; padding: 8px 8px 0; border-bottom: 1px solid var(--paper-edge); }
+.tabs button { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; }
+.pane { flex: 1; overflow-y: auto; padding: 10px 14px 16px; font-size: 14px; line-height: 1.45; }
+.pane h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); }
+.pane h3:first-child { margin-top: 2px; }
+.pane ul { padding-left: 18px; margin: 4px 0; }
+.quiet { color: var(--ink-soft); }
+.card { border: 1px dashed var(--paper-edge); border-radius: 8px; padding: 8px 10px; margin: 6px 0; background: #fffaf0; }
+.card-title { font-weight: bold; }
+.card .quote { font-style: italic; margin: 4px 0; }
+.card button { margin-right: 6px; margin-top: 4px; }
+
+.entry { padding: 3px 0; border-bottom: 1px dotted #eadfc6; }
+.entry.day { font-weight: bold; margin-top: 10px; border-bottom: 1px solid var(--paper-edge); }
+.entry.board { color: var(--ink-soft); }
+.entry.aside { padding-left: 14px; font-style: italic; }
+.entry.note { color: var(--ink-soft); font-size: 12px; }
+.entry .time { color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-right: 6px; font-size: 12px; }
+a.who { color: inherit; text-decoration: none; border-bottom: 2px solid; }
+
+.roster { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.roster button { border-width: 2px; }
+.journal h2 { margin: 4px 0; font-size: 20px; border-bottom: 3px solid; display: inline-block; }
+.journal .doing { font-style: italic; }
+.warning { color: var(--warn); font-weight: bold; }
+.meter { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.meter .label { width: 92px; font-size: 13px; }
+.meter .track { position: relative; flex: 1; height: 8px; background: #eadfc6; border-radius: 4px; }
+.meter .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--good); border-radius: 4px; }
+.meter .fill.low { background: var(--warn); }
+.meter .mark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
+details.why { margin: 3px 0; }
+details.why summary { cursor: pointer; }
+details.why ul { font-size: 12.5px; color: var(--ink-soft); }
+.people { columns: 2; }
+
+.palette { position: absolute; left: 12px; right: 384px; bottom: 12px; padding: 8px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.palette .status { margin-left: 8px; font-size: 13px; color: var(--ink-soft); }
+
+.bubbles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.bubble {
+  position: absolute; transform: translate(-50%, -100%); max-width: 220px;
+  background: #fffdf6; border: 2px solid; border-radius: 12px; padding: 4px 8px;
+  font-size: 12.5px; line-height: 1.3; box-shadow: 0 3px 8px rgba(40, 30, 15, 0.2);
+}
+
+@media (max-width: 760px) {
+  .side { top: auto; left: 8px; right: 8px; bottom: 64px; width: auto; height: 42vh; }
+  .palette { left: 8px; right: 8px; bottom: 8px; overflow-x: auto; flex-wrap: nowrap; }
+  .palette .status { display: none; }
+  .hud { left: 8px; right: 8px; top: 8px; gap: 6px; }
+  .hud .clock { min-width: 0; }
+}

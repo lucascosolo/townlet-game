@@ -471,6 +471,25 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 5. **Performance budget.** Sim stepping at 10× speed costs under 2 ms per frame on average in the browser test, measured on this container's headless Chromium. Frame rate is recorded for information only; the container renders in software, so it isn't a pass/fail measure.
 6. **Legibility (owner playtest, not automated).** A first-time player can explain *why* one resident is unhappy using only the in-game UI. The owner runs this test, and it is recorded here when done.
 
+**M2 status (2026-10-03): built.** Criteria 2–5 are met in automated browser tests. Criterion 1 is met locally and awaits its first deploy. Criterion 6 is the owner's playtest.
+
+1. **It ships: met locally.**
+   - `npm run build` produces the static site.
+   - `.github/workflows/ci.yml` runs the typecheck, the unit tests and the browser tests on every push.
+   - `.github/workflows/pages.yml` deploys `main` to GitHub Pages.
+   - The first deploy needs Pages turned on, with "GitHub Actions" as the source, in the repository settings, and the branch merged to `main`.
+2. **The same sim: met.** A browser session with two player commands produces the same event count and event hash as the Node sim fed the same command log (`e2e/townlet.spec.ts`). The UI changes the town only through `Game.command`.
+3. **Every resident can be inspected: met, with an interpretation.** Clicking each resident in the 3D town opens a journal with eight meters (mood, settled, and the six needs), feelings, and an opinion whose "why" list is non-empty.
+   - On day 6 of the bakery scenario, Fen held only *forming* opinions, not yet any settled ones. The journal now shows forming opinions with their why chains too, and the test accepts either kind, recording which one each resident relied on.
+   - This reads "opinion" as "settled or forming". It is stated here rather than silently widened.
+   - It reflects a real finding: by day 6, most residents have 0–3 settled beliefs and 5–10 still forming. Residents are slow to make up their minds early on.
+4. **The player can respond: met.**
+   - Approving from the notice board logs "The steward approves…", the proposer "is delighted", and their standing with the steward rises.
+   - A hedge placed from the palette is logged, and residents react.
+   - Removing the place residents are most attached to logs "taken down", and at least one resident records a `lost_place` memory.
+5. **Performance budget: met.** Sim stepping at 10× costs 0.38–0.47 ms per frame on average in headless Chromium. Frame rate was 17–27 fps under software rendering in the container, recorded for information only.
+6. **Legibility: open.** This is the owner's playtest.
+
 **Still open, for the next chunk to weigh:**
 - Gossip about places ("the commons is where the good evenings happen") is still the commonest kind of gossip.
 - The voice templates repeat over a long read.

@@ -647,12 +647,14 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - The settled land at the start is the current 24×24. The map has at least twice that area in wild plots around it.
    - Plots open as the town thrives, and a plot becomes buildable only once residents have cleared it, which yields timber.
    - With the favour-asking steward over one year (112 days), at least 2 plots are cleared on every seed. The steward never runs out of room to place a cottage.
-3. **More residents.**
-   - Cottages can be built.
-   - A newcomer arrives only when a home is free, food is at least 15, and mean disposition is at least 0.6. A unit test checks that none arrives otherwise.
+3. **More residents.** Changed by the owner mid-chunk, before this part was measured: "just make it so i can build an empty house and a new person moves in. each new person should be unique with their own semi-random but coherent personality and sliders", and "things should be seeded also by the actions of the player". The first draft's gates (food at least 15, mean disposition at least 0.6, a pool of authored newcomers) are dropped.
+   - Cottages can be built. Two hours after a cottage stands empty, someone new moves in, up to 18 residents.
+   - Each newcomer is generated: a trade leans their values and traits, noise makes them their own person, and their voice, habits, hours and background follow from the result.
+   - The steward's town shapes who comes: what is built draws matching trades, the home's surroundings draw more, and when and where the home went up seeds the rest. Same seed and same actions give the same person.
+   - **Unit tests:** nobody arrives without an empty home; two different towns or placements give different newcomers, and the same ones give the same; each newcomer's traits lie in [-1, 1], their values in [0, 1], and their register follows the declared rules.
    - With the favour-asking steward over one year, at least 3 newcomers arrive on every seed.
    - Two-thirds of newcomers, or more, count someone as a friend within 28 days of arriving.
-   - Newcomers have voices, form dreams and appear in the journal like everyone else.
+   - Newcomers have voices, form dreams, and show in the journal with personality sliders like everyone else.
 4. **Talking to a resident** (M3b criterion 4) holds as declared there. Favours live in the same panel.
 5. **In the browser.**
    - An end-to-end test opens the talk panel, asks a favour, and sees it accepted or refused with its reason.

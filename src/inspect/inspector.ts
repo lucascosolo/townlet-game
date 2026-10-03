@@ -92,7 +92,7 @@ export function residentReport(sim: Simulation, id: string, names: Narrator = ne
           .slice(0, 5)
           .map((t) => ({ key: t.key, label: topicLabel(t.key, t.vars), reason: t.reason, weight: round(t.weight) })),
     traits: Object.entries(def.traits),
-    values: Object.entries(def.values).filter(([, v]) => v >= 0.5),
+    values: Object.entries(def.values),
     departed: r.departed,
     doing,
     mood: r.mood,
@@ -163,7 +163,7 @@ export function inspectResident(sim: Simulation, id: string): string {
   out.push(`  Aspiration: ${rep.aspiration}`);
   if (rep.hope) out.push(`  Hoping to: ${rep.hope.title} (${rep.hope.done ? `done${rep.hope.outcome ? `: ${rep.hope.outcome}` : ''}` : `step ${rep.hope.stage + 1} of ${rep.hope.of}; next: ${rep.hope.next}`})`);
   out.push(`  Traits: ${rep.traits.map(([k, v]) => `${k} ${signed(v)}`).join(', ')}`);
-  out.push(`  Values: ${rep.values.map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ')}`);
+  out.push(`  Values: ${rep.values.filter(([, v]) => v >= 0.5).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(', ')}`);
   if (rep.departed) {
     out.push('  Has left the valley.');
     return out.join('\n');

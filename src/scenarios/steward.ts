@@ -3,15 +3,17 @@
 
 import { buildingDef } from '../content/buildings.js';
 import { chance, deriveSeed, type RngHolder } from '../sim/rng.js';
-import type { Simulation } from '../sim/sim.js';
+import { MAX_RESIDENTS, type Simulation } from '../sim/sim.js';
 import { active } from '../sim/story/director.js';
 import { dilemmaDef, stanceScore } from '../sim/story/dilemmas.js';
 import { TICKS_PER_DAY } from '../sim/time.js';
-import type { Dilemma, Request } from '../sim/types.js';
+import { considerFavour, openPlots } from '../sim/favours.js';
+import { at as atTime, dayOf } from '../sim/time.js';
+import type { Dilemma, FavourKind, Request } from '../sim/types.js';
 import { canPlace, distanceTo, getBuilding, sizeOf } from '../sim/world.js';
 
-export type StewardPolicy = 'none' | 'considerate' | 'approve' | 'decline' | 'neglectful' | 'random';
-export const STEWARD_POLICIES: StewardPolicy[] = ['none', 'considerate', 'approve', 'decline', 'neglectful', 'random'];
+export type StewardPolicy = 'none' | 'considerate' | 'approve' | 'decline' | 'neglectful' | 'random' | 'favours';
+export const STEWARD_POLICIES: StewardPolicy[] = ['none', 'considerate', 'approve', 'decline', 'neglectful', 'random', 'favours'];
 
 const REPLY_DELAY = 3 * 60;
 
@@ -95,6 +97,7 @@ export function attachSteward(sim: Simulation, policy: StewardPolicy): void {
       let option: 'approve' | 'decline' | null;
       switch (policy) {
         case 'considerate':
+        case 'favours':
           option = townSupports(sim, d) ? 'approve' : 'decline';
           break;
         case 'approve':
@@ -112,7 +115,7 @@ export function attachSteward(sim: Simulation, policy: StewardPolicy): void {
       }
       if (option) sim.schedule([{ at: e.t + REPLY_DELAY, kind: 'decide', dilemma: d.type, option }]);
     }
-    if (e.type === 'request_posted' && (policy === 'considerate' || (policy === 'random' && chance(rng, 0.5)))) wanted.push(e.request.id);
+    if (e.type === 'request_posted' && (policy === 'considerate' || policy === 'favours' || (policy === 'random' && chance(rng, 0.5)))) wanted.push(e.request.id);
     // Each morning, act on the asks still waiting, as far as the stores allow.
     if (e.type === 'dawn' && wanted.length > 0) {
       const still: number[] = [];
@@ -124,10 +127,47 @@ export function attachSteward(sim: Simulation, policy: StewardPolicy): void {
           still.push(id);
           continue;
         }
-        const at = e.t + (policy === 'considerate' ? REPLY_DELAY : TICKS_PER_DAY);
+        const at = e.t + (policy === 'considerate' || policy === 'favours' ? REPLY_DELAY : TICKS_PER_DAY);
         sim.schedule(plan.map((p) => ({ at, kind: 'build' as const, ...p })));
       }
       wanted.splice(0, wanted.length, ...still);
     }
+    if (policy === 'favours' && e.type === 'dawn') favourMorning(sim, dayOf(e.t));
   });
+}
+
+/** What the town needs most from people's hands today. */
+export function neededFavour(sim: Simulation): FavourKind {
+  const s = sim.state.stock;
+  if (s.timber < 30) return 'timber';
+  if (s.food < 25) return 'catch';
+  if (openPlots(sim.state).length > 0) return 'clear';
+  return 'timber';
+}
+
+/**
+ * The favour-asking steward (M3c tests): one favour a day, at 8:00, of whoever is likeliest to
+ * agree; and a cottage whenever a newcomer could come but no home is empty.
+ */
+function favourMorning(sim: Simulation, day: number): void {
+  const kind = neededFavour(sim);
+  const people = active(sim.state)
+    .map((r) => ({ r, v: considerFavour(sim.state, r, kind) }))
+    .filter((x) => x.v.reason !== 'nowhere')
+    .sort((a, b) => b.v.score - a.v.score || a.r.id.localeCompare(b.r.id));
+  const who = people[0]?.r.id;
+  if (who) sim.schedule([{ at: atTime(day, 8), kind: 'favour', who, favour: kind }]);
+  const moreToCome = active(sim.state).length < MAX_RESIDENTS;
+  if (moreToCome && sim.emptyHomes().length === 0 && sim.canAfford('cottage')) {
+    const spot = cottageSpot(sim);
+    if (spot) sim.schedule([{ at: atTime(day, 10), kind: 'build', type: 'cottage', x: spot[0], y: spot[1] }]);
+  }
+}
+
+/** Somewhere for a new cottage: near the town centre if there's room, else anywhere cleared. */
+export function cottageSpot(sim: Simulation): [number, number] | null {
+  const near = spotNear(sim, 'cottage', ...townCentre(sim), 14);
+  if (near) return near;
+  for (let y = 0; y < sim.state.height - 1; y++) for (let x = 0; x < sim.state.width - 1; x++) if (canPlace(sim.state, 'cottage', x, y) === null) return [x, y];
+  return null;
 }

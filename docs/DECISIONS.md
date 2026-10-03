@@ -26,6 +26,11 @@ Points 1 and 3 were fixed at once:
 
 **Not chosen this time:** assigning jobs directly (it treats people as units), and town projects.
 
+**Changed mid-chunk (owner):** "just make it so i can build an empty house and a new person moves in. each new person should be unique with their own semi-random but coherent personality and sliders", then "things should be seeded also by the actions of the player". So the pool of six authored newcomers and the arrival gates (food, mood) were dropped.
+- **Who comes:** newcomers are generated from a trade. Traits and values come from the trade's leanings plus noise, and voice, habits and background are read off the result.
+- **What shapes them:** the steward's town draws matching trades, and the time and place of the new home seed the rest. Same seed and same actions give the same person.
+- **Limit:** 18 residents for now, for performance and screen space.
+
 **Order:** talking to a resident (from M3b) comes first, because favours live in it. Then favours, then the growing valley, then newcomers. M3b's moods and memories in talk follow after M3c. Their criteria stand as predeclared.
 
 ## 2026-10-03: M3b, deeper structured minds — directions chosen

@@ -7,7 +7,7 @@ import { residentDef } from '../../../src/content/residents.js';
 import { DILEMMA_NAMES, PROPOSALS } from '../../../src/content/story.js';
 import { residentReport, type ResidentReport } from '../../../src/inspect/inspector.js';
 import type { NarratorEntry } from '../../../src/narrate/narrator.js';
-import { FAVOUR_MINUTES, openPlots, recentAsks } from '../../../src/sim/favours.js';
+import { CLEAR_MINUTES, FAVOUR_MINUTES, openPlots, recentAsks } from '../../../src/sim/favours.js';
 import { opinion } from '../../../src/sim/mind/memory.js';
 import { ambientPrefs, prefScore } from '../../../src/sim/needs.js';
 import { wishProgress } from '../../../src/sim/story/director.js';
@@ -15,13 +15,14 @@ import { dilemmaDef, stanceScore } from '../../../src/sim/story/dilemmas.js';
 import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
-import { RESIDENT_COLORS } from '../view/meshes.js';
+import { residentColor } from '../view/meshes.js';
 import type { TownView } from '../view/scene.js';
 
 export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
   { category: 'Green and decor', types: ['hedge', 'flowerbed', 'bench'] },
   { category: 'Gathering', types: ['teahouse', 'commons', 'well'] },
   { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop'] },
+  { category: 'Homes', types: ['cottage'] },
   { category: 'Dreams', types: ['orchard', 'glasshouse', 'banner'] },
 ];
 interface TalkPanel {
@@ -58,6 +59,15 @@ const FAVOUR_DOING: Record<FavourKind, string> = {
   clear: 'clearing wild land',
   visit: 'going to see someone',
   mend: 'going to make peace',
+};
+
+/** The two ends of each trait slider. */
+const TRAIT_ENDS: Record<string, [string, string]> = {
+  sociable: ['reserved', 'sociable'],
+  steady: ['excitable', 'steady'],
+  curious: ['settled', 'curious'],
+  generous: ['guarded', 'generous'],
+  tidy: ['messy', 'tidy'],
 };
 
 type LogFilter = 'highlights' | 'story' | 'everything';
@@ -477,7 +487,7 @@ export class Ui {
       nodes.push(document.createTextNode(text.slice(last, m.index)));
       const id = ids.find((x) => residentDef(x).name === m[1]) as string;
       const a = el('a', { href: '#', class: 'who' }, m[1]);
-      a.style.borderBottomColor = cssColor(RESIDENT_COLORS[id] ?? 0x888888);
+      a.style.borderBottomColor = cssColor(residentColor(id));
       a.addEventListener('click', (ev) => {
         ev.preventDefault();
         this.select({ kind: 'resident', id });
@@ -594,7 +604,7 @@ export class Ui {
     let b = this.bubbles.get(id);
     if (!b) {
       b = { el: el('div', { class: 'bubble' }), until: 0 };
-      b.el.style.borderColor = cssColor(RESIDENT_COLORS[id] ?? 0x888888);
+      b.el.style.borderColor = cssColor(residentColor(id));
       this.bubbleLayer.appendChild(b.el);
       this.bubbles.set(id, b);
     }
@@ -700,7 +710,7 @@ export class Ui {
                 ? 'is unhappy with you'
                 : 'has lost faith in you';
       const title = el('div', { class: 'card-title' }, `${def.name} ${word}`);
-      title.style.borderLeft = `4px solid ${cssColor(RESIDENT_COLORS[id] ?? 0x888888)}`;
+      title.style.borderLeft = `4px solid ${cssColor(residentColor(id))}`;
       title.style.paddingLeft = '6px';
       card.appendChild(title);
       const track = el('div', { class: 'track two-sided' });
@@ -864,13 +874,14 @@ export class Ui {
       this.lastJournalRender = now;
       return;
     }
+    if (!force && document.activeElement instanceof HTMLSelectElement && this.journalEl.contains(document.activeElement)) return;
     this.lastJournalRender = now;
     const pane = this.journalEl;
     pane.replaceChildren();
     const roster = el('div', { class: 'roster' });
     for (const id of this.game.sim.state.order) {
       const b = el('button', { 'data-testid': `roster-${id}` }, residentDef(id).name);
-      b.style.borderColor = cssColor(RESIDENT_COLORS[id] ?? 0x888888);
+      b.style.borderColor = cssColor(residentColor(id));
       b.classList.toggle('on', this.selected?.kind === 'resident' && this.selected.id === id);
       b.addEventListener('click', () => this.select({ kind: 'resident', id }));
       roster.appendChild(b);
@@ -890,6 +901,11 @@ export class Ui {
     if (!b) return;
     const card = el('div', { class: 'journal', 'data-testid': 'building-card' });
     card.appendChild(el('h2', {}, cap(this.game.narrator.subjectName(`b:${id}`))));
+    if (b.type === 'wild') {
+      this.renderWild(card, b.id);
+      pane.appendChild(card);
+      return;
+    }
     card.appendChild(
       el('p', { class: 'quiet' }, b.removed ? 'Gone now.' : `${buildingDef(b.type).kind} · ${b.placedBy === 'founding' ? 'here before you' : `built on day ${dayOf(b.placedTick)}`} · gives off ${this.givesOff(b.type)}`),
     );
@@ -903,6 +919,55 @@ export class Ui {
     if (!list.childElementCount) list.appendChild(el('li', { class: 'quiet' }, 'Nobody has strong feelings yet.'));
     card.appendChild(list);
     pane.appendChild(card);
+  }
+
+  /** Wild land: is it open, how far has clearing got, and who could help. */
+  private renderWild(card: HTMLElement, id: number): void {
+    const state = this.game.sim.state;
+    const open = openPlots(state).includes(id);
+    const done = state.clearing?.[String(id)] ?? 0;
+    card.appendChild(el('p', { class: 'quiet' }, buildingDef('wild').blurb ?? ''));
+    card.appendChild(this.meter('Cleared', done / CLEAR_MINUTES));
+    if (!open) {
+      card.appendChild(el('p', {}, 'Not open for clearing yet. The valley opens next to settled land, once the town is doing well.'));
+      return;
+    }
+    card.appendChild(el('p', {}, `Open for clearing: about ${Math.ceil((CLEAR_MINUTES - done) / 360)} more days of someone's work. Clearing brings in timber, and the land is yours to build on.`));
+    const row = el('div', { class: 'talk-row' });
+    const who = el('select', { 'data-testid': 'clear-who' });
+    for (const rid of state.order) if (!state.residents[rid]?.departed) who.appendChild(el('option', { value: rid }, residentDef(rid).name));
+    const ask = el('button', { 'data-testid': 'clear-ask' }, 'Ask to help clear it');
+    ask.addEventListener('click', () => {
+      this.game.command({ kind: 'favour', who: who.value, favour: 'clear', plot: id });
+      const last = this.game.narrator.lastReply;
+      this.status(last && last.who === who.value ? `${residentDef(who.value).name}: “${last.text}”` : '');
+    });
+    row.append(ask, who);
+    card.appendChild(row);
+  }
+
+  /** Who they are: traits as two-ended sliders, values as bars. */
+  private personality(rep: ResidentReport): HTMLElement {
+    const strongest = [...rep.traits].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 2).map(([k, v]) => (TRAIT_ENDS[k] ?? [k, k])[v >= 0 ? 1 : 0]);
+    const sec = this.section(`Personality · ${strongest.join(', ')}`, 'personality');
+    for (const [k, v] of rep.traits) {
+      const [lo, hi] = TRAIT_ENDS[k] ?? [k, k];
+      const row = el('div', { class: 'slider', 'data-testid': `trait-${k}` });
+      row.appendChild(el('span', { class: 'end' }, lo));
+      const track = el('span', { class: 'track' });
+      const knob = el('span', { class: 'knob' });
+      knob.style.left = pct((v + 1) / 2);
+      track.appendChild(knob);
+      row.append(track, el('span', { class: 'end' }, hi));
+      sec.appendChild(row);
+    }
+    sec.appendChild(el('p', { class: 'quiet' }, 'Cares about'));
+    for (const [k, v] of [...rep.values].sort((a, b) => b[1] - a[1])) {
+      const bar = this.meter(cap(k), v);
+      bar.className = 'valuebar';
+      sec.appendChild(bar);
+    }
+    return sec;
   }
 
   private meter(label: string, value: number, setpoint?: number): HTMLElement {
@@ -925,7 +990,7 @@ export class Ui {
   private renderResident(pane: HTMLElement, rep: ResidentReport): void {
     const j = el('div', { class: 'journal', 'data-testid': 'journal' });
     const head = el('h2', {}, `${rep.name}, ${rep.age}`);
-    head.style.borderBottomColor = cssColor(RESIDENT_COLORS[rep.id] ?? 0x888888);
+    head.style.borderBottomColor = cssColor(residentColor(rep.id));
     j.appendChild(head);
     j.appendChild(el('p', { class: 'quiet' }, rep.background));
     if (rep.hope) {
@@ -968,6 +1033,7 @@ export class Ui {
     for (const n of rep.needs) needs.appendChild(this.meter(cap(n.need), n.level, n.setpoint));
     j.appendChild(needs);
 
+    j.appendChild(this.personality(rep));
     j.appendChild(el('h3', {}, 'Feeling'));
     const feel = el('p', { 'data-testid': 'feelings' });
     feel.textContent = rep.feelings.length ? rep.feelings.map((f) => `${f.kind}${f.about ? ` about ${f.about}` : ''}`).join(', ') : 'Nothing in particular.';

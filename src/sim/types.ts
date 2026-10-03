@@ -232,6 +232,8 @@ export interface ResidentState {
   lowDays: number;
   leaving: { sinceDay: number } | null;
   departed: boolean;
+  /** Tick a newcomer moved in (M3c); absent for the founding cast. */
+  arrivedTick?: number;
   /** Tick they left the valley (M3b: friends speak of them). */
   departedTick?: number;
   /** A longer mood they are in, if any (M3b). */
@@ -442,6 +444,10 @@ export interface SimState {
   tick: number;
   width: number;
   height: number;
+  /** Newcomers' generated definitions, kept with the state so saves and clones know them (M3c). */
+  newcomerDefs?: ResidentDef[];
+  /** The settled valley at the start; beyond it, wild plots (M3c). */
+  settled?: { width: number; height: number };
   buildings: BuildingState[];
   nextBuildingId: number;
   residents: Record<string, ResidentState>;
@@ -525,6 +531,8 @@ export type SimEvent =
   /** A resident's view of the steward moved overnight, and why. */
   | { t: number; type: 'standing'; who: string; delta: number; reasons: string[] }
   | { t: number; type: 'thinking_of_leaving'; who: string }
+  /** A newcomer moves into an empty home (M3c). */
+  | { t: number; type: 'arrived'; who: string; home: number }
   | { t: number; type: 'decided_to_stay'; who: string }
   | { t: number; type: 'left_town'; who: string }
   | { t: number; type: 'story'; id: string; tone: Tone; cast: string[]; place?: number; topic?: SubjectId; ok?: boolean }

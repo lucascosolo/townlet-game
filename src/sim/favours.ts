@@ -77,7 +77,9 @@ export function favourPlace(state: SimState, r: ResidentState, kind: FavourKind,
   if (kind === 'clear') {
     const open = openPlots(state);
     if (plot !== undefined) return open.includes(plot) ? plot : null;
-    return open[0] ?? null;
+    // Carry on where clearing has already begun.
+    const progress = (id: number) => state.clearing?.[String(id)] ?? 0;
+    return [...open].sort((a, b) => progress(b) - progress(a) || a - b)[0] ?? null;
   }
   const o = other ? state.residents[other] : undefined;
   if (!o || o.departed || o.id === r.id) return null;

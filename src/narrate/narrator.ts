@@ -46,6 +46,7 @@ export function importanceOf(e: SimEvent): Importance {
     case 'shortage':
     case 'aspiration':
     case 'plot_cleared':
+    case 'arrived':
       return 'major';
     case 'request_closed':
       return e.request.status === 'lapsed' ? 'major' : 'normal';
@@ -437,6 +438,11 @@ export class Narrator {
       case 'production':
         this.production(e);
         break;
+      case 'arrived': {
+        const d = residentDef(e.who);
+        this.live(e.t, `Someone new comes up the valley road: ${d.name}, ${d.age}. ${d.background} ${cap(d.pronouns.subj)} ${d.pronouns.subj === 'they' ? 'move' : 'moves'} into ${this.subjectName(`b:${e.home}`).replace(/^.*'s /, 'the ')}.`);
+        break;
+      }
       case 'plot_cleared':
         this.live(e.t, `The wild land${e.by.length ? `, cleared by ${this.names(e.by)},` : ''} is open at last. There is room to build.`);
         break;

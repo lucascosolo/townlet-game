@@ -76,10 +76,10 @@ a.who { color: inherit; text-decoration: none; border-bottom: 2px solid; }
 .journal h2 { margin: 4px 0; font-size: 20px; border-bottom: 3px solid; display: inline-block; }
 .journal .doing { font-style: italic; }
 .warning { color: var(--warn); font-weight: bold; }
-.meter { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
-.meter .label { width: 92px; font-size: 13px; }
-.meter .track { position: relative; flex: 1; height: 8px; background: #eadfc6; border-radius: 4px; }
-.meter .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--good); border-radius: 4px; }
+.meter, .valuebar { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.meter .label, .valuebar .label { width: 92px; font-size: 13px; }
+.meter .track, .valuebar .track { position: relative; flex: 1; height: 8px; background: #eadfc6; border-radius: 4px; }
+.meter .fill, .valuebar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--good); border-radius: 4px; }
 .meter .fill.low { background: var(--warn); }
 .meter .mark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
 details.why { margin: 3px 0; }
@@ -163,3 +163,9 @@ details.section > summary { cursor: pointer; font-size: 13px; text-transform: up
 .talk-row button { font-size: 12.5px; padding: 3px 8px; }
 .talk-row select { font-size: 12.5px; max-width: 150px; }
 .talk .reply { margin: 6px 0; padding: 6px 10px; border-left: 3px solid var(--accent); font-style: italic; background: rgba(214, 140, 60, 0.08); }
+
+/* Personality sliders (M3c). */
+.slider { display: grid; grid-template-columns: 74px 1fr 74px; gap: 6px; align-items: center; font-size: 12px; color: var(--ink-soft); margin: 3px 0; }
+.slider .end:last-child { text-align: right; }
+.slider .track { position: relative; height: 4px; border-radius: 2px; background: linear-gradient(90deg, rgba(120, 90, 50, 0.25), rgba(120, 90, 50, 0.08) 50%, rgba(120, 90, 50, 0.25)); }
+.slider .knob { position: absolute; top: -4px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--accent); }

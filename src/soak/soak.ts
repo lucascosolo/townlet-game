@@ -102,8 +102,10 @@ export function soakRun(scenarioName: string, seed: number, days: number): RunMe
       const type = pick(steward, STEWARD_BUILDS);
       const [w, h] = buildingDef(type).size;
       for (let tries = 0; tries < 40; tries++) {
-        const x = intBetween(steward, 0, sim.state.width - w);
-        const y = intBetween(steward, 0, sim.state.height - h);
+        // Within the settled valley (and any land cleared next to it is left to the residents' own story).
+        const area = sim.state.settled ?? sim.state;
+        const x = intBetween(steward, 0, area.width - w);
+        const y = intBetween(steward, 0, area.height - h);
         if (canPlace(sim.state, type, x, y) === null && sim.canAfford(type)) {
           sim.build(type, x, y);
           builds++;
@@ -113,7 +115,7 @@ export function soakRun(scenarioName: string, seed: number, days: number): RunMe
       if (chance(steward, 0.25)) {
         const removable = liveBuildings(sim.state).filter((b) => {
           const k = buildingDef(b.type).kind;
-          return k === 'decor' || k === 'nature' || k === 'social';
+          return b.type !== 'wild' && (k === 'decor' || k === 'nature' || k === 'social');
         });
         if (removable.length > 0) {
           const b = pick(steward, removable);

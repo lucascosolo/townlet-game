@@ -36,9 +36,13 @@ interface TalkPanel {
   status: HTMLElement;
   controls: Array<HTMLButtonElement | HTMLSelectElement>;
   clear: HTMLButtonElement;
-  aboutSelect: HTMLSelectElement;
-  visitSelect: HTMLSelectElement;
-  mendSelect: HTMLSelectElement;
+  /** Who said the last thing: the steward's question, then the resident's answer. */
+  asked: HTMLElement;
+  /** Portrait chips to pick a person or place, shown under the button that asked for them. */
+  picker: HTMLElement;
+  pick: 'opinion' | 'visit' | 'mend' | null;
+  pickKey: string;
+  pickButtons: Record<'opinion' | 'visit' | 'mend', HTMLButtonElement>;
 }
 
 const QUESTIONS: Array<[TalkQuestion, string]> = [
@@ -55,6 +59,16 @@ const FAVOUR_LABELS: Record<FavourKind, string> = {
   clear: 'Help clear wild land',
   visit: 'Look in on…',
   mend: 'Make peace with…',
+};
+
+/** What the steward says when asking, shown above the answer. */
+const FAVOUR_ASKS: Record<FavourKind, string> = {
+  timber: 'Could you cut some timber for the store?',
+  catch: 'Could you bring in a catch?',
+  garden: 'Could you work the garden for a while?',
+  clear: 'Could you help clear some wild land?',
+  visit: 'Could you look in on {o}?',
+  mend: 'Could you make peace with {o}?',
 };
 
 const FAVOUR_DOING: Record<FavourKind, string> = {
@@ -189,6 +203,8 @@ export class Ui {
   private readonly lastStock: Partial<Record<'food' | 'timber', number>> = {};
   /** One talk panel per resident, kept across journal redraws so its choices stay put. */
   private readonly talkPanels = new Map<string, TalkPanel>();
+  /** Which page of a resident's journal is open; kept as you move between residents. */
+  private residentView: 'about' | 'talk' = 'about';
   /** On-screen panels that speech bubbles must not cover. */
   private readonly panels: HTMLElement[] = [];
   /** The log's list, its filter, and the run of lines being folded together. */
@@ -419,40 +435,67 @@ export class Ui {
     });
   }
 
+  /** The build tray: one row of cards along the bottom, details for the card under the pointer above it. */
   private buildMenu(): HTMLElement {
     const menu = el('div', { class: 'menu paper', 'data-testid': 'build-menu' });
     const head = el('div', { class: 'menu-head' });
     head.append(el('h3', {}, 'Build'), el('span', { class: 'quiet', 'data-menu-timber': '' }));
-    const close = el('button', {}, '✕');
+    const close = el('button', { 'aria-label': 'Close' }, '✕');
     close.addEventListener('click', () => (menu.hidden = true));
     head.appendChild(close);
     menu.appendChild(head);
+    const info = el('div', { class: 'tray-info', 'data-testid': 'tray-info' });
+    const hint = 'Point at a card to see what it gives off and who would like it.';
+    info.textContent = hint;
+    menu.appendChild(info);
+    const row = el('div', { class: 'cards' });
     for (const group of BUILD_MENU) {
-      menu.appendChild(el('h4', {}, group.category));
-      const row = el('div', { class: 'cards' });
+      row.appendChild(el('div', { class: 'tray-group' }, group.category));
       for (const type of group.types) {
         const def = buildingDef(type);
         const card = el('button', { class: 'build-card', 'data-testid': `tool-build-${type}`, 'data-type': type });
         card.appendChild(el('img', { class: 'thumb', alt: '', 'data-thumb': type }));
+        card.appendChild(el('span', { class: 'lock', 'aria-hidden': 'true' }));
         card.appendChild(el('div', { class: 'card-title' }, def.name));
         const cost = el('div', { class: 'cost' });
         cost.innerHTML = `${ICONS.log}<span>${def.cost ?? 0} timber</span>`;
         card.appendChild(cost);
-        if (def.blurb) card.appendChild(el('div', { class: 'blurb' }, def.blurb));
-        card.appendChild(el('div', { class: 'gives', 'data-testid': 'gives-off' }, `Gives off: ${this.givesOff(type)}`));
-        card.appendChild(el('div', { class: 'likes', 'data-likes': '' }));
+        // Details live on the card (for the info line and screen readers) but show above the tray.
+        const details = el('div', { class: 'details' });
+        if (def.blurb) details.appendChild(el('div', { class: 'blurb' }, def.blurb));
+        details.appendChild(el('div', { class: 'gives', 'data-testid': 'gives-off' }, `Gives off: ${this.givesOff(type)}`));
+        details.appendChild(el('div', { class: 'likes', 'data-likes': '' }));
+        card.appendChild(details);
+        const show = () => {
+          info.replaceChildren(el('b', {}, def.name), ...[...details.children].map((c) => c.cloneNode(true)));
+          if (!this.game.sim.canAfford(type)) info.appendChild(el('div', { class: 'need' }, `Needs ${def.cost} timber; you have ${Math.floor(this.game.sim.state.stock.timber)}. Ask someone to cut timber.`));
+        };
+        card.addEventListener('pointerenter', show);
+        card.addEventListener('focus', show);
         card.addEventListener('click', () => {
           if (!this.game.sim.canAfford(type)) {
             this.status(`Not enough timber for a ${def.name.toLowerCase()} (${def.cost} needed).`);
+            show();
+            this.shake(card);
+            this.shake(this.stockEl.querySelector('[data-res="timber"]')?.parentElement ?? this.stockEl, 'pulse');
             return;
           }
           this.setTool({ kind: 'build', type });
         });
         row.appendChild(card);
       }
-      menu.appendChild(row);
     }
+    row.addEventListener('pointerleave', () => (info.textContent = hint));
+    menu.appendChild(row);
     return menu;
+  }
+
+  /** Replay a one-shot CSS animation on an element. */
+  private shake(target: Element, cls = 'shake'): void {
+    target.classList.remove(cls);
+    void (target as HTMLElement).offsetWidth;
+    target.classList.add(cls);
+    setTimeout(() => target.classList.remove(cls), 600);
   }
 
   private refreshMenu(): void {
@@ -874,34 +917,46 @@ export class Ui {
   private buildTalkPanel(id: string): TalkPanel {
     const name = residentDef(id).name;
     const root = el('div', { class: 'talk', 'data-testid': 'talk' });
-    root.appendChild(el('h3', {}, `Talk with ${name}`));
-    const controls: Array<HTMLButtonElement | HTMLSelectElement> = [];
-    const ask = (question: TalkQuestion, about?: string) => {
+    // The conversation reads top-down like a chat: your question, then their answer.
+    const convo = el('div', { class: 'convo' });
+    const asked = el('div', { class: 'said you', 'data-testid': 'talk-asked' });
+    const answer = el('div', { class: 'said them' });
+    answer.appendChild(portrait(id, 36));
+    const reply = el('div', { class: 'bubble-reply', 'data-testid': 'talk-reply' });
+    answer.appendChild(reply);
+    convo.append(asked, answer);
+    root.appendChild(convo);
+    const controls: HTMLButtonElement[] = [];
+    let p!: TalkPanel;
+    const say = (words: string) => {
+      asked.textContent = words;
+      p.pick = null;
+    };
+    const ask = (question: TalkQuestion, label: string, about?: string) => {
+      say(label);
       this.game.command({ kind: 'talk', who: id, question, ...(about ? { about } : {}) });
       this.renderJournal(true);
     };
-    const qs = el('div', { class: 'talk-row' });
+    root.appendChild(el('h3', {}, `Ask ${name}`));
+    const qs = el('div', { class: 'talk-grid' });
     for (const [q, label] of QUESTIONS) {
       const b = el('button', { 'data-testid': `ask-${q}` }, label);
-      b.addEventListener('click', () => ask(q));
+      b.addEventListener('click', () => ask(q, label));
       qs.appendChild(b);
       controls.push(b);
     }
+    const opinion = el('button', { 'data-testid': 'ask-opinion', class: 'picks' }, 'What do you think of…');
+    qs.appendChild(opinion);
+    controls.push(opinion);
     root.appendChild(qs);
-    const aboutRow = el('div', { class: 'talk-row' });
-    const aboutSelect = el('select', { 'data-testid': 'ask-about' });
-    const aboutButton = el('button', { 'data-testid': 'ask-opinion' }, 'What do you think of…');
-    aboutButton.addEventListener('click', () => ask('opinion', aboutSelect.value));
-    aboutRow.append(aboutButton, aboutSelect);
-    root.appendChild(aboutRow);
-    controls.push(aboutSelect, aboutButton);
 
     root.appendChild(el('h3', {}, 'Ask a favour'));
     const favour = (kind: FavourKind, other?: string) => {
+      say(FAVOUR_ASKS[kind].replace('{o}', other ? residentDef(other).name : ''));
       this.game.command({ kind: 'favour', who: id, favour: kind, ...(other ? { other } : {}) });
       this.renderJournal(true);
     };
-    const fs = el('div', { class: 'talk-row' });
+    const fs = el('div', { class: 'talk-grid' });
     let clear!: HTMLButtonElement;
     for (const kind of ['timber', 'catch', 'garden', 'clear'] as FavourKind[]) {
       const b = el('button', { 'data-testid': `favour-${kind}`, title: `About ${Math.round(FAVOUR_MINUTES[kind] / 60)} hours of work` }, FAVOUR_LABELS[kind]);
@@ -910,52 +965,81 @@ export class Ui {
       controls.push(b);
       if (kind === 'clear') clear = b;
     }
+    const visit = el('button', { 'data-testid': 'favour-visit', class: 'picks' }, FAVOUR_LABELS.visit);
+    const mend = el('button', { 'data-testid': 'favour-mend', class: 'picks' }, FAVOUR_LABELS.mend);
+    fs.append(visit, mend);
+    controls.push(visit, mend);
     root.appendChild(fs);
-    const people = el('div', { class: 'talk-row' });
-    const visitSelect = el('select', { 'data-testid': 'favour-visit-who' });
-    const visit = el('button', { 'data-testid': 'favour-visit' }, FAVOUR_LABELS.visit);
-    visit.addEventListener('click', () => visitSelect.value && favour('visit', visitSelect.value));
-    const mendSelect = el('select', { 'data-testid': 'favour-mend-who' });
-    const mend = el('button', { 'data-testid': 'favour-mend' }, FAVOUR_LABELS.mend);
-    mend.addEventListener('click', () => mendSelect.value && favour('mend', mendSelect.value));
-    people.append(visit, visitSelect, mend, mendSelect);
-    root.appendChild(people);
-    controls.push(visitSelect, visit, mendSelect, mend);
-
-    const reply = el('blockquote', { class: 'reply', 'data-testid': 'talk-reply' });
+    const picker = el('div', { class: 'picker', 'data-testid': 'talk-picker' });
+    picker.hidden = true;
+    root.appendChild(picker);
     const status = el('p', { class: 'quiet', 'data-testid': 'favour-status' });
-    root.append(reply, status);
-    return { root, reply, status, controls, clear, aboutSelect, visitSelect, mendSelect };
+    root.appendChild(status);
+
+    p = { root, reply, status, controls, clear, asked, picker, pick: null, pickKey: '', pickButtons: { opinion, visit, mend } };
+    const open = (mode: 'opinion' | 'visit' | 'mend') => {
+      p.pick = p.pick === mode ? null : mode;
+      this.refreshTalkPanel(id, p);
+    };
+    opinion.addEventListener('click', () => open('opinion'));
+    visit.addEventListener('click', () => open('visit'));
+    mend.addEventListener('click', () => open('mend'));
+    picker.addEventListener('click', (ev) => {
+      const chip = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-pick]');
+      if (!chip || !p.pick) return;
+      const value = chip.dataset.pick as string;
+      if (p.pick === 'opinion') ask('opinion', `What do you think of ${chip.dataset.label}?`, value);
+      else favour(p.pick, value);
+    });
+    return p;
   }
 
-  private fillSelect(sel: HTMLSelectElement, options: Array<[string, string]>): void {
-    const key = options.map(([v]) => v).join('|');
-    if (sel.dataset.key === key) return;
-    const keep = sel.value;
-    sel.replaceChildren(...options.map(([v, label]) => el('option', { value: v }, label)));
-    sel.dataset.key = key;
-    if (options.some(([v]) => v === keep)) sel.value = keep;
+  /** The chips for the open picker: people (with portraits) and, for opinions, places. */
+  private pickOptions(id: string, mode: 'opinion' | 'visit' | 'mend'): Array<{ value: string; label: string; who?: string }> {
+    const state = this.game.sim.state;
+    const r = this.game.sim.resident(id);
+    const others = state.order.filter((o) => o !== id && !state.residents[o]?.departed);
+    const person = (o: string, value = o) => ({ value, label: residentDef(o).name, who: o });
+    if (mode === 'visit') return others.map((o) => person(o));
+    if (mode === 'mend') {
+      const cool = others.filter((o) => (r.rel[o]?.affinity ?? 0) < 0.1);
+      return (cool.length ? cool : others).map((o) => person(o));
+    }
+    const places = state.buildings.filter((b) => !b.removed && b.type !== 'wild' && buildingDef(b.type).kind !== 'home');
+    return [
+      ...others.map((o) => person(o, `r:${o}`)),
+      ...places.map((b) => ({ value: `b:${b.id}`, label: this.game.narrator.subjectName(`b:${b.id}`) })),
+    ];
   }
 
   private refreshTalkPanel(id: string, p: TalkPanel): void {
     const state = this.game.sim.state;
     const r = this.game.sim.resident(id);
-    const others = state.order.filter((o) => o !== id && !state.residents[o]?.departed);
-    const places = state.buildings.filter((b) => !b.removed && b.type !== 'wild' && buildingDef(b.type).kind !== 'home');
-    this.fillSelect(p.aboutSelect, [
-      ...others.map((o) => [`r:${o}`, residentDef(o).name] as [string, string]),
-      ...places.map((b) => [`b:${b.id}`, this.game.narrator.subjectName(`b:${b.id}`)] as [string, string]),
-    ]);
-    this.fillSelect(p.visitSelect, others.map((o) => [o, residentDef(o).name]));
-    const cool = others.filter((o) => (r.rel[o]?.affinity ?? 0) < 0.1);
-    this.fillSelect(p.mendSelect, (cool.length ? cool : others).map((o) => [o, residentDef(o).name]));
     const asleep = r.activity?.id === 'sleep' && r.at === r.homeId;
     for (const c of p.controls) c.disabled = asleep || r.departed;
     p.clear.disabled = p.clear.disabled || openPlots(state).length === 0;
     p.clear.title = openPlots(state).length === 0 ? 'No wild land is open for clearing yet: the valley opens as the town thrives' : 'About 6 hours of work';
+    if (asleep) p.pick = null;
+    for (const [mode, b] of Object.entries(p.pickButtons)) b.classList.toggle('on', p.pick === mode);
+    const options = p.pick ? this.pickOptions(id, p.pick) : [];
+    const key = `${p.pick}:${options.map((o) => o.value).join('|')}`;
+    if (key !== p.pickKey) {
+      p.pickKey = key;
+      p.picker.replaceChildren(
+        ...options.map((o) => {
+          const chip = el('button', { class: 'chip', 'data-pick': o.value, 'data-label': o.label, 'data-testid': `pick-${o.value.replace(':', '-')}` });
+          if (o.who) chip.appendChild(portrait(o.who, 28));
+          chip.appendChild(el('span', {}, o.label));
+          return chip;
+        }),
+      );
+    }
+    p.picker.hidden = !p.pick;
     const last = this.game.narrator.lastReply;
     p.reply.textContent = asleep ? `${residentDef(id).name} is asleep. Talk in the morning.` : last && last.who === id ? `“${last.text}”` : '';
-    p.reply.hidden = p.reply.textContent === '';
+    const answered = p.reply.textContent !== '';
+    (p.reply.parentElement as HTMLElement).hidden = !answered;
+    p.asked.hidden = !answered || asleep || p.asked.textContent === '';
     p.status.textContent = this.favourStatus(r);
   }
 
@@ -1146,6 +1230,24 @@ export class Ui {
     head.style.borderBottomColor = cssColor(residentColor(rep.id));
     headRow.appendChild(head);
     j.appendChild(headRow);
+    if (!rep.departed) {
+      const subs = el('div', { class: 'subtabs' });
+      for (const [view, label] of [['about', 'About'], ['talk', 'Talk']] as const) {
+        const b = el('button', { 'data-testid': `sub-${view}`, class: this.residentView === view ? 'on' : '' }, label);
+        b.addEventListener('click', () => {
+          this.residentView = view;
+          this.renderJournal(true);
+        });
+        subs.appendChild(b);
+      }
+      j.appendChild(subs);
+    }
+    if (this.residentView === 'talk' && !rep.departed) {
+      j.appendChild(el('p', { class: 'doing' }, `Now: ${rep.doing}`));
+      j.appendChild(this.talkPanel(rep.id));
+      pane.appendChild(j);
+      return;
+    }
     j.appendChild(el('p', { class: 'quiet' }, rep.background));
     if (rep.hope) {
       const hope = el('div', { class: 'hope', 'data-testid': 'hope' });
@@ -1190,7 +1292,6 @@ export class Ui {
     }
     if (!mind.childElementCount) mind.appendChild(el('li', { class: 'quiet' }, 'Nothing much. Content.'));
     j.appendChild(mind);
-    j.appendChild(this.talkPanel(rep.id));
     j.appendChild(this.meter('Mood', rep.mood));
     j.appendChild(this.meter('Settled here', rep.disposition));
 

@@ -7,7 +7,7 @@ import { minuteOf, seasonOf, type Season } from '../../../src/sim/time.js';
 import type { BuildingState, ResidentState } from '../../../src/sim/types.js';
 import { footprint, liveBuildings, placeTile, route, sizeOf } from '../../../src/sim/world.js';
 import type { Game } from '../game.js';
-import { buildingMesh, glow, mat, residentMesh } from './meshes.js';
+import { buildingMesh, glow, mat, residentMesh, seasonalLeaf } from './meshes.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
@@ -67,6 +67,8 @@ export class TownView {
   private readonly ground: THREE.Mesh;
   private readonly groundMat = new THREE.MeshLambertMaterial({ color: SEASON_GROUND.spring });
   private readonly leafMat = mat(SEASON_LEAF.spring);
+  /** The same seasonal leaf for the woods, whose trees carry their own shade per vertex. */
+  private readonly leafMatV = seasonalLeaf.clone();
   private readonly buildings = new Map<number, THREE.Group>();
   private readonly residents = new Map<string, THREE.Group>();
   private readonly ringOffsets = new Map<string, THREE.Vector3>();
@@ -454,6 +456,7 @@ export class TownView {
       g.userData.buildingId = b.id;
       g.traverse((o) => {
         if (o instanceof THREE.Mesh && o.name === 'canopy') o.material = this.leafMat;
+        if (o instanceof THREE.Mesh && o.name === 'canopy-v') o.material = this.leafMatV;
       });
       this.scene.add(g);
       this.buildings.set(b.id, g);
@@ -542,6 +545,7 @@ export class TownView {
       this.season = season;
       this.groundMat.color.setHex(SEASON_GROUND[season]);
       this.leafMat.color.setHex(SEASON_LEAF[season]);
+      this.leafMatV.color.setHex(SEASON_LEAF[season]);
     }
     const weather = state.story.weather.kind !== 'clear' && state.tick < state.story.weather.until ? state.story.weather.kind : 'clear';
     const gloom = weather === 'storm' ? 0.55 : weather === 'rain' ? 0.3 : 0;

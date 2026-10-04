@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { buildingDef } from '../../../src/content/buildings.js';
 import { looksOf } from './looks.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export const PALETTE = {
   wall: 0xeadfc8,
@@ -200,6 +201,122 @@ function homeProps(w: number, d: number, variant: number): THREE.Group {
 }
 
 /** A mesh group for a building type, centred on its footprint, sitting on y = 0. */
+/** Leaves that follow the seasons, tinted per vertex so no two trees match. The scene swaps in its seasonal copy. */
+export const seasonalLeaf = new THREE.MeshLambertMaterial({ color: PALETTE.leaf, flatShading: true, vertexColors: true });
+/** Conifers keep their needles all year. */
+const needles = new THREE.MeshLambertMaterial({ color: 0x3d6b47, flatShading: true, vertexColors: true });
+
+const WOOD_SHAPES = {
+  trunk: new THREE.BoxGeometry(1, 1, 1),
+  blob: new THREE.IcosahedronGeometry(1, 0),
+  cone: new THREE.ConeGeometry(1, 1, 6),
+  tuft: new THREE.CylinderGeometry(1, 1, 1, 7),
+};
+
+/**
+ * Woods and brambles over a wild plot (review: every plot was the same scatter, one species, and a
+ * ruler-straight edge). Seeded per plot: broadleaf, conifer and birch with jittered size, lean,
+ * turn and shade; saplings and bushes thicken towards the edge, and ragged tufts of forest floor
+ * break the line between wild and settled land. Merged per material so a plot costs a few draw calls.
+ */
+function woods(w: number, d: number, variant: number): THREE.Group {
+  const g = new THREE.Group();
+  let seed = (Math.abs(variant) * 2654435761) % 2147483647 || 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const parts: Record<'floor' | 'trunk' | 'birch' | 'leaf' | 'needle', THREE.BufferGeometry[]> = { floor: [], trunk: [], birch: [], leaf: [], needle: [] };
+  const q = new THREE.Quaternion();
+  const put = (
+    key: keyof typeof parts,
+    shape: THREE.BufferGeometry,
+    x: number,
+    y: number,
+    z: number,
+    sx: number,
+    sy: number,
+    sz: number,
+    yaw = 0,
+    tint?: number,
+  ) => {
+    const geo = (shape.index ? shape.toNonIndexed() : shape.clone()).deleteAttribute('uv');
+    q.setFromEuler(new THREE.Euler(0, yaw, 0));
+    geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), q, new THREE.Vector3(sx, sy, sz)));
+    if (tint !== undefined) {
+      const n = geo.getAttribute('position').count;
+      const c = new Float32Array(n * 3);
+      // Shade jitter: mostly lightness, a touch of hue (yellower or bluer).
+      for (let i = 0; i < n; i++) {
+        c[i * 3] = tint * (1 + (rnd() - 0.5) * 0.04);
+        c[i * 3 + 1] = tint;
+        c[i * 3 + 2] = tint * (1 + (rnd() - 0.5) * 0.06);
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    }
+    parts[key].push(geo);
+  };
+  const shade = () => 0.8 + rnd() * 0.35;
+  const broadleaf = (x: number, z: number, s: number) => {
+    put('trunk', WOOD_SHAPES.trunk, x, 0.25 * s, z, 0.12 * s, 0.5 * s, 0.12 * s, rnd() * 3);
+    const t = shade();
+    put('leaf', WOOD_SHAPES.blob, x, 0.75 * s, z, 0.38 * s, 0.36 * s * (0.9 + rnd() * 0.3), 0.38 * s, rnd() * 6, t);
+    if (rnd() < 0.5) put('leaf', WOOD_SHAPES.blob, x + (rnd() - 0.5) * 0.3 * s, 0.98 * s, z + (rnd() - 0.5) * 0.3 * s, 0.24 * s, 0.24 * s, 0.24 * s, rnd() * 6, t * 1.06);
+  };
+  const conifer = (x: number, z: number, s: number) => {
+    put('trunk', WOOD_SHAPES.trunk, x, 0.15 * s, z, 0.1 * s, 0.3 * s, 0.1 * s);
+    const t = shade();
+    const yaw = rnd() * 3;
+    put('needle', WOOD_SHAPES.cone, x, 0.55 * s, z, 0.46 * s, 0.6 * s, 0.46 * s, yaw, t);
+    put('needle', WOOD_SHAPES.cone, x, 0.88 * s, z, 0.36 * s, 0.55 * s, 0.36 * s, yaw + 0.5, t * 1.04);
+    put('needle', WOOD_SHAPES.cone, x, 1.18 * s, z, 0.24 * s, 0.45 * s, 0.24 * s, yaw + 1, t * 1.08);
+  };
+  const birch = (x: number, z: number, s: number) => {
+    put('birch', WOOD_SHAPES.trunk, x, 0.42 * s, z, 0.07 * s, 0.84 * s, 0.07 * s, rnd() * 3);
+    put('leaf', WOOD_SHAPES.blob, x, 1.0 * s, z, 0.27 * s, 0.38 * s, 0.27 * s, rnd() * 6, 1.12 + rnd() * 0.15);
+  };
+  const bush = (x: number, z: number, s: number) => put('leaf', WOOD_SHAPES.blob, x, 0.18 * s, z, 0.34 * s, 0.24 * s, 0.34 * s, rnd() * 6, 0.75 + rnd() * 0.15);
+  // The forest floor, with ragged tufts along all four sides.
+  put('floor', WOOD_SHAPES.trunk, 0, 0.015, 0, w, 0.03, d);
+  for (let i = 0; i < 20; i++) {
+    const along = rnd() - 0.5;
+    const out = (rnd() - 0.35) * 0.9;
+    const side = i % 4;
+    const x = side === 0 ? along * w : side === 1 ? along * w : side === 2 ? -w / 2 - out : w / 2 + out;
+    const z = side === 0 ? -d / 2 - out : side === 1 ? d / 2 + out : along * d;
+    const r = 0.3 + rnd() * 0.45;
+    put('floor', WOOD_SHAPES.tuft, x, 0.012 + rnd() * 0.004, z, r, 0.024, r * (0.7 + rnd() * 0.5), rnd() * 3);
+  }
+  // Big trees in the middle, thinning to saplings and bushes at the edge.
+  for (let i = 0; i < 26; i++) {
+    const x = -w / 2 + 0.5 + rnd() * (w - 1);
+    const z = -d / 2 + 0.5 + rnd() * (d - 1);
+    const edge = Math.min(w / 2 - Math.abs(x), d / 2 - Math.abs(z));
+    const grown = Math.min(1, edge / 1.6);
+    const s = (0.45 + grown * 0.7) * (0.85 + rnd() * 0.5);
+    const kind = rnd();
+    if (edge < 0.9 && rnd() < 0.55) bush(x, z, 0.7 + rnd() * 0.6);
+    else if (kind < 0.45) broadleaf(x, z, s);
+    else if (kind < 0.75) conifer(x, z, s);
+    else birch(x, z, s);
+  }
+  const materials: Record<keyof typeof parts, THREE.Material> = {
+    floor: mat(0x55703f),
+    trunk: mat(PALETTE.darkWood),
+    birch: mat(0xe4dfd2),
+    leaf: seasonalLeaf,
+    needle: needles,
+  };
+  for (const key of Object.keys(parts) as Array<keyof typeof parts>) {
+    if (!parts[key].length) continue;
+    const mesh = new THREE.Mesh(mergeGeometries(parts[key]), materials[key]);
+    mesh.name = key === 'leaf' ? 'canopy-v' : key;
+    // The woods don't cast shadows: hundreds of trees in the shadow pass cost more than they show.
+    mesh.castShadow = false;
+    mesh.receiveShadow = key === 'floor';
+    g.add(mesh);
+    for (const geo of parts[key]) geo.dispose();
+  }
+  return g;
+}
+
 export function buildingMesh(type: string, variant = 0): THREE.Group {
   const [w, d] = buildingDef(type).size;
   let g: THREE.Group;
@@ -317,30 +434,9 @@ export function buildingMesh(type: string, variant = 0): THREE.Group {
       }
       break;
     }
-    case 'wild': {
-      // Woods and brambles over an 8x8 plot: a fixed, irregular scatter.
-      g = new THREE.Group();
-      const floor = box(w, 0.03, d, mat(0x55703f), 0, 0.015);
-      floor.receiveShadow = true;
-      g.add(floor);
-      let seed = 7;
-      const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-      for (let i = 0; i < 18; i++) {
-        const x = -w / 2 + 0.6 + rnd() * (w - 1.2);
-        const z = -d / 2 + 0.6 + rnd() * (d - 1.2);
-        if (rnd() < 0.7) g.add(tree(x, z, 1 + rnd() * 0.9));
-        else {
-          const bush = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35 + rnd() * 0.2, 0), mat(PALETTE.hedge));
-          bush.position.set(x, 0.25, z);
-          g.add(bush);
-        }
-      }
-      // The woods don't cast shadows: hundreds of trees in the shadow pass cost more than they show.
-      g.traverse((o) => {
-        o.castShadow = false;
-      });
+    case 'wild':
+      g = woods(w, d, variant);
       break;
-    }
     case 'orchard': {
       g = new THREE.Group();
       g.add(box(w * 0.9, 0.04, d * 0.9, mat(PALETTE.hedge), 0, 0.02));

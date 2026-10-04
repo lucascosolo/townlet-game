@@ -42,6 +42,7 @@ test('criterion 5a: ask a favour in the talk panel; a yes sends them to work and
   await putOff(page);
   await page.getByTestId('tab-journal').click();
   await page.getByTestId('roster-fen').click();
+  await page.getByTestId('sub-talk').click();
   await page.getByTestId('ask-how').click();
   await expect(page.getByTestId('talk-reply')).toContainText('“');
   const before = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.sim.state.stock.timber as number);

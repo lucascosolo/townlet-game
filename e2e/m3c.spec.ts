@@ -24,15 +24,18 @@ async function runTo(page: Page, tick: number): Promise<void> {
   await putOff(page);
 }
 
-/** Put off any proposal popup (it appears on the next frame, so look twice). */
+/** Put off every proposal popup, however many frames they take to appear. */
 async function putOff(page: Page): Promise<void> {
-  for (let pass = 0; pass < 2; pass++) {
-    await page.waitForTimeout(250);
-    const later = page.locator('[data-testid^="later-"]');
-    while ((await later.count()) > 0) {
+  // Popups show one per rendered frame, and a slow frame can take longer than any fixed wait:
+  // wait for frames to be drawn, put off what is there, and stop after two quiet frames.
+  const frames = () => page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+  for (let quiet = 0; quiet < 2; ) {
+    await frames();
+    const later = page.locator('[data-testid^="later-"], [data-testid="tier-ok"]');
+    if ((await later.count()) > 0) {
       await later.first().click();
-      await page.waitForTimeout(50);
-    }
+      quiet = 0;
+    } else quiet++;
   }
 }
 
@@ -42,6 +45,7 @@ test('criterion 5a: ask a favour in the talk panel; a yes sends them to work and
   await putOff(page);
   await page.getByTestId('tab-journal').click();
   await page.getByTestId('roster-fen').click();
+  await page.getByTestId('sub-talk').click();
   await page.getByTestId('ask-how').click();
   await expect(page.getByTestId('talk-reply')).toContainText('“');
   const before = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.sim.state.stock.timber as number);
@@ -116,6 +120,8 @@ test('criterion 5c: a cottage brings a newcomer, and the sim stays fast with 12 
   await page.evaluate(() => {
     const h = (window as unknown as { __townlet: Handle }).__townlet;
     h.game.sim.state.stock.timber = 100;
+    // A Clearing holds 8 (M4 tiers); this test measures speed with 12, so the town starts a Hamlet.
+    h.game.sim.state.progress = { ...h.game.sim.state.progress, tier: 1, renown: 40 };
     const spots = [
       [12, 20],
       [2, 2],

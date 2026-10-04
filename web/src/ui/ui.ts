@@ -2,7 +2,7 @@
 // log, journal, and how the town sees you); the build menu; decision popups; the introduction;
 // and thought bubbles. Everything it changes, it changes through Game.command.
 
-import { buildingDef } from '../../../src/content/buildings.js';
+import { buildingDef, singularName } from '../../../src/content/buildings.js';
 import { residentDef } from '../../../src/content/residents.js';
 import { DILEMMA_NAMES, PROPOSALS } from '../../../src/content/story.js';
 import { residentReport, type ResidentReport } from '../../../src/inspect/inspector.js';
@@ -13,17 +13,22 @@ import { ambientPrefs, prefScore } from '../../../src/sim/needs.js';
 import { wishProgress } from '../../../src/sim/story/director.js';
 import { dilemmaDef, stanceScore } from '../../../src/sim/story/dilemmas.js';
 import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
+import { daysToWinter, granaryRoom, hasGranary } from '../../../src/sim/stores.js';
+import { ALL_FACTS, FACTS, TIERS, factValue, goalLabel, knownFacts, nextTier, progressOf, todaysGoals, unlocked, RENOWN } from '../../../src/sim/progress.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
 import { residentColor } from '../view/meshes.js';
+import { ICONS } from './icons.js';
+import { thumbnail } from '../view/thumbs.js';
+import { portrait, portraitSvg } from './portrait.js';
 import { greenAroundHome } from '../../../src/sim/world.js';
 import { GREEN_ENOUGH } from '../../../src/sim/asks.js';
 import type { TownView } from '../view/scene.js';
 
 export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
   { category: 'Green and decor', types: ['hedge', 'flowerbed', 'bench'] },
-  { category: 'Gathering', types: ['teahouse', 'commons', 'well'] },
-  { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop'] },
+  { category: 'Gathering', types: ['teahouse', 'commons', 'well', 'fountain'] },
+  { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop', 'granary', 'beehives', 'coop'] },
   { category: 'Homes', types: ['cottage'] },
   { category: 'Dreams', types: ['orchard', 'glasshouse', 'banner'] },
 ];
@@ -33,9 +38,13 @@ interface TalkPanel {
   status: HTMLElement;
   controls: Array<HTMLButtonElement | HTMLSelectElement>;
   clear: HTMLButtonElement;
-  aboutSelect: HTMLSelectElement;
-  visitSelect: HTMLSelectElement;
-  mendSelect: HTMLSelectElement;
+  /** Who said the last thing: the steward's question, then the resident's answer. */
+  asked: HTMLElement;
+  /** Portrait chips to pick a person or place, shown under the button that asked for them. */
+  picker: HTMLElement;
+  pick: 'opinion' | 'visit' | 'mend' | null;
+  pickKey: string;
+  pickButtons: Record<'opinion' | 'visit' | 'mend', HTMLButtonElement>;
 }
 
 const QUESTIONS: Array<[TalkQuestion, string]> = [
@@ -52,6 +61,16 @@ const FAVOUR_LABELS: Record<FavourKind, string> = {
   clear: 'Help clear wild land',
   visit: 'Look in on…',
   mend: 'Make peace with…',
+};
+
+/** What the steward says when asking, shown above the answer. */
+const FAVOUR_ASKS: Record<FavourKind, string> = {
+  timber: 'Could you cut some timber for the store?',
+  catch: 'Could you bring in a catch?',
+  garden: 'Could you work the garden for a while?',
+  clear: 'Could you help clear some wild land?',
+  visit: 'Could you look in on {o}?',
+  mend: 'Could you make peace with {o}?',
 };
 
 const FAVOUR_DOING: Record<FavourKind, string> = {
@@ -148,7 +167,7 @@ const INTRO = [
   },
   {
     title: 'How to look after the place',
-    body: "The notice board shows what people are asking for and the season's Town Wishes. Click anyone to read their journal and see why they feel as they do. Build from the Build menu: buildings cost timber, gardens and the jetty fill the larder. Drag to move, right-drag to turn the view, wheel to zoom.",
+    body: 'Each morning brings three small goals: see them through to earn renown and grow the valley from a Clearing to a Townlet, opening new things to build. Talk to people to fill in their pages in the Folk album, and ask them favours when the stores run low. Buildings cost timber; gardens, the jetty and the bakery fill the larder, and winter needs food put by.',
   },
 ];
 
@@ -170,7 +189,7 @@ export class Ui {
   private readonly youEl: HTMLElement;
   private readonly menu: HTMLElement;
   private readonly statusEl: HTMLElement;
-  private readonly bubbles = new Map<string, { el: HTMLElement; until: number }>();
+  private readonly bubbles = new Map<string, { el: HTMLElement; until: number; born: number; major: boolean }>();
   private readonly bubbleLayer: HTMLElement;
   private readonly openWhy = new Set<string>();
   private readonly standingNotes = new Map<string, string[]>();
@@ -181,14 +200,33 @@ export class Ui {
   private lastJournalRender = 0;
   private lastYouRender = 0;
   private morning: NarratorEntry[] = [];
+  private rosterEl: HTMLElement | null = null;
+  private journalBody: HTMLElement | null = null;
+  private readonly lastStock: Partial<Record<'food' | 'timber', number>> = {};
   /** One talk panel per resident, kept across journal redraws so its choices stay put. */
   private readonly talkPanels = new Map<string, TalkPanel>();
+  /** Which page of a resident's journal is open; kept as you move between residents. */
+  private residentView: 'about' | 'talk' = 'about';
   /** On-screen panels that speech bubbles must not cover. */
   private readonly panels: HTMLElement[] = [];
   /** The log's list, its filter, and the run of lines being folded together. */
   private logList!: HTMLElement;
   private logFilter: LogFilter = 'story';
   private logGroup: { who: string; t: number; extra: HTMLElement; toggle: HTMLButtonElement; count: number } | null = null;
+  // M4: goals, the Folk album, the desktop dashboard and the phone shell.
+  private readonly goalsEl: HTMLElement;
+  private readonly folkEl: HTMLElement;
+  private readonly leftCol: HTMLElement;
+  private readonly widgets = new Map<string, HTMLElement>();
+  private readonly renownEl: HTMLElement;
+  private readonly tabbar: HTMLElement;
+  private readonly quick: HTMLElement;
+  private readonly toasts: HTMLElement;
+  private readonly widgetMenu: HTMLElement;
+  private phone = false;
+  private lastGoalsKey = '';
+  private lastFolkKey = '';
+  private lastRenown = -1;
 
   constructor(root: HTMLElement, game: Game, view: TownView, opts: { intro: boolean }) {
     this.game = game;
@@ -199,23 +237,49 @@ export class Ui {
     const hud = el('div', { class: 'hud paper' });
     this.clockEl = el('div', { class: 'clock', 'data-testid': 'clock' });
     this.stockEl = el('div', { class: 'stock', 'data-testid': 'stock' });
+    for (const [res, icon, label] of [
+      ['food', ICONS.wheat, 'Food'],
+      ['timber', ICONS.log, 'Timber'],
+    ] as const) {
+      const item = el('span', { class: `res res-${res}`, title: label });
+      item.innerHTML = icon;
+      const n = el('b', { 'data-res': res });
+      item.append(n, el('span', { class: 'sr' }, ` ${label}`));
+      this.stockEl.appendChild(item);
+    }
+    // The granary's stores, once one stands (winter stores, 2026-10-04).
+    const sack = el('span', { class: 'res res-granary', 'data-testid': 'granary-stock' });
+    sack.innerHTML = ICONS.sack;
+    sack.append(el('b'), el('span', { class: 'sr' }, ' put by'));
+    sack.hidden = true;
+    this.stockEl.appendChild(sack);
     const speeds = el('div', { class: 'speeds' });
-    const labels = ['❚❚', '▶', '▶▶', '▶▶▶', '⏩'];
+    const icons = [ICONS.pause, ICONS.play, ICONS.fast, ICONS.faster, ICONS.fastest];
     SPEEDS.forEach((s, i) => {
-      const b = el('button', { title: s === 0 ? 'Pause (space)' : `${s}× (${i})`, 'data-testid': `speed-${i}` }, labels[i]);
+      const b = el('button', { class: 'icon', title: s === 0 ? 'Pause (space)' : `Speed ${s}× (key ${i})`, 'aria-label': s === 0 ? 'Pause' : `Speed ${s}×`, 'data-testid': `speed-${i}` });
+      b.innerHTML = icons[i] as string;
       b.addEventListener('click', () => this.setSpeed(i));
       speeds.appendChild(b);
       this.speedButtons.push(b);
     });
-    const rot = el('div', { class: 'speeds' });
-    const left = el('button', { title: 'Turn left (Q). Or right-drag to turn freely.' }, '⟲');
-    const right = el('button', { title: 'Turn right (E). Or right-drag to turn freely.' }, '⟳');
-    const help = el('button', { title: 'How to play', 'data-testid': 'help' }, '?');
+    const rot = el('div', { class: 'speeds rot' });
+    const left = el('button', { class: 'icon', title: 'Turn left (Q). Or right-drag, or twist two fingers, to turn freely.', 'aria-label': 'Turn left' });
+    const right = el('button', { class: 'icon', title: 'Turn right (E). Or right-drag, or twist two fingers, to turn freely.', 'aria-label': 'Turn right' });
+    const help = el('button', { class: 'icon', title: 'How to play', 'aria-label': 'How to play', 'data-testid': 'help' });
+    left.innerHTML = ICONS.turnLeft;
+    right.innerHTML = ICONS.turnRight;
+    help.innerHTML = ICONS.help;
     left.addEventListener('click', () => view.rotate(-1));
     right.addEventListener('click', () => view.rotate(1));
     help.addEventListener('click', () => this.showIntro());
-    rot.append(left, right, help);
-    hud.append(el('div', { class: 'title' }, 'Townlet'), this.clockEl, this.stockEl, speeds, rot);
+    const widgetsB = el('button', { class: 'icon desk-only', title: 'Show or hide panels', 'aria-label': 'Panels', 'data-testid': 'widgets' });
+    widgetsB.innerHTML = ICONS.widgets;
+    widgetsB.addEventListener('click', () => (this.widgetMenu.hidden = !this.widgetMenu.hidden));
+    rot.append(left, right, widgetsB, help);
+    // Renown and the town's tier, always in view (M4: goals and rewards).
+    this.renownEl = el('button', { class: 'renown', 'data-testid': 'renown', title: 'Renown: what the town has become. Open your goals.' });
+    this.renownEl.addEventListener('click', () => this.showTab('goals'));
+    hud.append(el('div', { class: 'title' }, 'Townlet'), this.clockEl, this.stockEl, this.renownEl, speeds, rot);
     root.appendChild(hud);
     this.panels.push(hud);
 
@@ -246,17 +310,68 @@ export class Ui {
     this.buildLogPane();
     this.journalEl = this.tabs.get('journal')!.pane;
     this.youEl = this.tabs.get('you')!.pane;
+    const hidePanel = el('button', { class: 'roll desk-only', title: 'Hide this panel (bring it back from the panels button)', 'data-testid': 'hide-panel' });
+    hidePanel.innerHTML = ICONS.close;
+    hidePanel.addEventListener('click', () => this.setWidget('panel', false));
+    rodTop.insertBefore(hidePanel, roll);
     root.appendChild(this.scroll);
     this.panels.push(this.scroll);
-    this.showTab('board');
+    this.widgets.set('panel', this.scroll);
+
+    // The dashboard's left column (desktop): today's goals and the Folk album, as docked widgets.
+    this.goalsEl = el('section', { class: 'pane', 'data-pane': 'goals', 'data-testid': 'goals' });
+    this.folkEl = el('section', { class: 'pane', 'data-pane': 'folk', 'data-testid': 'folk' });
+    this.leftCol = el('div', { class: 'dash-left' });
+    this.leftCol.append(this.widget('goals', 'Goals', ICONS.star, this.goalsEl), this.widget('folk', 'Folk', ICONS.people, this.folkEl));
+    root.appendChild(this.leftCol);
+    this.panels.push(this.leftCol);
+    this.widgetMenu = el('div', { class: 'widget-menu paper', 'data-testid': 'widget-menu' });
+    this.widgetMenu.hidden = true;
+    for (const [key, label] of [['goals', 'Goals'], ['folk', 'Folk'], ['panel', 'Board, log and journal']] as const) {
+      const b = el('button', { 'data-testid': `show-widget-${key}`, 'data-key': key });
+      b.innerHTML = `${ICONS.check}<span>${label}</span>`;
+      b.addEventListener('click', () => {
+        this.setWidget(key, this.widgets.get(key)?.hidden === true);
+        this.widgetMenu.hidden = true;
+      });
+      this.widgetMenu.appendChild(b);
+    }
+    root.appendChild(this.widgetMenu);
+
+    // The phone shell: a tab bar within thumb reach, and a card for whoever you tap.
+    this.tabbar = el('nav', { class: 'tabbar', 'data-testid': 'tabbar' });
+    for (const [key, label, icon] of [
+      ['town', 'Town', ICONS.map],
+      ['goals', 'Goals', ICONS.star],
+      ['folk', 'Folk', ICONS.people],
+      ['build', 'Build', ICONS.build],
+      ['log', 'Log', ICONS.list],
+    ] as const) {
+      const b = el('button', { 'data-testid': `nav-${key}`, 'data-nav': key });
+      b.innerHTML = `${icon}<span>${label}</span>`;
+      b.addEventListener('click', () => this.nav(key));
+      this.tabbar.appendChild(b);
+    }
+    root.appendChild(this.tabbar);
+    this.quick = el('div', { class: 'quick-card paper', 'data-testid': 'quick-card' });
+    this.quick.hidden = true;
+    root.appendChild(this.quick);
+    this.panels.push(this.quick);
+    this.toasts = el('div', { class: 'toasts', 'aria-live': 'polite' });
+    root.appendChild(this.toasts);
+
+
 
     // The dock: look, build menu, remove, and a status line.
     const dock = el('div', { class: 'dock paper' });
-    const look = el('button', { 'data-testid': 'tool-select', title: 'Look and inspect (Esc)' }, 'Look');
+    const look = el('button', { 'data-testid': 'tool-select', title: 'Look and inspect (Esc)' });
+    look.innerHTML = `${ICONS.look}<span>Look</span>`;
     look.addEventListener('click', () => this.setTool({ kind: 'select' }));
-    const build = el('button', { 'data-testid': 'open-build' }, 'Build ▾');
+    const build = el('button', { 'data-testid': 'open-build' });
+    build.innerHTML = `${ICONS.build}<span>Build</span>`;
     build.addEventListener('click', () => this.toggleMenu());
-    const remove = el('button', { 'data-testid': 'tool-remove' }, 'Remove');
+    const remove = el('button', { 'data-testid': 'tool-remove' });
+    remove.innerHTML = `${ICONS.remove}<span>Remove</span>`;
     remove.addEventListener('click', () => this.setTool({ kind: 'remove' }));
     this.statusEl = el('div', { class: 'status', 'data-testid': 'palette-status' });
     dock.append(look, build, remove, this.statusEl);
@@ -267,13 +382,32 @@ export class Ui {
     root.appendChild(this.menu);
     this.panels.push(this.menu);
 
+    this.placeBar = el('div', { class: 'place-bar paper', 'data-testid': 'place-bar' });
+    this.placeBar.hidden = true;
+    const ok = el('button', { class: 'primary', 'data-testid': 'place-ok' }, '✓ Place');
+    const rotateB = el('button', { 'data-testid': 'place-rotate' });
+    rotateB.innerHTML = `${ICONS.turnRight}<span>Rotate</span>`;
+    const cancel = el('button', { 'data-testid': 'place-cancel' }, '✕ Cancel');
+    this.placeBar.append(el('span', { class: 'quiet' }, 'Drag the outline to move it'), rotateB, cancel, ok);
+    this.placeButtons = { ok, rotate: rotateB, cancel };
+    root.appendChild(this.placeBar);
+    this.panels.push(this.placeBar);
+
     this.bubbleLayer = el('div', { class: 'bubbles' });
     root.appendChild(this.bubbleLayer);
+
+    const media = window.matchMedia('(max-width: 760px)');
+    this.applyLayout(media.matches);
+    media.addEventListener('change', (m) => this.applyLayout(m.matches));
+    this.showTab('board');
 
     game.narrator.onEntry((e) => this.onEntry(e));
     game.onEvent((e) => this.onEvent(e));
     this.setSpeed(game.speedIndex);
     this.setTool({ kind: 'select' });
+    // On a phone the sheet starts at its peek, so the town is what you see first.
+    if (this.phone && !this.scroll.classList.contains('rolled')) this.toggleScroll();
+    if (this.phone) this.markNav('town');
     if (opts.intro) this.showIntro();
   }
 
@@ -284,9 +418,22 @@ export class Ui {
     this.speedButtons.forEach((b, j) => b.classList.toggle('on', j === this.game.speedIndex));
   }
 
+  /** Told whenever the tool changes (main.ts uses it for touch placement). */
+  onToolChange: ((tool: Tool) => void) | null = null;
+  /** Touch placement: a bar with Place, Rotate and Cancel (owner: no way to preview a build on mobile). */
+  readonly placeBar: HTMLElement;
+  readonly placeButtons: { ok: HTMLButtonElement; rotate: HTMLButtonElement; cancel: HTMLButtonElement };
+
+  showPlaceBar(on: boolean, canPlace = true): void {
+    this.placeBar.hidden = !on;
+    this.placeButtons.ok.disabled = !canPlace;
+  }
+
   setTool(tool: Tool): void {
     this.tool = tool;
+    this.onToolChange?.(tool);
     this.menu.hidden = true;
+    this.view.showGrid(tool.kind === 'build');
     this.view.setGhost(tool.kind === 'build' ? tool.type : null, null, false, this.rotation);
     this.view.highlightBuilding(null);
     this.status(
@@ -311,9 +458,33 @@ export class Ui {
   }
 
   showTab(key: string): void {
+    // On a desktop, goals and the Folk album are widgets of their own: bring the one asked for to the fore.
+    if (!this.phone && (key === 'goals' || key === 'folk')) {
+      this.setWidget(key, true);
+      const w = this.widgets.get(key) as HTMLElement;
+      w.classList.remove('collapsed', 'flash');
+      void w.offsetWidth;
+      w.classList.add('flash');
+      if (key === 'goals') this.renderGoals(true);
+      else this.renderFolk(true);
+      return;
+    }
+    if (!this.phone) this.setWidget('panel', true);
     for (const [k, t] of this.tabs) {
       t.button.classList.toggle('on', k === key);
-      t.pane.hidden = k !== key;
+      // On a phone, Goals shows the notice board beneath today's goals.
+      t.pane.hidden = k !== key && !(this.phone && key === 'goals' && k === 'board');
+    }
+    if (this.phone) {
+      this.goalsEl.hidden = key !== 'goals';
+      this.folkEl.hidden = key !== 'folk';
+      this.scroll.classList.toggle('stacked', key === 'goals');
+      (this.scroll.querySelector('.rod.top') as HTMLElement).dataset.title = ({ goals: 'Goals', folk: 'Folk', board: 'Notice board', log: 'Town log', journal: 'Journal', you: 'You' } as Record<string, string>)[key] ?? '';
+      this.markNav(key === 'folk' || key === 'journal' ? 'folk' : key === 'log' ? 'log' : 'goals');
+      this.quick.hidden = true;
+      this.menu.hidden = true;
+      if (key === 'goals') this.renderGoals(true);
+      if (key === 'folk') this.renderFolk(true);
     }
     if (this.scroll.classList.contains('rolled')) this.toggleScroll();
     if (key === 'journal') this.renderJournal(true);
@@ -323,14 +494,262 @@ export class Ui {
 
   toggleScroll(): void {
     const rolled = this.scroll.classList.toggle('rolled');
-    const roll = this.scroll.querySelector('.roll');
+    const roll = this.scroll.querySelector('.roll:not(.desk-only)');
     if (roll) roll.textContent = rolled ? '▾' : '▴';
+    if (this.phone && rolled) this.markNav('town');
   }
 
   select(target: Ui['selected']): void {
     this.selected = target;
     this.view.highlightBuilding(target?.kind === 'building' ? target.id : null);
+    this.view.selectResident(target?.kind === 'resident' ? target.id : null);
+    // On a phone with the sheet down, tapping someone shows a small card, not the whole journal.
+    if (this.phone && target?.kind === 'resident' && this.scroll.classList.contains('rolled')) {
+      this.showQuick(target.id);
+      return;
+    }
     this.showTab('journal');
+  }
+
+  // ---------------------------------------------------------------- layout (M4)
+
+  /** A docked dashboard widget with a title, fold and hide. */
+  private widget(key: string, title: string, icon: string, body: HTMLElement): HTMLElement {
+    const w = el('section', { class: 'widget paper', 'data-widget': key, 'data-testid': `widget-${key}` });
+    const head = el('header', { class: 'widget-head' });
+    const t = el('h2', {});
+    t.innerHTML = `${icon}<span>${title}</span>`;
+    t.addEventListener('click', () => w.classList.toggle('collapsed'));
+    const fold = el('button', { class: 'icon fold', title: 'Fold', 'aria-label': `Fold ${title}`, 'data-testid': `collapse-${key}` });
+    fold.innerHTML = ICONS.chevron;
+    fold.addEventListener('click', () => w.classList.toggle('collapsed'));
+    const hide = el('button', { class: 'icon', title: 'Hide (bring it back from the panels button)', 'aria-label': `Hide ${title}`, 'data-testid': `hide-${key}` });
+    hide.innerHTML = ICONS.close;
+    hide.addEventListener('click', () => this.setWidget(key, false));
+    head.append(t, fold, hide);
+    const b = el('div', { class: 'widget-body' });
+    b.appendChild(body);
+    w.append(head, b);
+    this.widgets.set(key, w);
+    return w;
+  }
+
+  private setWidget(key: string, on: boolean): void {
+    const w = this.widgets.get(key);
+    if (!w) return;
+    w.hidden = !on;
+    for (const b of this.widgetMenu.querySelectorAll<HTMLElement>('button[data-key]')) b.classList.toggle('on', !this.widgets.get(b.dataset.key as string)?.hidden);
+  }
+
+  /** Phone (portrait) or desktop: the goals and Folk panes move between the sheet and the widgets. */
+  private applyLayout(phone: boolean): void {
+    this.phone = phone;
+    document.body.classList.toggle('phone', phone);
+    const body = this.scroll.querySelector('.scroll-body') as HTMLElement;
+    if (phone) {
+      body.prepend(this.folkEl);
+      body.prepend(this.goalsEl);
+      this.goalsEl.hidden = true;
+      this.folkEl.hidden = true;
+      this.widgetMenu.hidden = true;
+    } else {
+      (this.widgets.get('goals')?.querySelector('.widget-body') as HTMLElement).appendChild(this.goalsEl);
+      (this.widgets.get('folk')?.querySelector('.widget-body') as HTMLElement).appendChild(this.folkEl);
+      this.goalsEl.hidden = false;
+      this.folkEl.hidden = false;
+      this.scroll.classList.remove('stacked');
+      this.quick.hidden = true;
+      this.setWidget('panel', true);
+    }
+    this.renderGoals(true);
+    this.renderFolk(true);
+  }
+
+  /** The phone's tab bar. */
+  private nav(key: 'town' | 'goals' | 'folk' | 'build' | 'log'): void {
+    if (key === 'town' || key === 'build') {
+      this.quick.hidden = true;
+      if (!this.scroll.classList.contains('rolled')) this.toggleScroll();
+      this.menu.hidden = key !== 'build';
+      if (key === 'build') this.refreshMenu();
+      this.markNav(key);
+      return;
+    }
+    this.showTab(key);
+  }
+
+  private markNav(key: string): void {
+    for (const b of this.tabbar.querySelectorAll<HTMLElement>('button[data-nav]')) b.classList.toggle('on', b.dataset.nav === key);
+  }
+
+  /** The card for a resident tapped in the town (phone). */
+  private showQuick(id: string): void {
+    const rep = residentReport(this.game.sim, id, this.game.narrator);
+    const card = this.quick;
+    card.replaceChildren();
+    const head = el('div', { class: 'quick-head' });
+    head.appendChild(portrait(id, 48));
+    const words = el('div', {});
+    words.append(el('div', { class: 'quick-name' }, rep.name), el('div', { class: 'quiet' }, `Now: ${rep.doing}`));
+    head.appendChild(words);
+    const close = el('button', { class: 'icon', 'aria-label': 'Close', 'data-testid': 'quick-close' });
+    close.innerHTML = ICONS.close;
+    close.addEventListener('click', () => (card.hidden = true));
+    head.appendChild(close);
+    card.appendChild(head);
+    card.appendChild(this.meter('Mood', rep.mood));
+    const row = el('div', { class: 'quick-actions' });
+    for (const [key, label, view] of [
+      ['talk', 'Talk', 'talk'],
+      ['favour', 'Favour', 'talk'],
+      ['profile', 'Profile', 'about'],
+    ] as const) {
+      const b = el('button', { class: key === 'talk' ? 'primary' : '', 'data-testid': `quick-${key}` }, label);
+      b.addEventListener('click', () => {
+        this.residentView = view;
+        card.hidden = true;
+        this.showTab('journal');
+        if (key === 'favour') requestAnimationFrame(() => this.journalEl.querySelector('[data-testid="favour-timber"]')?.scrollIntoView({ block: 'center' }));
+      });
+      row.appendChild(b);
+    }
+    card.appendChild(row);
+    card.hidden = false;
+  }
+
+  /** A short note that floats in at the top and fades (goals done, things learned). */
+  private toast(html: string, kind = ''): void {
+    const t = el('div', { class: `toast ${kind}` });
+    t.innerHTML = html;
+    this.toasts.appendChild(t);
+    while (this.toasts.childElementCount > 3) this.toasts.firstElementChild?.remove();
+    setTimeout(() => t.classList.add('out'), 2800);
+    setTimeout(() => t.remove(), 3300);
+  }
+
+  // ---------------------------------------------------------------- goals and the Folk album (M4)
+
+  /** Today's goals, the town's tier and the winter stores. */
+  private renderGoals(force = false): void {
+    const state = this.game.sim.state;
+    const p = progressOf(state);
+    const goals = todaysGoals(state);
+    const key = JSON.stringify([goals, p.renown, p.tier, p.goals.bonus, state.stores, Math.floor(state.granary ?? 0), dayOf(state.tick)]);
+    if (!force && key === this.lastGoalsKey) return;
+    this.lastGoalsKey = key;
+    const pane = this.goalsEl;
+    pane.replaceChildren();
+    pane.appendChild(el('h3', {}, `Today · day ${dayOf(state.tick)}`));
+    if (goals.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'New goals arrive each morning.'));
+    for (const g of goals) {
+      const row = el('div', { class: `goal${g.done ? ' done' : ''}`, 'data-testid': `goal-${g.kind}` });
+      const box = el('span', { class: 'box' });
+      if (g.done) box.innerHTML = ICONS.check;
+      row.append(box, el('span', { class: 'what' }, goalLabel(g)));
+      if (g.target > 1) row.appendChild(el('span', { class: 'count' }, `${g.count}/${g.target}`));
+      row.appendChild(el('span', { class: 'reward' }, `+${RENOWN.goal} ✦`));
+      pane.appendChild(row);
+    }
+    if (goals.length) pane.appendChild(el('div', { class: `goal bonus${p.goals.bonus ? ' done' : ''}` }, p.goals.bonus ? `All done today: +${RENOWN.allGoals} ✦ bonus earned` : `All three: +${RENOWN.allGoals} ✦ bonus`));
+
+    const nt = nextTier(state);
+    const tier = el('div', { class: 'tier-card', 'data-testid': 'tier' });
+    tier.append(el('div', { class: 'tier-name' }, TIERS[p.tier] as string), el('div', { class: 'tier-renown' }, `${p.renown} ✦ renown`));
+    if (nt) {
+      const track = el('div', { class: 'track' });
+      const fill = el('div', { class: 'fill' });
+      fill.style.width = pct((p.renown - nt.from) / (nt.to - nt.from));
+      track.appendChild(fill);
+      tier.appendChild(track);
+      const opens = ({ Hamlet: 'beehives', Village: 'a chicken coop', Townlet: 'a fountain' } as Record<string, string>)[nt.name];
+      tier.appendChild(el('p', { class: 'quiet' }, `${nt.need} ✦ to ${nt.name}: it opens ${opens} and room for more neighbours.`));
+    } else tier.appendChild(el('p', { class: 'quiet' }, 'A Townlet: the valley is all it set out to be.'));
+    tier.appendChild(el('p', { class: 'quiet small' }, 'Renown comes from goals, granted asks and wishes, dreams come true, the winter stores, newcomers, and getting to know people.'));
+    pane.appendChild(tier);
+    if (state.stores?.asked) pane.appendChild(this.storesCard());
+    const you = el('button', { class: 'link', 'data-testid': 'open-you' }, 'How the town sees you →');
+    you.addEventListener('click', () => this.showTab('you'));
+    pane.appendChild(you);
+  }
+
+  /** The Folk album: everyone in the valley, filled in as you get to know them. */
+  private renderFolk(force = false): void {
+    const state = this.game.sim.state;
+    const people = state.order.filter((id) => !state.residents[id]?.departed);
+    const key = JSON.stringify([people.map((id) => [id, knownFacts(state, id).length]), this.selected]);
+    if (!force && key === this.lastFolkKey) return;
+    this.lastFolkKey = key;
+    const pane = this.folkEl;
+    pane.replaceChildren();
+    const met = people.filter((id) => knownFacts(state, id).length > 0).length;
+    const facts = people.reduce((n, id) => n + knownFacts(state, id).length, 0);
+    pane.appendChild(el('p', { class: 'quiet album-summary', 'data-testid': 'album-summary' }, `${met} of ${people.length} met · ${facts} of ${people.length * ALL_FACTS.length} things known. Talk to people to fill in their pages.`));
+    const grid = el('div', { class: 'album' });
+    for (const id of people) {
+      const known = knownFacts(state, id);
+      const r = this.game.sim.resident(id);
+      const card = el('button', { class: `folk-card${known.length ? '' : ' unmet'}${this.selected?.kind === 'resident' && this.selected.id === id ? ' on' : ''}`, 'data-testid': `folk-${id}` });
+      card.style.setProperty('--who', cssColor(residentColor(id)));
+      card.appendChild(portrait(id, 52));
+      card.appendChild(el('div', { class: 'folk-name' }, residentDef(id).name));
+      card.appendChild(el('div', { class: 'folk-line' }, known.includes('job') ? factValue(state, r, 'job') : known.length ? 'Getting to know them' : 'Not met yet: say hello'));
+      const pips = el('div', { class: 'pips', title: `${known.length} of ${ALL_FACTS.length} things known` });
+      for (let i = 0; i < ALL_FACTS.length; i++) pips.appendChild(el('span', { class: i < known.length ? 'pip on' : 'pip' }));
+      card.appendChild(pips);
+      card.addEventListener('click', () => this.select({ kind: 'resident', id }));
+      grid.appendChild(card);
+    }
+    pane.appendChild(grid);
+  }
+
+  /** "What you know" on a resident's page: learned facts, and how to learn the rest. */
+  private factsSection(id: string): HTMLElement {
+    const state = this.game.sim.state;
+    const r = this.game.sim.resident(id);
+    const known = knownFacts(state, id);
+    const sec = el('div', { class: 'facts', 'data-testid': 'facts' });
+    sec.appendChild(el('h3', {}, `What you know · ${known.length} of ${ALL_FACTS.length}`));
+    const ask = Object.fromEntries((Object.entries(FACTS) as Array<[TalkQuestion, string[]]>).flatMap(([q, keys]) => keys.map((k) => [k, q]))) as Record<string, TalkQuestion>;
+    const label = (q: TalkQuestion) => (q === 'opinion' ? 'What do you think of…' : (QUESTIONS.find(([x]) => x === q)?.[1] ?? q));
+    const ul = el('ul');
+    for (const k of ALL_FACTS) {
+      if (known.includes(k)) ul.appendChild(el('li', { 'data-fact': k }, factValue(state, r, k)));
+      else {
+        const q = ask[k] as TalkQuestion;
+        const askedToday = progressOf(state).asked[`${id}|${q}`] === dayOf(state.tick);
+        ul.appendChild(el('li', { class: 'unknown' }, `??? Ask "${label(q)}"${askedToday ? ' again another day' : ''}`));
+      }
+    }
+    sec.appendChild(ul);
+    return sec;
+  }
+
+  /** Moving up a tier: a moment worth stopping for. */
+  private celebrateTier(e: Extract<SimEvent, { type: 'tier' }>): void {
+    const c = el('div', { class: 'celebrate', 'data-testid': 'tier-up' });
+    const confetti = el('div', { class: 'confetti', 'aria-hidden': 'true' });
+    for (let i = 0; i < 28; i++) {
+      const bit = el('i');
+      bit.style.left = `${(i * 37) % 100}%`;
+      bit.style.animationDelay = `${(i % 7) * 0.12}s`;
+      bit.style.background = ['#e0a33a', '#b5653e', '#5f9e4f', '#4f8a86', '#c0503c'][i % 5] as string;
+      confetti.appendChild(bit);
+    }
+    c.append(confetti, el('div', { class: 'eyebrow' }, 'The valley grows'), el('h2', {}, `A ${e.name} now!`));
+    c.appendChild(el('p', {}, `Word has got round. The neighbouring towns send 15 timber, and up to ${e.cap} can make their home here.`));
+    for (const t of e.unlocks) {
+      const row = el('div', { class: 'unlock' });
+      const img = el('img', { class: 'thumb', alt: '' });
+      img.src = thumbnail(t) || 'data:,';
+      row.append(img, el('div', {}, `New to build: ${buildingDef(t).name}. ${buildingDef(t).blurb?.replace(/ Opens at \w+\.$/, '') ?? ''}`));
+      c.appendChild(row);
+    }
+    const buttons = el('div', { class: 'modal-buttons' });
+    const ok = el('button', { class: 'primary', 'data-testid': 'tier-ok' }, 'Wonderful');
+    ok.addEventListener('click', () => this.closeModal());
+    buttons.appendChild(ok);
+    c.appendChild(buttons);
+    this.openModal(c);
   }
 
   // ---------------------------------------------------------------- build menu
@@ -369,46 +788,92 @@ export class Ui {
     });
   }
 
+  /** The build tray: one row of cards along the bottom, details for the card under the pointer above it. */
   private buildMenu(): HTMLElement {
     const menu = el('div', { class: 'menu paper', 'data-testid': 'build-menu' });
     const head = el('div', { class: 'menu-head' });
     head.append(el('h3', {}, 'Build'), el('span', { class: 'quiet', 'data-menu-timber': '' }));
-    const close = el('button', {}, '✕');
+    const removeB = el('button', { class: 'phone-only', 'data-testid': 'tray-remove' });
+    removeB.innerHTML = `${ICONS.remove}<span>Remove</span>`;
+    removeB.addEventListener('click', () => this.setTool({ kind: 'remove' }));
+    const close = el('button', { 'aria-label': 'Close' }, '✕');
     close.addEventListener('click', () => (menu.hidden = true));
-    head.appendChild(close);
+    head.append(removeB, close);
     menu.appendChild(head);
+    const info = el('div', { class: 'tray-info', 'data-testid': 'tray-info' });
+    const hint = window.matchMedia('(pointer: coarse)').matches ? 'Tap a card to place it; its details show here.' : 'Point at a card to see what it gives off and who would like it.';
+    info.textContent = hint;
+    menu.appendChild(info);
+    const row = el('div', { class: 'cards' });
     for (const group of BUILD_MENU) {
-      menu.appendChild(el('h4', {}, group.category));
-      const row = el('div', { class: 'cards' });
+      row.appendChild(el('div', { class: 'tray-group' }, group.category));
       for (const type of group.types) {
         const def = buildingDef(type);
         const card = el('button', { class: 'build-card', 'data-testid': `tool-build-${type}`, 'data-type': type });
+        card.appendChild(el('img', { class: 'thumb', alt: '', 'data-thumb': type }));
+        card.appendChild(el('span', { class: 'lock', 'aria-hidden': 'true' }));
         card.appendChild(el('div', { class: 'card-title' }, def.name));
-        card.appendChild(el('div', { class: 'cost' }, `${def.cost ?? 0} timber`));
-        if (def.blurb) card.appendChild(el('div', { class: 'blurb' }, def.blurb));
-        card.appendChild(el('div', { class: 'gives', 'data-testid': 'gives-off' }, `Gives off: ${this.givesOff(type)}`));
-        card.appendChild(el('div', { class: 'likes', 'data-likes': '' }));
+        const cost = el('div', { class: 'cost' });
+        cost.innerHTML = `${ICONS.log}<span>${def.cost ?? 0} timber</span>`;
+        card.appendChild(cost);
+        // Details live on the card (for the info line and screen readers) but show above the tray.
+        const details = el('div', { class: 'details' });
+        if (def.blurb) details.appendChild(el('div', { class: 'blurb' }, def.blurb));
+        details.appendChild(el('div', { class: 'gives', 'data-testid': 'gives-off' }, `Gives off: ${this.givesOff(type)}`));
+        details.appendChild(el('div', { class: 'likes', 'data-likes': '' }));
+        card.appendChild(details);
+        const show = () => {
+          info.replaceChildren(el('b', {}, def.name), ...[...details.children].map((c) => c.cloneNode(true)));
+          if (!unlocked(this.game.sim.state, type)) info.appendChild(el('div', { class: 'need' }, `Opens when the valley is a ${TIERS[def.tier ?? 0]}. Earn renown with your daily goals.`));
+          else if (!this.game.sim.canAfford(type)) info.appendChild(el('div', { class: 'need' }, `Needs ${def.cost} timber; you have ${Math.floor(this.game.sim.state.stock.timber)}. Ask someone to cut timber.`));
+        };
+        card.addEventListener('pointerenter', show);
+        card.addEventListener('focus', show);
         card.addEventListener('click', () => {
+          if (!unlocked(this.game.sim.state, type)) {
+            this.status(`${def.name}: opens when the valley is a ${TIERS[def.tier ?? 0]}.`);
+            show();
+            this.shake(card);
+            return;
+          }
           if (!this.game.sim.canAfford(type)) {
             this.status(`Not enough timber for a ${def.name.toLowerCase()} (${def.cost} needed).`);
+            show();
+            this.shake(card);
+            this.shake(this.stockEl.querySelector('[data-res="timber"]')?.parentElement ?? this.stockEl, 'pulse');
             return;
           }
           this.setTool({ kind: 'build', type });
         });
         row.appendChild(card);
       }
-      menu.appendChild(row);
     }
+    row.addEventListener('pointerleave', () => (info.textContent = hint));
+    menu.appendChild(row);
     return menu;
   }
 
+  /** Replay a one-shot CSS animation on an element. */
+  private shake(target: Element, cls = 'shake'): void {
+    target.classList.remove(cls);
+    void (target as HTMLElement).offsetWidth;
+    target.classList.add(cls);
+    setTimeout(() => target.classList.remove(cls), 600);
+  }
+
   private refreshMenu(): void {
+    // Thumbnails are drawn the first time the menu is open.
+    for (const img of this.menu.querySelectorAll<HTMLImageElement>('img[data-thumb]')) {
+      if (!img.src) img.src = thumbnail(img.dataset.thumb as string) || 'data:,';
+    }
     const timber = Math.floor(this.game.sim.state.stock.timber);
     const t = this.menu.querySelector('[data-menu-timber]');
     if (t) t.textContent = `${timber} timber in store`;
     for (const card of this.menu.querySelectorAll<HTMLElement>('.build-card')) {
       const type = card.dataset.type as string;
-      card.classList.toggle('unaffordable', !this.game.sim.canAfford(type));
+      const open = unlocked(this.game.sim.state, type);
+      card.classList.toggle('locked', !open);
+      card.classList.toggle('unaffordable', open && !this.game.sim.canAfford(type));
       const likes = card.querySelector('[data-likes]');
       const who = this.likelyToPlease(type).map((id) => residentDef(id).name);
       if (likes) likes.textContent = who.length ? `Likely to please: ${who.join(', ')}` : '';
@@ -443,12 +908,40 @@ export class Ui {
       return;
     }
     const c = el('div', { 'data-testid': 'intro' });
+    c.appendChild(el('div', { class: 'eyebrow' }, `${page + 1} of ${INTRO.length}`));
     c.appendChild(el('h2', {}, p.title));
+    // The first page puts faces to the six names.
+    if (page === 0) {
+      const faces = el('div', { class: 'intro-faces' });
+      for (const id of this.game.sim.state.order.slice(0, 6)) {
+        const f = el('figure');
+        f.append(portrait(id, 52), el('figcaption', {}, residentDef(id).name));
+        faces.appendChild(f);
+      }
+      c.appendChild(faces);
+    }
     c.appendChild(el('p', {}, p.body));
     const row = el('div', { class: 'modal-buttons' });
-    const next = el('button', { class: 'primary', 'data-testid': 'intro-next' }, page === INTRO.length - 1 ? 'Begin' : 'Next');
-    next.addEventListener('click', () => this.showIntro(page + 1));
+    const last = page === INTRO.length - 1;
+    const next = el('button', { class: 'primary', 'data-testid': 'intro-next' }, last ? 'Begin' : 'Next');
+    // The scroll stays rolled up behind the welcome (review: a cluttered first frame) and unrolls at the end.
+    if (page === 0 && !this.scroll.classList.contains('rolled')) this.toggleScroll();
+    next.addEventListener('click', () => {
+      if (last && this.scroll.classList.contains('rolled') && window.innerWidth > 600) this.toggleScroll();
+      this.showIntro(page + 1);
+    });
     row.appendChild(next);
+    // Starting over (M4: saves): two taps, so nobody loses a town by accident.
+    const fresh = el('button', { class: 'link', 'data-testid': 'new-valley' }, 'Start a new valley');
+    fresh.addEventListener('click', () => {
+      if (fresh.dataset.sure) {
+        location.href = `${location.pathname}?new=1`;
+        return;
+      }
+      fresh.dataset.sure = '1';
+      fresh.textContent = 'Tap again to leave this town and start a new one';
+    });
+    row.appendChild(fresh);
     c.appendChild(row);
     this.openModal(c);
   }
@@ -460,8 +953,13 @@ export class Ui {
     const def = residentDef(d.proposer);
     const lines = PROPOSALS[d.type];
     const c = el('div', { 'data-testid': 'decision' });
-    c.appendChild(el('div', { class: 'eyebrow' }, 'A decision for you'));
-    c.appendChild(el('h2', {}, `${def.name} has a proposal: ${DILEMMA_NAMES[d.type]}`));
+    const top = el('div', { class: 'modal-head' });
+    top.appendChild(portrait(d.proposer, 64));
+    const titles = el('div');
+    titles.appendChild(el('div', { class: 'eyebrow' }, 'A decision for you'));
+    titles.appendChild(el('h2', {}, `${def.name} has a proposal: ${DILEMMA_NAMES[d.type]}`));
+    top.appendChild(titles);
+    c.appendChild(top);
     c.appendChild(el('p', { class: 'quote' }, `“${(lines[def.voice.register] ?? lines.plain)[0]}”`));
     const glad: string[] = [];
     const not: string[] = [];
@@ -476,7 +974,7 @@ export class Ui {
     const row = el('div', { class: 'modal-buttons' });
     const yes = el('button', { class: 'primary', 'data-testid': `approve-${d.id}` }, 'Approve');
     const no = el('button', { 'data-testid': `decline-${d.id}` }, 'Decline');
-    const later = el('button', { 'data-testid': `later-${d.id}` }, 'Decide later');
+    const later = el('button', { class: 'link', 'data-testid': `later-${d.id}` }, 'Decide later');
     yes.addEventListener('click', () => {
       this.game.command({ kind: 'decide', dilemma: d.type, option: 'approve' });
       this.closeModal();
@@ -608,6 +1106,10 @@ export class Ui {
   }
 
   private onEvent(e: SimEvent): void {
+    if (e.type === 'goal' && e.phase === 'done' && e.goal) this.toast(`${ICONS.check}<span>${goalLabel(e.goal)}</span><b>+${RENOWN.goal} ✦</b>`, 'goal');
+    if (e.type === 'goal' && e.phase === 'all') this.toast(`${ICONS.star}<span>All of today's goals!</span><b>+${RENOWN.allGoals} ✦</b>`, 'goal big');
+    if (e.type === 'fact') this.toast(`${portraitSvg(e.who, 26)}<span>${e.first ? 'Met' : 'Getting to know'} ${residentDef(e.who).name}: ${factValue(this.game.sim.state, this.game.sim.resident(e.who), e.key)}</span>`, 'fact');
+    if (e.type === 'tier') this.celebrateTier(e);
     if (e.type === 'standing') {
       const notes = this.standingNotes.get(e.who) ?? [];
       notes.unshift(`${e.delta > 0 ? '▲' : '▼'} Day ${dayOf(e.t)}: ${e.reasons.join('; ')}`);
@@ -619,14 +1121,20 @@ export class Ui {
   private bubble(id: string, text: string, mood = ''): void {
     let b = this.bubbles.get(id);
     if (!b) {
-      b = { el: el('div', { class: 'bubble' }), until: 0 };
+      b = { el: el('div', { class: 'bubble' }), until: 0, born: 0, major: false };
       b.el.style.borderColor = cssColor(residentColor(id));
       this.bubbleLayer.appendChild(b.el);
       this.bubbles.set(id, b);
     }
     b.el.className = `bubble ${mood}`;
-    b.el.textContent = text.length > 90 ? `${text.slice(0, 87)}…` : text;
-    b.until = performance.now() + 7000;
+    // Who is speaking, so a line never floats over an anonymous figure (review).
+    const who = el('span', { class: 'speaker' }, residentDef(id).name);
+    who.style.background = cssColor(residentColor(id));
+    b.el.replaceChildren(who, document.createTextNode(text.length > 90 ? `${text.slice(0, 87)}…` : text));
+    b.el.dataset.who = id;
+    b.born = performance.now();
+    b.until = b.born + 4500;
+    b.major = mood === 'major' || mood === 'up' || mood === 'down';
   }
 
   // ---------------------------------------------------------------- the notice board
@@ -637,7 +1145,7 @@ export class Ui {
     const requests = state.requests.filter((q) => q.status === 'open');
     const wishes = state.story.wishes.filter((w) => w.status === 'open');
     const progress = wishes.map((w) => wishProgress(state, w).met);
-    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick), state.buildings.length]);
+    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick), state.buildings.length, Math.floor(state.granary ?? 0), state.stores]);
     if (key === this.lastBoardKey) return;
     this.lastBoardKey = key;
     const pane = this.boardEl;
@@ -676,7 +1184,7 @@ export class Ui {
     for (const q of requests) {
       const card = el('div', { class: 'card', 'data-testid': `request-${q.id}` });
       const who = residentDef(q.by);
-      card.appendChild(el('div', { class: 'card-title' }, `${who.name} ${ASK_TITLES[q.kind]}${q.wants ? `: a ${buildingDef(q.wants).name.toLowerCase()}` : ''}`));
+      card.appendChild(el('div', { class: 'card-title' }, `${who.name} ${ASK_TITLES[q.kind]}${q.wants ? `: ${/^[aeiou]/.test(singularName(q.wants)) ? 'an' : 'a'} ${singularName(q.wants)}` : ''}`));
       if (q.kind === 'quieter_home') card.appendChild(el('p', {}, `${cap(this.game.narrator.statement(q.by, { subject: q.subject, aspect: 'noisy_at_night' }))}.`));
       if (q.kind === 'more_green') card.appendChild(el('p', { 'data-testid': 'green-progress' }, this.greenLine(q.by)));
       card.appendChild(el('p', { class: 'quiet' }, ASK_HINTS[q.kind]));
@@ -689,19 +1197,61 @@ export class Ui {
       pane.appendChild(card);
     }
 
+    // This morning: only what matters, the rest is in the log (review: the board repeated the log).
     pane.appendChild(el('h3', {}, 'This morning'));
-    if (this.morning.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'Nothing new on the board.'));
+    const worth = this.morning.filter((e) => e.importance === 'major');
+    const rest = this.morning.filter((e) => e.importance !== 'major').length;
+    if (worth.length === 0) pane.appendChild(el('p', { class: 'quiet' }, rest ? 'A quiet night. Nothing needs you.' : 'Nothing new on the board.'));
     const list = el('ul');
-    for (const e of this.morning) {
-      if (e.importance === 'minor') continue;
+    for (const e of worth) {
       const li = el('li', { class: e.importance });
       for (const n of this.nameLinks(e.text)) li.appendChild(n);
       list.appendChild(li);
     }
     pane.appendChild(list);
+    if (rest) {
+      const more = el('button', { class: 'link', 'data-testid': 'morning-more' }, `${rest} more in the Town log`);
+      more.addEventListener('click', () => this.showTab('log'));
+      pane.appendChild(more);
+    }
   }
 
   /** How green it is around someone's home, against what satisfies them. */
+  /** Winter stores: the yearly quest, with its count, target and days to winter. */
+  private storesCard(): HTMLElement {
+    const state = this.game.sim.state;
+    const q = state.stores as NonNullable<typeof state.stores>;
+    const put = Math.floor(state.granary ?? 0);
+    const keeper = q.by ? residentDef(q.by).name : 'The town';
+    const card = el('div', { class: 'card quest', 'data-testid': 'stores-card' });
+    const head = el('div', { class: 'card-title' });
+    head.innerHTML = ICONS.sack;
+    head.append(el('span', {}, `Winter stores · ${keeper}'s worry`));
+    card.appendChild(head);
+    const days = daysToWinter(state.tick);
+    const status = q.outcome === 'met'
+      ? `${put} food put by. The town is ready for winter.`
+      : q.outcome === 'short'
+        ? `Winter came with the granary short of ${q.target}. ${keeper} will start sooner next year.`
+        : `${put} of ${q.target} food put by in the granary · ${days} day${days === 1 ? '' : 's'} to winter.`;
+    card.appendChild(el('p', { 'data-testid': 'stores-progress' }, status));
+    if (!q.outcome) {
+      const room = granaryRoom(state);
+      const hint = room === 0
+        ? 'Build a granary (Work and food, 12 timber). Food the larder can\'t hold goes there, and surplus is carried across by day.'
+        : room < q.target
+          ? `The granaries hold ${room} between them. Another would make room for ${q.target}.`
+          : 'Food over what the larder needs is carried across each day. Favours that bring in food help most.';
+      card.appendChild(el('p', { class: 'quiet' }, hint));
+      const track = el('div', { class: 'track' });
+      const fill = el('div', { class: 'fill' });
+      fill.style.width = pct(Math.min(1, put / q.target));
+      track.appendChild(fill);
+      card.appendChild(track);
+    }
+    return card;
+  }
+
   private greenLine(id: string): string {
     const state = this.game.sim.state;
     const home = state.buildings.find((b) => b.id === this.game.sim.resident(id).homeId);
@@ -786,34 +1336,46 @@ export class Ui {
   private buildTalkPanel(id: string): TalkPanel {
     const name = residentDef(id).name;
     const root = el('div', { class: 'talk', 'data-testid': 'talk' });
-    root.appendChild(el('h3', {}, `Talk with ${name}`));
-    const controls: Array<HTMLButtonElement | HTMLSelectElement> = [];
-    const ask = (question: TalkQuestion, about?: string) => {
+    // The conversation reads top-down like a chat: your question, then their answer.
+    const convo = el('div', { class: 'convo' });
+    const asked = el('div', { class: 'said you', 'data-testid': 'talk-asked' });
+    const answer = el('div', { class: 'said them' });
+    answer.appendChild(portrait(id, 36));
+    const reply = el('div', { class: 'bubble-reply', 'data-testid': 'talk-reply' });
+    answer.appendChild(reply);
+    convo.append(asked, answer);
+    root.appendChild(convo);
+    const controls: HTMLButtonElement[] = [];
+    let p!: TalkPanel;
+    const say = (words: string) => {
+      asked.textContent = words;
+      p.pick = null;
+    };
+    const ask = (question: TalkQuestion, label: string, about?: string) => {
+      say(label);
       this.game.command({ kind: 'talk', who: id, question, ...(about ? { about } : {}) });
       this.renderJournal(true);
     };
-    const qs = el('div', { class: 'talk-row' });
+    root.appendChild(el('h3', {}, `Ask ${name}`));
+    const qs = el('div', { class: 'talk-grid' });
     for (const [q, label] of QUESTIONS) {
       const b = el('button', { 'data-testid': `ask-${q}` }, label);
-      b.addEventListener('click', () => ask(q));
+      b.addEventListener('click', () => ask(q, label));
       qs.appendChild(b);
       controls.push(b);
     }
+    const opinion = el('button', { 'data-testid': 'ask-opinion', class: 'picks' }, 'What do you think of…');
+    qs.appendChild(opinion);
+    controls.push(opinion);
     root.appendChild(qs);
-    const aboutRow = el('div', { class: 'talk-row' });
-    const aboutSelect = el('select', { 'data-testid': 'ask-about' });
-    const aboutButton = el('button', { 'data-testid': 'ask-opinion' }, 'What do you think of…');
-    aboutButton.addEventListener('click', () => ask('opinion', aboutSelect.value));
-    aboutRow.append(aboutButton, aboutSelect);
-    root.appendChild(aboutRow);
-    controls.push(aboutSelect, aboutButton);
 
     root.appendChild(el('h3', {}, 'Ask a favour'));
     const favour = (kind: FavourKind, other?: string) => {
+      say(FAVOUR_ASKS[kind].replace('{o}', other ? residentDef(other).name : ''));
       this.game.command({ kind: 'favour', who: id, favour: kind, ...(other ? { other } : {}) });
       this.renderJournal(true);
     };
-    const fs = el('div', { class: 'talk-row' });
+    const fs = el('div', { class: 'talk-grid' });
     let clear!: HTMLButtonElement;
     for (const kind of ['timber', 'catch', 'garden', 'clear'] as FavourKind[]) {
       const b = el('button', { 'data-testid': `favour-${kind}`, title: `About ${Math.round(FAVOUR_MINUTES[kind] / 60)} hours of work` }, FAVOUR_LABELS[kind]);
@@ -822,52 +1384,81 @@ export class Ui {
       controls.push(b);
       if (kind === 'clear') clear = b;
     }
+    const visit = el('button', { 'data-testid': 'favour-visit', class: 'picks' }, FAVOUR_LABELS.visit);
+    const mend = el('button', { 'data-testid': 'favour-mend', class: 'picks' }, FAVOUR_LABELS.mend);
+    fs.append(visit, mend);
+    controls.push(visit, mend);
     root.appendChild(fs);
-    const people = el('div', { class: 'talk-row' });
-    const visitSelect = el('select', { 'data-testid': 'favour-visit-who' });
-    const visit = el('button', { 'data-testid': 'favour-visit' }, FAVOUR_LABELS.visit);
-    visit.addEventListener('click', () => visitSelect.value && favour('visit', visitSelect.value));
-    const mendSelect = el('select', { 'data-testid': 'favour-mend-who' });
-    const mend = el('button', { 'data-testid': 'favour-mend' }, FAVOUR_LABELS.mend);
-    mend.addEventListener('click', () => mendSelect.value && favour('mend', mendSelect.value));
-    people.append(visit, visitSelect, mend, mendSelect);
-    root.appendChild(people);
-    controls.push(visitSelect, visit, mendSelect, mend);
-
-    const reply = el('blockquote', { class: 'reply', 'data-testid': 'talk-reply' });
+    const picker = el('div', { class: 'picker', 'data-testid': 'talk-picker' });
+    picker.hidden = true;
+    root.appendChild(picker);
     const status = el('p', { class: 'quiet', 'data-testid': 'favour-status' });
-    root.append(reply, status);
-    return { root, reply, status, controls, clear, aboutSelect, visitSelect, mendSelect };
+    root.appendChild(status);
+
+    p = { root, reply, status, controls, clear, asked, picker, pick: null, pickKey: '', pickButtons: { opinion, visit, mend } };
+    const open = (mode: 'opinion' | 'visit' | 'mend') => {
+      p.pick = p.pick === mode ? null : mode;
+      this.refreshTalkPanel(id, p);
+    };
+    opinion.addEventListener('click', () => open('opinion'));
+    visit.addEventListener('click', () => open('visit'));
+    mend.addEventListener('click', () => open('mend'));
+    picker.addEventListener('click', (ev) => {
+      const chip = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-pick]');
+      if (!chip || !p.pick) return;
+      const value = chip.dataset.pick as string;
+      if (p.pick === 'opinion') ask('opinion', `What do you think of ${chip.dataset.label}?`, value);
+      else favour(p.pick, value);
+    });
+    return p;
   }
 
-  private fillSelect(sel: HTMLSelectElement, options: Array<[string, string]>): void {
-    const key = options.map(([v]) => v).join('|');
-    if (sel.dataset.key === key) return;
-    const keep = sel.value;
-    sel.replaceChildren(...options.map(([v, label]) => el('option', { value: v }, label)));
-    sel.dataset.key = key;
-    if (options.some(([v]) => v === keep)) sel.value = keep;
+  /** The chips for the open picker: people (with portraits) and, for opinions, places. */
+  private pickOptions(id: string, mode: 'opinion' | 'visit' | 'mend'): Array<{ value: string; label: string; who?: string }> {
+    const state = this.game.sim.state;
+    const r = this.game.sim.resident(id);
+    const others = state.order.filter((o) => o !== id && !state.residents[o]?.departed);
+    const person = (o: string, value = o) => ({ value, label: residentDef(o).name, who: o });
+    if (mode === 'visit') return others.map((o) => person(o));
+    if (mode === 'mend') {
+      const cool = others.filter((o) => (r.rel[o]?.affinity ?? 0) < 0.1);
+      return (cool.length ? cool : others).map((o) => person(o));
+    }
+    const places = state.buildings.filter((b) => !b.removed && b.type !== 'wild' && buildingDef(b.type).kind !== 'home');
+    return [
+      ...others.map((o) => person(o, `r:${o}`)),
+      ...places.map((b) => ({ value: `b:${b.id}`, label: this.game.narrator.subjectName(`b:${b.id}`) })),
+    ];
   }
 
   private refreshTalkPanel(id: string, p: TalkPanel): void {
     const state = this.game.sim.state;
     const r = this.game.sim.resident(id);
-    const others = state.order.filter((o) => o !== id && !state.residents[o]?.departed);
-    const places = state.buildings.filter((b) => !b.removed && b.type !== 'wild' && buildingDef(b.type).kind !== 'home');
-    this.fillSelect(p.aboutSelect, [
-      ...others.map((o) => [`r:${o}`, residentDef(o).name] as [string, string]),
-      ...places.map((b) => [`b:${b.id}`, this.game.narrator.subjectName(`b:${b.id}`)] as [string, string]),
-    ]);
-    this.fillSelect(p.visitSelect, others.map((o) => [o, residentDef(o).name]));
-    const cool = others.filter((o) => (r.rel[o]?.affinity ?? 0) < 0.1);
-    this.fillSelect(p.mendSelect, (cool.length ? cool : others).map((o) => [o, residentDef(o).name]));
     const asleep = r.activity?.id === 'sleep' && r.at === r.homeId;
     for (const c of p.controls) c.disabled = asleep || r.departed;
     p.clear.disabled = p.clear.disabled || openPlots(state).length === 0;
     p.clear.title = openPlots(state).length === 0 ? 'No wild land is open for clearing yet: the valley opens as the town thrives' : 'About 6 hours of work';
+    if (asleep) p.pick = null;
+    for (const [mode, b] of Object.entries(p.pickButtons)) b.classList.toggle('on', p.pick === mode);
+    const options = p.pick ? this.pickOptions(id, p.pick) : [];
+    const key = `${p.pick}:${options.map((o) => o.value).join('|')}`;
+    if (key !== p.pickKey) {
+      p.pickKey = key;
+      p.picker.replaceChildren(
+        ...options.map((o) => {
+          const chip = el('button', { class: 'chip', 'data-pick': o.value, 'data-label': o.label, 'data-testid': `pick-${o.value.replace(':', '-')}` });
+          if (o.who) chip.appendChild(portrait(o.who, 28));
+          chip.appendChild(el('span', {}, o.label));
+          return chip;
+        }),
+      );
+    }
+    p.picker.hidden = !p.pick;
     const last = this.game.narrator.lastReply;
     p.reply.textContent = asleep ? `${residentDef(id).name} is asleep. Talk in the morning.` : last && last.who === id ? `“${last.text}”` : '';
-    p.reply.hidden = p.reply.textContent === '';
+    const answered = p.reply.textContent !== '';
+    (p.reply.parentElement as HTMLElement).hidden = !answered;
+    p.asked.hidden = !answered || asleep || p.asked.textContent === '';
     p.status.textContent = this.favourStatus(r);
   }
 
@@ -903,17 +1494,29 @@ export class Ui {
     }
     if (!force && document.activeElement instanceof HTMLSelectElement && this.journalEl.contains(document.activeElement)) return;
     this.lastJournalRender = now;
-    const pane = this.journalEl;
-    pane.replaceChildren();
-    const roster = el('div', { class: 'roster' });
-    for (const id of this.game.sim.state.order) {
-      const b = el('button', { 'data-testid': `roster-${id}` }, residentDef(id).name);
-      b.style.borderColor = cssColor(residentColor(id));
-      b.classList.toggle('on', this.selected?.kind === 'resident' && this.selected.id === id);
-      b.addEventListener('click', () => this.select({ kind: 'resident', id }));
-      roster.appendChild(b);
+    // The roster is built once and only updated, so a name isn't swapped out under a finger.
+    if (!this.rosterEl) {
+      this.rosterEl = el('div', { class: 'roster' });
+      this.journalBody = el('div');
+      this.journalEl.replaceChildren(this.rosterEl, this.journalBody);
     }
-    pane.appendChild(roster);
+    const order = this.game.sim.state.order;
+    if (this.rosterEl.childElementCount !== order.length) {
+      for (const id of order.slice(this.rosterEl.childElementCount)) {
+        const b = el('button', { class: 'chip', 'data-testid': `roster-${id}`, 'data-id': id });
+        b.append(portrait(id, 22), el('span', {}, residentDef(id).name));
+        b.style.borderColor = cssColor(residentColor(id));
+        b.addEventListener('click', () => this.select({ kind: 'resident', id }));
+        this.rosterEl.appendChild(b);
+      }
+    }
+    for (const b of this.rosterEl.children) {
+      const id = (b as HTMLElement).dataset.id as string;
+      b.classList.toggle('on', this.selected?.kind === 'resident' && this.selected.id === id);
+      (b as HTMLElement).hidden = !!this.game.sim.state.residents[id]?.departed;
+    }
+    const pane = this.journalBody as HTMLElement;
+    pane.replaceChildren();
     if (!this.selected) {
       pane.appendChild(el('p', { class: 'quiet' }, 'Click someone in the town, or a name above, to read their journal.'));
       return;
@@ -941,7 +1544,8 @@ export class Ui {
       const row = el('div', { class: 'talk-row', 'data-testid': 'home-of' });
       row.appendChild(el('span', { class: 'quiet' }, living.length ? 'Home of:' : 'Nobody lives here yet. Someone new will move in soon.'));
       for (const rid of living) {
-        const go = el('button', { 'data-testid': `open-resident-${rid}` }, residentDef(rid).name);
+        const go = el('button', { class: 'chip', 'data-testid': `open-resident-${rid}` });
+        go.append(portrait(rid, 22), el('span', {}, residentDef(rid).name));
         go.style.borderColor = cssColor(residentColor(rid));
         go.addEventListener('click', () => this.select({ kind: 'resident', id: rid }));
         row.appendChild(go);
@@ -1039,10 +1643,32 @@ export class Ui {
 
   private renderResident(pane: HTMLElement, rep: ResidentReport): void {
     const j = el('div', { class: 'journal', 'data-testid': 'journal' });
+    const headRow = el('div', { class: 'journal-head' });
+    headRow.appendChild(portrait(rep.id, 64));
     const head = el('h2', {}, `${rep.name}, ${rep.age}`);
     head.style.borderBottomColor = cssColor(residentColor(rep.id));
-    j.appendChild(head);
+    headRow.appendChild(head);
+    j.appendChild(headRow);
+    if (!rep.departed) {
+      const subs = el('div', { class: 'subtabs' });
+      for (const [view, label] of [['about', 'About'], ['talk', 'Talk']] as const) {
+        const b = el('button', { 'data-testid': `sub-${view}`, class: this.residentView === view ? 'on' : '' }, label);
+        b.addEventListener('click', () => {
+          this.residentView = view;
+          this.renderJournal(true);
+        });
+        subs.appendChild(b);
+      }
+      j.appendChild(subs);
+    }
+    if (this.residentView === 'talk' && !rep.departed) {
+      j.appendChild(el('p', { class: 'doing' }, `Now: ${rep.doing}`));
+      j.appendChild(this.talkPanel(rep.id));
+      pane.appendChild(j);
+      return;
+    }
     j.appendChild(el('p', { class: 'quiet' }, rep.background));
+    if (!rep.departed) j.appendChild(this.factsSection(rep.id));
     if (rep.hope) {
       const hope = el('div', { class: 'hope', 'data-testid': 'hope' });
       hope.appendChild(el('p', {}, `Hoping to: ${rep.hope.title.charAt(0).toLowerCase()}${rep.hope.title.slice(1)}`));
@@ -1086,7 +1712,6 @@ export class Ui {
     }
     if (!mind.childElementCount) mind.appendChild(el('li', { class: 'quiet' }, 'Nothing much. Content.'));
     j.appendChild(mind);
-    j.appendChild(this.talkPanel(rep.id));
     j.appendChild(this.meter('Mood', rep.mood));
     j.appendChild(this.meter('Settled here', rep.disposition));
 
@@ -1153,9 +1778,51 @@ export class Ui {
     const t = state.tick;
     const weather = state.story.weather;
     const w = weather.kind !== 'clear' && t < weather.until ? ` · ${weather.kind}` : '';
-    this.clockEl.textContent = `Day ${dayOf(t)} · ${cap(seasonOf(t))} · ${clock(t)}${w}`;
-    this.stockEl.textContent = `Food ${Math.floor(state.stock.food)} · Timber ${Math.floor(state.stock.timber)}`;
+    const hour = Math.floor((t % 1440) / 60);
+    const clockText = `Day ${dayOf(t)} · ${cap(seasonOf(t))} · ${clock(t)}${w}`;
+    if (this.clockEl.dataset.text !== clockText) {
+      this.clockEl.dataset.text = clockText;
+      this.clockEl.innerHTML = `${w ? ICONS.cloud : hour >= 6 && hour < 20 ? ICONS.sun : ICONS.moon}<span><span class="day">Day ${dayOf(t)}</span><span class="season"> · ${cap(seasonOf(t))}</span> · ${clock(t)}<span class="season">${w}</span></span>`;
+      this.clockEl.title = clockText;
+    }
+    for (const res of ['food', 'timber'] as const) {
+      const v = Math.floor(state.stock[res]);
+      const n = this.stockEl.querySelector(`[data-res="${res}"]`) as HTMLElement;
+      const last = this.lastStock[res];
+      if (n.textContent !== String(v)) n.textContent = String(v);
+      // A little "+3" floats up when the stores rise (review: no feedback when things happen).
+      if (last !== undefined && v > last) {
+        const f = el('span', { class: `floater ${res}` }, `+${v - last}`);
+        n.parentElement?.appendChild(f);
+        setTimeout(() => f.remove(), 950);
+      }
+      this.lastStock[res] = v;
+    }
     this.stockEl.classList.toggle('short', state.stock.food < 3);
+    const prog = progressOf(state);
+    if (prog.renown !== this.lastRenown) {
+      const nt = nextTier(state);
+      const gained = this.lastRenown >= 0 ? prog.renown - this.lastRenown : 0;
+      this.lastRenown = prog.renown;
+      this.renownEl.innerHTML = `${ICONS.star}<span class="tier">${TIERS[prog.tier]}</span><b>${prog.renown}</b><span class="bar"><i style="width:${nt ? pct((prog.renown - nt.from) / (nt.to - nt.from)) : '100%'}"></i></span>`;
+      this.renownEl.title = nt ? `${prog.renown} renown · ${nt.need} more to ${nt.name}` : `${prog.renown} renown · a Townlet`;
+      if (gained > 0) {
+        const f = el('span', { class: 'floater renown-up' }, `+${gained}`);
+        this.renownEl.appendChild(f);
+        setTimeout(() => f.remove(), 950);
+      }
+    }
+    this.renderGoals();
+    this.renderFolk();
+    const sack = this.stockEl.querySelector('[data-testid="granary-stock"]') as HTMLElement;
+    sack.hidden = !hasGranary(state);
+    if (!sack.hidden) {
+      const put = Math.floor(state.granary ?? 0);
+      const text = state.stores?.asked && !state.stores.outcome ? `${put}/${state.stores.target}` : String(put);
+      const b = sack.querySelector('b') as HTMLElement;
+      if (b.textContent !== text) b.textContent = text;
+      sack.title = `Granary: ${put} food put by (room for ${granaryRoom(state)})`;
+    }
     this.renderBoard();
     if (!this.menu.hidden) this.refreshMenu();
     if (!this.tabs.get('journal')!.pane.hidden) this.renderJournal();
@@ -1167,16 +1834,35 @@ export class Ui {
     }
     const now = performance.now();
     const covers = this.panels.filter((p) => !p.hidden).map((p) => p.getBoundingClientRect());
+    // At most two bubbles at once (review: six at a time was noise): whoever you're looking at
+    // first, then what matters, then the newest. Zoomed far out, only theirs.
+    const selectedId = this.selected?.kind === 'resident' ? this.selected.id : null;
+    const zoomedOut = this.view.zoomLevel < 0.8;
+    const live = [...this.bubbles.entries()]
+      .filter(([id, b]) => now < b.until && (!zoomedOut || id === selectedId))
+      .sort(([ia, a], [ib, b]) => Number(ib === selectedId) - Number(ia === selectedId) || Number(b.major) - Number(a.major) || b.born - a.born);
+    const allowed = new Set(live.slice(0, 2).map(([id]) => id));
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
     for (const [id, b] of this.bubbles) {
       const pos = this.view.residentHead(id);
-      let show = pos !== null && pos.visible && now < b.until;
+      let show = allowed.has(id) && pos !== null && pos.visible;
       if (show && pos) {
         b.el.hidden = false;
         b.el.style.left = `${pos.x}px`;
         b.el.style.top = `${pos.y}px`;
+        // Keep it on screen, 16px from the edges.
+        let r = b.el.getBoundingClientRect();
+        const dx = r.left < 16 ? 16 - r.left : r.right > vw - 16 ? vw - 16 - r.right : 0;
+        const dy = r.top < 16 ? 16 - r.top : 0;
+        if (dx || dy) {
+          b.el.style.left = `${pos.x + dx}px`;
+          b.el.style.top = `${pos.y + dy}px`;
+          r = b.el.getBoundingClientRect();
+        }
+        b.el.style.setProperty('--tail', `${Math.max(12, Math.min(r.width - 12, pos.x - r.left))}px`);
         // A bubble that would sit over the scroll, the dock or the top bar waits out of sight.
-        const r = b.el.getBoundingClientRect();
-        show = !covers.some((c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top);
+        show = r.bottom < vh && !covers.some((c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top);
       }
       b.el.hidden = !show;
     }

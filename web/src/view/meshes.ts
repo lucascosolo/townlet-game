@@ -4,6 +4,8 @@
 
 import * as THREE from 'three';
 import { buildingDef } from '../../../src/content/buildings.js';
+import { looksOf } from './looks.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export const PALETTE = {
   wall: 0xeadfc8,
@@ -18,8 +20,9 @@ export const PALETTE = {
   leaf: 0x5f9e4f,
   hedge: 0x4e8a46,
   water: 0x5aa7c7,
-  window: 0xffd27a,
+  window: 0xffcf7a,
   lantern: 0xffb85c,
+  trim: 0x5a3a24,
   green: 0x8cc06b,
 };
 
@@ -42,7 +45,42 @@ export const glow = {
   window: new THREE.MeshLambertMaterial({ color: PALETTE.window, emissive: new THREE.Color(PALETTE.window), emissiveIntensity: 0 }),
   lantern: new THREE.MeshLambertMaterial({ color: PALETTE.lantern, emissive: new THREE.Color(PALETTE.lantern), emissiveIntensity: 0 }),
   oven: new THREE.MeshLambertMaterial({ color: 0xff8a3d, emissive: new THREE.Color(0xff6a1d), emissiveIntensity: 0 }),
+  /** The warm pool a lamp throws on the ground: additive, faded in at dusk. */
+  pool: new THREE.MeshBasicMaterial({ map: radialTexture(), color: 0xffb75e, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
 };
+
+function radialTexture(): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const ctx = c.getContext('2d') as CanvasRenderingContext2D;
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.45, 'rgba(255,255,255,0.45)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** A lamp's light: a pool on the ground, and a marker the scene uses to place real lights. */
+function lightSpot(x: number, y: number, z: number, size = 3): THREE.Group {
+  const g = new THREE.Group();
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(size, size), glow.pool);
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.set(x, 0.03, z);
+  pool.renderOrder = 1;
+  g.add(pool);
+  const marker = new THREE.Object3D();
+  marker.name = 'light';
+  marker.position.set(x, y, z);
+  g.add(marker);
+  return g;
+}
+
+/** Roof colours for homes, so a street isn't one colour (review: flat materials). */
+const ROOFS = [0xb5532f, 0x7a4b8a, 0x3f7a72, 0xa8743a, 0x8f3f3a];
 
 function box(w: number, h: number, d: number, material: THREE.Material, x = 0, y = h / 2, z = 0): THREE.Mesh {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
@@ -80,6 +118,7 @@ function lanternPost(x: number, z: number): THREE.Group {
   const lamp = new THREE.Mesh(new THREE.OctahedronGeometry(0.08, 0), glow.lantern);
   lamp.position.y = 0.65;
   g.add(lamp);
+  g.add(lightSpot(0, 0.7, 0, 2.6));
   g.position.set(x, 0, z);
   return g;
 }
@@ -90,6 +129,23 @@ function house(w: number, d: number, roofColor: number, opts: { chimney?: boolea
   const bd = d * 0.82;
   const wallH = 0.7;
   g.add(box(bw, wallH, bd, mat(PALETTE.wall)));
+  // Timber frame: corner posts and a sill beam under the eaves.
+  for (const [x, z] of [
+    [-bw / 2, -bd / 2],
+    [bw / 2, -bd / 2],
+    [-bw / 2, bd / 2],
+    [bw / 2, bd / 2],
+  ] as const)
+    g.add(box(0.07, wallH, 0.07, mat(PALETTE.trim), x, wallH / 2, z));
+  g.add(box(bw + 0.06, 0.06, bd + 0.06, mat(PALETTE.trim), 0, wallH - 0.03));
+  // A door, and a lamp beside it that lights the step at night.
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.36), mat(PALETTE.trim));
+  door.position.set(-bw * 0.22, 0.18, bd / 2 + 0.012);
+  g.add(door);
+  const doorLamp = new THREE.Mesh(new THREE.OctahedronGeometry(0.05, 0), glow.lantern);
+  doorLamp.position.set(-bw * 0.22 + 0.17, 0.42, bd / 2 + 0.04);
+  g.add(doorLamp);
+  g.add(lightSpot(-bw * 0.22, 0.5, bd / 2 + 0.5, 2.4));
   g.add(pyramidRoof(bw + 0.15, bd + 0.15, 0.6, mat(roofColor), wallH));
   // Windows on two faces, glowing at night.
   for (const [x, z, ry] of [
@@ -97,7 +153,7 @@ function house(w: number, d: number, roofColor: number, opts: { chimney?: boolea
     [bw / 2 + 0.01, 0, Math.PI / 2],
     [0, -bd / 2 - 0.01, 0],
   ] as const) {
-    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.2), glow.window);
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.27), glow.window);
     win.position.set(x, 0.42, z);
     win.rotation.y = ry;
     g.add(win);
@@ -115,13 +171,159 @@ function house(w: number, d: number, roofColor: number, opts: { chimney?: boolea
   return g;
 }
 
+/** A woodpile, a water butt, a bit of fence and a pot of flowers: a home that's lived in (review: no props). */
+function homeProps(w: number, d: number, variant: number): THREE.Group {
+  const g = new THREE.Group();
+  const side = variant % 2 ? 1 : -1;
+  // Woodpile against a side wall.
+  for (let i = 0; i < 3; i++) {
+    const log = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.36, 6), mat(PALETTE.wood));
+    log.rotation.z = Math.PI / 2;
+    log.position.set(side * (w * 0.41 + 0.08), 0.06 + Math.floor(i / 2) * 0.09, -0.15 + (i % 2) * 0.11 + (i >= 2 ? 0.05 : 0));
+    log.castShadow = true;
+    g.add(log);
+  }
+  // A water butt by the door.
+  const butt = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.18, 8), mat(PALETTE.darkWood));
+  butt.position.set(w * 0.2, 0.09, d * 0.41 + 0.12);
+  butt.castShadow = true;
+  g.add(butt);
+  // A short picket run along the front.
+  for (let i = 0; i < 4; i++) g.add(box(0.03, 0.16, 0.03, mat(0xd8cbb0), -w * 0.45 + i * 0.12, 0.08, d * 0.5 + 0.08));
+  g.add(box(0.4, 0.025, 0.02, mat(0xd8cbb0), -w * 0.45 + 0.18, 0.12, d * 0.5 + 0.08));
+  // Flowers in a pot.
+  const pot = box(0.1, 0.08, 0.1, mat(0xb5653e), w * 0.38, 0.04, d * 0.41 + 0.1);
+  g.add(pot);
+  const bloom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.06, 0), mat([0xe76f8a, 0xf2c14e, 0xb48be0][variant % 3] as number));
+  bloom.position.set(w * 0.38, 0.12, d * 0.41 + 0.1);
+  g.add(bloom);
+  return g;
+}
+
 /** A mesh group for a building type, centred on its footprint, sitting on y = 0. */
-export function buildingMesh(type: string): THREE.Group {
+/** Leaves that follow the seasons, tinted per vertex so no two trees match. The scene swaps in its seasonal copy. */
+export const seasonalLeaf = new THREE.MeshLambertMaterial({ color: PALETTE.leaf, flatShading: true, vertexColors: true });
+/** Conifers keep their needles all year. */
+const needles = new THREE.MeshLambertMaterial({ color: 0x3d6b47, flatShading: true, vertexColors: true });
+
+const WOOD_SHAPES = {
+  trunk: new THREE.BoxGeometry(1, 1, 1),
+  blob: new THREE.IcosahedronGeometry(1, 0),
+  cone: new THREE.ConeGeometry(1, 1, 6),
+  tuft: new THREE.CylinderGeometry(1, 1, 1, 7),
+};
+
+/**
+ * Woods and brambles over a wild plot (review: every plot was the same scatter, one species, and a
+ * ruler-straight edge). Seeded per plot: broadleaf, conifer and birch with jittered size, lean,
+ * turn and shade; saplings and bushes thicken towards the edge, and ragged tufts of forest floor
+ * break the line between wild and settled land. Merged per material so a plot costs a few draw calls.
+ */
+function woods(w: number, d: number, variant: number): THREE.Group {
+  const g = new THREE.Group();
+  let seed = (Math.abs(variant) * 2654435761) % 2147483647 || 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const parts: Record<'floor' | 'trunk' | 'birch' | 'leaf' | 'needle', THREE.BufferGeometry[]> = { floor: [], trunk: [], birch: [], leaf: [], needle: [] };
+  const q = new THREE.Quaternion();
+  const put = (
+    key: keyof typeof parts,
+    shape: THREE.BufferGeometry,
+    x: number,
+    y: number,
+    z: number,
+    sx: number,
+    sy: number,
+    sz: number,
+    yaw = 0,
+    tint?: number,
+  ) => {
+    const geo = (shape.index ? shape.toNonIndexed() : shape.clone()).deleteAttribute('uv');
+    q.setFromEuler(new THREE.Euler(0, yaw, 0));
+    geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), q, new THREE.Vector3(sx, sy, sz)));
+    if (tint !== undefined) {
+      const n = geo.getAttribute('position').count;
+      const c = new Float32Array(n * 3);
+      // Shade jitter: mostly lightness, a touch of hue (yellower or bluer).
+      for (let i = 0; i < n; i++) {
+        c[i * 3] = tint * (1 + (rnd() - 0.5) * 0.04);
+        c[i * 3 + 1] = tint;
+        c[i * 3 + 2] = tint * (1 + (rnd() - 0.5) * 0.06);
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    }
+    parts[key].push(geo);
+  };
+  const shade = () => 0.8 + rnd() * 0.35;
+  const broadleaf = (x: number, z: number, s: number) => {
+    put('trunk', WOOD_SHAPES.trunk, x, 0.25 * s, z, 0.12 * s, 0.5 * s, 0.12 * s, rnd() * 3);
+    const t = shade();
+    put('leaf', WOOD_SHAPES.blob, x, 0.75 * s, z, 0.38 * s, 0.36 * s * (0.9 + rnd() * 0.3), 0.38 * s, rnd() * 6, t);
+    if (rnd() < 0.5) put('leaf', WOOD_SHAPES.blob, x + (rnd() - 0.5) * 0.3 * s, 0.98 * s, z + (rnd() - 0.5) * 0.3 * s, 0.24 * s, 0.24 * s, 0.24 * s, rnd() * 6, t * 1.06);
+  };
+  const conifer = (x: number, z: number, s: number) => {
+    put('trunk', WOOD_SHAPES.trunk, x, 0.15 * s, z, 0.1 * s, 0.3 * s, 0.1 * s);
+    const t = shade();
+    const yaw = rnd() * 3;
+    put('needle', WOOD_SHAPES.cone, x, 0.55 * s, z, 0.46 * s, 0.6 * s, 0.46 * s, yaw, t);
+    put('needle', WOOD_SHAPES.cone, x, 0.88 * s, z, 0.36 * s, 0.55 * s, 0.36 * s, yaw + 0.5, t * 1.04);
+    put('needle', WOOD_SHAPES.cone, x, 1.18 * s, z, 0.24 * s, 0.45 * s, 0.24 * s, yaw + 1, t * 1.08);
+  };
+  const birch = (x: number, z: number, s: number) => {
+    put('birch', WOOD_SHAPES.trunk, x, 0.42 * s, z, 0.07 * s, 0.84 * s, 0.07 * s, rnd() * 3);
+    put('leaf', WOOD_SHAPES.blob, x, 1.0 * s, z, 0.27 * s, 0.38 * s, 0.27 * s, rnd() * 6, 1.12 + rnd() * 0.15);
+  };
+  const bush = (x: number, z: number, s: number) => put('leaf', WOOD_SHAPES.blob, x, 0.18 * s, z, 0.34 * s, 0.24 * s, 0.34 * s, rnd() * 6, 0.75 + rnd() * 0.15);
+  // The forest floor, with ragged tufts along all four sides.
+  put('floor', WOOD_SHAPES.trunk, 0, 0.015, 0, w, 0.03, d);
+  for (let i = 0; i < 20; i++) {
+    const along = rnd() - 0.5;
+    const out = (rnd() - 0.35) * 0.9;
+    const side = i % 4;
+    const x = side === 0 ? along * w : side === 1 ? along * w : side === 2 ? -w / 2 - out : w / 2 + out;
+    const z = side === 0 ? -d / 2 - out : side === 1 ? d / 2 + out : along * d;
+    const r = 0.3 + rnd() * 0.45;
+    put('floor', WOOD_SHAPES.tuft, x, 0.012 + rnd() * 0.004, z, r, 0.024, r * (0.7 + rnd() * 0.5), rnd() * 3);
+  }
+  // Big trees in the middle, thinning to saplings and bushes at the edge.
+  for (let i = 0; i < 26; i++) {
+    const x = -w / 2 + 0.5 + rnd() * (w - 1);
+    const z = -d / 2 + 0.5 + rnd() * (d - 1);
+    const edge = Math.min(w / 2 - Math.abs(x), d / 2 - Math.abs(z));
+    const grown = Math.min(1, edge / 1.6);
+    const s = (0.45 + grown * 0.7) * (0.85 + rnd() * 0.5);
+    const kind = rnd();
+    if (edge < 0.9 && rnd() < 0.55) bush(x, z, 0.7 + rnd() * 0.6);
+    else if (kind < 0.45) broadleaf(x, z, s);
+    else if (kind < 0.75) conifer(x, z, s);
+    else birch(x, z, s);
+  }
+  const materials: Record<keyof typeof parts, THREE.Material> = {
+    floor: mat(0x55703f),
+    trunk: mat(PALETTE.darkWood),
+    birch: mat(0xe4dfd2),
+    leaf: seasonalLeaf,
+    needle: needles,
+  };
+  for (const key of Object.keys(parts) as Array<keyof typeof parts>) {
+    if (!parts[key].length) continue;
+    const mesh = new THREE.Mesh(mergeGeometries(parts[key]), materials[key]);
+    mesh.name = key === 'leaf' ? 'canopy-v' : key;
+    // The woods don't cast shadows: hundreds of trees in the shadow pass cost more than they show.
+    mesh.castShadow = false;
+    mesh.receiveShadow = key === 'floor';
+    g.add(mesh);
+    for (const geo of parts[key]) geo.dispose();
+  }
+  return g;
+}
+
+export function buildingMesh(type: string, variant = 0): THREE.Group {
   const [w, d] = buildingDef(type).size;
   let g: THREE.Group;
   switch (type) {
     case 'cottage':
-      g = house(w, d, PALETTE.roof, { chimney: true });
+      g = house(w, d, ROOFS[variant % ROOFS.length] as number, { chimney: true });
+      g.add(homeProps(w, d, variant));
       break;
     case 'bakery':
       g = house(w, d, 0xc98b4b, { chimney: true, oven: true });
@@ -232,27 +434,9 @@ export function buildingMesh(type: string): THREE.Group {
       }
       break;
     }
-    case 'wild': {
-      // Woods and brambles over an 8x8 plot: a fixed, irregular scatter.
-      g = new THREE.Group();
-      const floor = box(w * 0.98, 0.03, d * 0.98, mat(0x55703f), 0, 0.015);
-      floor.receiveShadow = true;
-      g.add(floor);
-      let seed = 7;
-      const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-      for (let i = 0; i < 18; i++) {
-        const x = -w / 2 + 0.6 + rnd() * (w - 1.2);
-        const z = -d / 2 + 0.6 + rnd() * (d - 1.2);
-        if (rnd() < 0.7) g.add(tree(x, z, 1 + rnd() * 0.9));
-        else {
-          const bush = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35 + rnd() * 0.2, 0), mat(PALETTE.hedge));
-          bush.position.set(x, 0.25, z);
-          bush.castShadow = true;
-          g.add(bush);
-        }
-      }
+    case 'wild':
+      g = woods(w, d, variant);
       break;
-    }
     case 'orchard': {
       g = new THREE.Group();
       g.add(box(w * 0.9, 0.04, d * 0.9, mat(PALETTE.hedge), 0, 0.02));
@@ -270,6 +454,115 @@ export function buildingMesh(type: string): THREE.Group {
           t.add(apple);
         }
         g.add(t);
+      }
+      break;
+    }
+    case 'beehives': {
+      // Three skeps on a low bench, with flowers round about.
+      g = new THREE.Group();
+      g.add(box(0.85, 0.12, 0.3, mat(PALETTE.darkWood), 0, 0.18));
+      for (const sx of [-1, 0, 1]) g.add(box(0.06, 0.18, 0.06, mat(PALETTE.darkWood), sx * 0.36, 0.09, 0));
+      const straw = mat(0xd8b15a);
+      for (const x of [-0.27, 0, 0.27]) {
+        const skep = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6, 0, Math.PI * 2, 0, Math.PI / 1.8), straw);
+        skep.scale.y = 1.35;
+        skep.position.set(x, 0.24, 0);
+        skep.castShadow = true;
+        g.add(skep);
+        g.add(box(0.05, 0.03, 0.02, mat(0x2b211a), x, 0.27, 0.12));
+      }
+      for (let i = 0; i < 5; i++) {
+        const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), mat([0xe07a9a, 0xf2d15c, 0xb48ad6][i % 3] as number));
+        f.position.set(-0.36 + i * 0.18, 0.05, 0.33);
+        g.add(f);
+      }
+      break;
+    }
+    case 'coop': {
+      // A little hen house on legs with a run in front, and a hen or two about.
+      g = new THREE.Group();
+      g.add(box(w * 0.9, 0.03, d * 0.8, mat(0x9b8a5c), 0, 0.015));
+      const house = new THREE.Group();
+      for (const [x, z] of [[-0.3, -0.15], [0.3, -0.15], [-0.3, 0.15], [0.3, 0.15]] as const) house.add(box(0.05, 0.22, 0.05, mat(PALETTE.darkWood), x, 0.11, z));
+      house.add(box(0.75, 0.38, 0.42, mat(0xc4583f), 0, 0.41));
+      const roof = pyramidRoof(0.86, 0.52, 0.22, mat(PALETTE.darkWood), 0.6);
+      roof.scale.x *= 1.25;
+      house.add(roof);
+      house.add(box(0.14, 0.18, 0.02, mat(0x2b211a), 0.15, 0.34, 0.22));
+      house.add(box(0.06, 0.03, 0.4, mat(PALETTE.wood), 0.15, 0.15, 0.4));
+      house.position.x = -w * 0.22;
+      g.add(house);
+      // The run: a low wire fence.
+      const wire = mat(0xd9d4c4);
+      for (let i = 0; i <= 4; i++) g.add(box(0.03, 0.22, 0.03, wire, 0.05 + i * 0.2, 0.11, 0.38));
+      g.add(box(0.85, 0.02, 0.02, wire, 0.45, 0.2, 0.38));
+      for (const [x, z, c] of [[0.35, 0.05, 0xf4efe4], [0.65, -0.12, 0x9a5b34]] as const) {
+        const hen = new THREE.Group();
+        hen.add(box(0.12, 0.09, 0.08, mat(c), 0, 0.07, 0));
+        hen.add(box(0.05, 0.06, 0.05, mat(c), 0.06, 0.12, 0));
+        hen.add(box(0.02, 0.03, 0.02, mat(0xd8473a), 0.07, 0.165, 0));
+        hen.position.set(x, 0, z);
+        hen.rotation.y = x * 4;
+        g.add(hen);
+      }
+      break;
+    }
+    case 'fountain': {
+      // A round stone basin with a tiered column and water that catches the light.
+      g = new THREE.Group();
+      const stone = mat(PALETTE.stone);
+      const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.92, 0.28, 12), stone);
+      basin.position.y = 0.14;
+      basin.castShadow = true;
+      basin.receiveShadow = true;
+      g.add(basin);
+      const water = new THREE.Mesh(new THREE.CylinderGeometry(0.76, 0.76, 0.04, 12), new THREE.MeshLambertMaterial({ color: PALETTE.water, emissive: new THREE.Color(0x1d4a5c), transparent: true, opacity: 0.9 }));
+      water.position.y = 0.27;
+      g.add(water);
+      const column = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 0.6, 8), stone);
+      column.position.y = 0.55;
+      g.add(column);
+      const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.18, 0.1, 10), stone);
+      bowl.position.y = 0.86;
+      bowl.castShadow = true;
+      g.add(bowl);
+      const spout = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 6), new THREE.MeshLambertMaterial({ color: 0xcfeaf3, emissive: new THREE.Color(0x3a6f80) }));
+      spout.position.y = 1.02;
+      g.add(spout);
+      // Paving round about.
+      g.add(box(w, 0.02, d, mat(0xcbc2ad), 0, 0.01));
+      break;
+    }
+    case 'granary': {
+      // A timber store raised on staddle stones (to keep mice out), with sacks by the door.
+      g = new THREE.Group();
+      const stone = mat(PALETTE.stone);
+      for (const x of [-1, 0, 1]) for (const z of [-1, 1]) {
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.28, 6), stone);
+        cap.position.set(x * w * 0.32, 0.14, z * d * 0.3);
+        cap.castShadow = true;
+        g.add(cap);
+        g.add(box(0.24, 0.04, 0.24, stone, x * w * 0.32, 0.3, z * d * 0.3));
+      }
+      g.add(box(w * 0.78, 0.06, d * 0.72, mat(PALETTE.darkWood), 0, 0.35));
+      const body = box(w * 0.74, 0.62, d * 0.66, mat(PALETTE.wood), 0, 0.69);
+      body.receiveShadow = true;
+      g.add(body);
+      // Weatherboarding: dark strips along the sides.
+      for (let i = 0; i < 3; i++) g.add(box(w * 0.75, 0.025, d * 0.67, mat(PALETTE.darkWood), 0, 0.48 + i * 0.2));
+      const roof = pyramidRoof(w * 0.92, d * 0.86, 0.55, mat(PALETTE.roof), 1.0);
+      roof.scale.x *= 1.15;
+      g.add(roof);
+      g.add(box(0.36, 0.48, 0.03, mat(PALETTE.trim), 0, 0.68, (d * 0.66) / 2 + 0.01));
+      // Steps up to the door, and sacks waiting to go in.
+      g.add(box(0.4, 0.08, 0.3, mat(PALETTE.darkWood), 0, 0.2, (d * 0.66) / 2 + 0.2));
+      const sackMat = mat(PALETTE.canvas);
+      for (const [x, z, s] of [[0.42, 0.95, 1], [0.6, 0.9, 0.85], [-0.48, 0.92, 0.9]] as const) {
+        const sack = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13 * s, 0), sackMat);
+        sack.scale.y = 1.3;
+        sack.position.set(x, 0.16 * s, z);
+        sack.castShadow = true;
+        g.add(sack);
       }
       break;
     }
@@ -321,19 +614,96 @@ export const RESIDENT_COLORS: Record<string, number> = {
 };
 
 export function residentMesh(id: string): THREE.Group {
+  // A chunky low-poly villager (review: "faceless pills"): legs, a coat in their colour, arms,
+  // a head with their hair or hat. Looks match their portrait.
+  const look = looksOf(id);
+  const coat = mat(residentColor(id));
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.38, 6), mat(residentColor(id)));
-  body.position.y = 0.19;
-  body.castShadow = true;
-  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 0), mat(0xf1d2b6));
-  head.position.y = 0.48;
+  const body = new THREE.Group();
+  body.name = 'body';
+  for (const [x, name] of [
+    [-0.055, 'legL'],
+    [0.055, 'legR'],
+  ] as const) {
+    const leg = new THREE.Group();
+    leg.name = name;
+    leg.position.set(x, 0.2, 0);
+    leg.add(box(0.07, 0.2, 0.08, mat(0x3a2e26), 0, -0.1, 0));
+    body.add(leg);
+  }
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.3, 7), coat);
+  torso.position.y = 0.34;
+  torso.castShadow = true;
+  body.add(torso);
+  body.add(box(0.21, 0.035, 0.18, mat(0x4a3a2c), 0, 0.25, 0));
+  for (const [x, name] of [
+    [-0.15, 'armL'],
+    [0.15, 'armR'],
+  ] as const) {
+    const arm = new THREE.Group();
+    arm.name = name;
+    arm.position.set(x, 0.46, 0);
+    arm.add(box(0.06, 0.22, 0.07, coat, 0, -0.1, 0));
+    const hand = new THREE.Mesh(new THREE.IcosahedronGeometry(0.035, 0), mat(look.skin));
+    hand.position.y = -0.22;
+    arm.add(hand);
+    body.add(arm);
+  }
+  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.115, 1), mat(look.skin));
+  head.position.y = 0.6;
   head.castShadow = true;
-  g.add(body, head);
+  body.add(head);
+  const hair = mat(look.hair);
+  const hairPiece = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, sx = 1, sy = 1, sz = 1) => {
+    const p = new THREE.Mesh(geo, m);
+    p.position.set(x, y, z);
+    p.scale.set(sx, sy, sz);
+    p.castShadow = true;
+    body.add(p);
+  };
+  const cap = new THREE.SphereGeometry(0.125, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2);
+  switch (look.style) {
+    case 'short':
+      hairPiece(cap, hair, 0, 0.62, -0.01);
+      break;
+    case 'bob':
+      hairPiece(cap, hair, 0, 0.6, -0.01, 1.08, 1.25, 1.08);
+      break;
+    case 'bun':
+      hairPiece(cap, hair, 0, 0.62, -0.01);
+      hairPiece(new THREE.IcosahedronGeometry(0.06, 0), hair, 0, 0.75, -0.07);
+      break;
+    case 'long':
+      hairPiece(cap, hair, 0, 0.62, -0.01);
+      hairPiece(new THREE.BoxGeometry(0.2, 0.22, 0.06), hair, 0, 0.52, -0.08);
+      break;
+    case 'cap':
+      hairPiece(cap, mat(residentColor(id), 0), 0, 0.63, 0, 1.02, 0.8, 1.02);
+      hairPiece(new THREE.BoxGeometry(0.12, 0.02, 0.1), coat, 0, 0.64, 0.12);
+      break;
+    case 'hat':
+      hairPiece(new THREE.CylinderGeometry(0.19, 0.19, 0.025, 10), mat(0x5a3a24), 0, 0.68, 0);
+      hairPiece(new THREE.CylinderGeometry(0.09, 0.11, 0.12, 8), mat(0x6b4a32), 0, 0.75, 0);
+      break;
+    case 'curly':
+      for (const [x, z] of [
+        [-0.07, 0],
+        [0.07, 0],
+        [0, -0.06],
+        [0, 0.05],
+      ] as const)
+        hairPiece(new THREE.IcosahedronGeometry(0.065, 0), hair, x, 0.69, z);
+      break;
+    case 'bald':
+      break;
+  }
+  if (look.glasses) hairPiece(new THREE.BoxGeometry(0.16, 0.03, 0.02), mat(0x3b3226), 0, 0.61, 0.11);
+  g.add(body);
   // A generous invisible hit box, so small figures are easy to click.
-  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.75, 0.5), new THREE.MeshBasicMaterial({ visible: false }));
-  hit.position.y = 0.35;
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.85, 0.5), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.y = 0.4;
   hit.name = 'hit';
   g.add(hit);
-  g.scale.setScalar(1.35);
+  g.scale.setScalar(1.25 * look.height);
   return g;
 }

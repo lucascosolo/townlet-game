@@ -94,6 +94,7 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     blurb: 'Plots that feed the town.',
     produces: { food: 0.9 },
     name: 'Garden plots',
+    singular: 'garden plot',
     kind: 'work',
     size: [2, 2],
     emits: { green: 0.5 },
@@ -133,7 +134,7 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   woodlot: {
     type: 'woodlot',
-    cost: 2,
+    cost: 6,
     blurb: 'Trees tended for timber.',
     produces: { timber: 0.3 },
     name: 'Woodlot',
@@ -185,7 +186,7 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   flowerbed: {
     type: 'flowerbed',
-    cost: 0,
+    cost: 1,
     blurb: 'Colour and scent.',
     name: 'Flower bed',
     kind: 'decor',
@@ -233,6 +234,59 @@ Object.assign(BUILDINGS, {
     blurb: 'Grows food even in winter.',
     passive: { food: 0.35 },
   },
+  granary: {
+    type: 'granary',
+    name: 'Granary',
+    kind: 'work',
+    size: [2, 2],
+    emits: { scent: 0.1 },
+    radius: 1,
+    activities: [],
+    cost: 12,
+    blurb: 'Puts food by for winter. What the larder can\'t hold goes here.',
+  },
+  // Tier buildings (M4): each opens up as the town moves up a tier.
+  beehives: {
+    type: 'beehives',
+    name: 'Beehives',
+    tier: 1,
+    kind: 'work',
+    size: [1, 1],
+    emits: { green: 0.2, scent: 0.3 },
+    radius: 1,
+    activities: ['stroll'],
+    cost: 4,
+    blurb: 'Honey from spring to autumn, and the flowers do better for it. Opens at Hamlet.',
+    passive: { food: 0.1 },
+  },
+  coop: {
+    type: 'coop',
+    name: 'Chicken coop',
+    tier: 2,
+    kind: 'work',
+    size: [2, 1],
+    emits: { bustle: 0.2, noise: 0.15 },
+    radius: 1,
+    activities: ['work', 'stroll'],
+    capacity: 1,
+    shift: [h(7), h(12)],
+    cost: 8,
+    blurb: 'Eggs every morning, all year round. Opens at Village.',
+    produces: { food: 1.2 },
+  },
+  fountain: {
+    type: 'fountain',
+    name: 'Fountain',
+    tier: 3,
+    kind: 'social',
+    size: [2, 2],
+    emits: { water: 0.6, bustle: 0.2, green: 0.1 },
+    radius: 2,
+    activities: ['socialize', 'stroll'],
+    comfortable: 6,
+    cost: 15,
+    blurb: 'The heart of a proper town. Somewhere to meet that is not the teahouse. Opens at Townlet.',
+  },
   banner: {
     type: 'banner',
     name: 'Town banner',
@@ -250,4 +304,10 @@ export function buildingDef(type: string): BuildingDef {
   const def = BUILDINGS[type];
   if (!def) throw new Error(`unknown building type: ${type}`);
   return def;
+}
+
+/** One of a building, lower case: "garden plot", not "garden plots" (review: "a garden plots"). */
+export function singularName(type: string): string {
+  const def = buildingDef(type);
+  return def.singular ?? def.name.toLowerCase();
 }

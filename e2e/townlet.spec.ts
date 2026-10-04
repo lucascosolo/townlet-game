@@ -36,7 +36,7 @@ async function runTo(page: Page, tick: number): Promise<void> {
 
 /** A proposal that came up along the way is put off, so its popup doesn't cover the town. */
 async function putOffDecisions(page: Page): Promise<void> {
-  const later = page.locator('[data-testid^="later-"]');
+  const later = page.locator('[data-testid^="later-"], [data-testid="tier-ok"]');
   while ((await later.count()) > 0) {
     await later.first().click();
     await page.waitForTimeout(50);

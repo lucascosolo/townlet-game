@@ -2,6 +2,79 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-04: M4, a fun game on phones and desktops — directions chosen
+
+**The ask (owner):** "Make it a super fun mobile game with a good UI for mobile, but the desktop UI should be fun on desktop and use the extra space appropriately."
+
+**The harsh gameplay review** (docs/reviews/2026-10-04-gameplay-review.md) scored the game 4/10. Its main findings:
+- Player choices barely move how residents feel.
+- Timber and food pile up, and favours are almost always yes.
+- There are dead stretches with nothing to decide.
+- Residents talk about the steward too much.
+- Lines repeat.
+- There is no save.
+- There are no tiers or long arc.
+
+**The owner's answers:**
+- **Phone: portrait first.** One-handed play: a bottom tab bar, controls within thumb reach, and sheets that peek so the town stays visible. Landscape still works, with less polish.
+- **The fun to push: goals and rewards, and collecting residents.**
+- **Desktop: dashboard style.** Docked widgets (goals, people, board and log, the selection, stores) that the player can show or hide around the town.
+
+**Chosen for M4:**
+- **Today's goals.** Each morning brings three small goals, drawn from what the town needs right now (answer an ask, talk to someone you haven't, fill the granary by an amount, ask a favour, build what someone wants). Each completed goal earns renown, with a bonus for all three.
+- **Renown and tiers.** The spec's tiers arrive: Clearing → Hamlet → Village → Townlet.
+  - **Renown comes from** goals, granted asks and wishes, dreams seen through, the winter stores and newcomers.
+  - **Each tier** raises the resident cap and unlocks a new building: beehives at Hamlet, a chicken coop at Village, a fountain at Townlet.
+  - **Each tier-up** is celebrated.
+  - **Buildings already in the game stay unlocked**, so earlier milestones keep their meaning.
+- **The Folk album.** A card for every resident. You fill it in by talking: each question reveals facts (what they like and dislike, what they value, their quirks, their dream, their closest friend). Each new fact earns a little renown. Residents you haven't spoken to show as "not met yet".
+- **The review's quick wins**, which are cheap and remove things a reviewer would screenshot:
+  - grammar (a/an, singular building names, stacked tics);
+  - separate opinion lines for people and for places;
+  - the steward topic weighted by recent change rather than standing;
+  - dream steps that advance when their building appears;
+  - a digest of belief updates on the board;
+  - speaker names on bubbles;
+  - progress lines for the stores quest;
+  - fewer repeated lines.
+- **Economy tension:**
+  - A favour's hours come out of the resident's own job output.
+  - Flower beds and woodlots cost more.
+  - The bakery and jetty make less in winter, so the stores matter.
+- **Save.** The game already keeps a replayable command log and a seed. Both are saved in the browser and replayed on load. There is also a "New valley" button.
+- **Layouts:**
+  - **Phone (portrait):** a bottom tab bar with Town, Goals, Folk, Build and Log. Sheets have peek, half and full heights. Tapping a resident opens a small card with Talk, Favour and Profile.
+  - **Desktop:** a dashboard of docked widgets in left and right columns. The town keeps the middle, and the build tray stays along the bottom.
+
+**Deferred, and why:**
+- *Making needs depend on the player's town* (review #1). This is the deepest fun problem, but it changes the mood model under every M1–M3 criterion. It needs its own chunk, with its own criteria and soaks.
+- *More dilemmas* (review #4) and *seeded friction between residents* (review #12). These are content-heavy, and they are the natural next chunk after M4.
+- *The charter and the Almanac.* Townlet tier is reached in M4. The ceremony comes later.
+- *A random seed by default.* The six founders are authored, so a new seed changes less than the review implies. "New valley" picks a random seed, and the default stays seed 1 for now.
+
+## 2026-10-04: Winter stores — Juniper's quest and the granary
+
+**The ask (owner):** "Juniper is obsessed with storing up food for winter. That may be reasonable, but instead of a food number just climbing higher, we could make it a goal: store 150 food for the winter, and it goes in a special building for storing food. Like a quest."
+
+**What the numbers showed first.** In the quiet town with the considerate steward, the larder reaches its cap of 80 by about day 7 and sits there. The town makes roughly 15 food a day and eats about 9, so 5–6 food a day was being thrown away at the cap. That is the "number just climbing higher", and it is also the missing food sink the owner asked for earlier.
+
+**Chosen:**
+- **A granary**, a new building (12 timber, 2×2). It holds up to 300 food, apart from the larder.
+- **A yearly town quest, raised by Juniper:** "Winter stores: put by 150 food in the granary before the first day of winter." Juniper asks for a granary once the larder is overflowing or autumn arrives, whichever comes first. The target grows with the town: 25 food per resident, never below 150.
+- **How food gets there.** Food that would spill over the larder's cap goes into the granary instead of being lost. In daylight, while the larder holds more than 24, surplus is carried across at 2 food an hour. The larder stops pinning at its cap, and the granary's count is the number that climbs, towards a target with a deadline.
+- **What the stores do in winter.** Every winter dawn, the granary tops the larder back up to 24. A meal that finds the larder empty draws from the granary. Stores that are full on the first day of winter mean a winter without shortages.
+- **The outcome is felt.** If the target is met on the first day of winter, the town is grateful to Juniper, and Juniper to the steward. If it falls short, Juniper says so, and the town eats what there is. The quest comes round again the next year.
+- **Shown on the board.** A quest card shows "N of 150 put by", a progress bar and the days left until winter. The HUD shows the granary's count next to the larder once a granary stands.
+
+**Changed mid-chunk, after the first measurements (before the criteria were checked):**
+- **Each spring, what's left is shared out at a feast, and the granary starts again from empty.** Without this, nothing drained the granary: the town's winter production still outran what it ate, and year two began with more than 200 already put by, so the quest was met before it was posted. The granary would just have been a second climbing number, which is what the owner complained about. The feast lifts everyone's mood by an amount that grows with what is shared, so a good harvest still pays off.
+- **Capacity is 300 per granary, not 300 in all.** With newcomers, the target (25 per resident) reached 450, more than one granary can hold, so the quest became impossible. The keeper now asks for another granary when the target outgrows the room. That gives a growing town something to build.
+
+**Rejected:**
+- *Adding the stores as more stages of Juniper's authored dream.* That would lengthen her first dream past winter, and it would move the M3a and M3b dream criteria without anyone deciding to. A quest beside the dream keeps those criteria as they were declared.
+- *An automatic granary with no deadline.* Without "before winter" there is no goal, only a second number climbing.
+- *Feasts, weddings and the trade cart as sinks.* They are planned for M3d (families and the food economy). The granary comes first because the owner asked for it by name.
+
 ## 2026-10-03: M3c, agency — playtest, and directions chosen
 
 **The playtest (owner, after M3b part 1 went live):**

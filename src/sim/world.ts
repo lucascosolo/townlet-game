@@ -132,6 +132,9 @@ export function route(from: [number, number], to: [number, number]): Array<[numb
 }
 
 export function canPlace(state: SimState, type: string, x: number, y: number, rot = 0): string | null {
+  // Buildings that open up with the town's tier (M4).
+  const tier = buildingDef(type).tier ?? 0;
+  if (tier > (state.progress?.tier ?? 0)) return 'not unlocked yet';
   const [w, h] = footprint(type, rot);
   if (x < 0 || y < 0 || x + w > state.width || y + h > state.height) return 'out of bounds';
   for (const b of liveBuildings(state)) {

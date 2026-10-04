@@ -667,7 +667,7 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - The log's default view stays readable: in a 7-day browser run, the Story filter shows at most 40 lines a day on average.
 
 
-**M3c status (2026-10-04): all six met, pending the 10-year soak with newcomers (below).** The tests are in `test/m3c.test.ts`, `test/m3c-year.slow.test.ts` and `e2e/m3c.spec.ts`.
+**M3c status (2026-10-04): all six met.** The tests are in `test/m3c.test.ts`, `test/m3c-year.slow.test.ts` and `e2e/m3c.spec.ts`.
 
 1. **Favours: met.**
    - Every refusal reason is checked against a state that makes it true: tired, unwell, asked too often, a poor view of the steward, low, not on speaking terms, already busy.
@@ -694,12 +694,147 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - All earlier unit and browser tests pass. Long tests got more time, because the bigger map and more residents are slower. One harness detail changed: popups are now put off on the next frame too.
    - The log's Story view averages 20–27 lines a day in the first week, against at most 40.
    - The one-year soak with newcomers (10 seeds) shows no degenerate state, after a fix: see below.
-   - The 10-year soak with newcomers (3 seeds) is still running at the time of writing; its result will be added here.
+   - The 10-year soak with newcomers (3 seeds) is clean: no degenerate state on seeds 1–3. It now runs nightly in `.github/workflows/slow.yml`.
 
 **Found and fixed on the way:**
 - **Jobless newcomers.** Workplaces have limited places, so a newcomer whose trade was full had no job, and their purpose ran dry; 6 of 10 one-year soaks flagged it. They now help out at their trade's workplace, and their "place to work" ask fires when every place of that kind is full. That gives the player something to build.
 - **Newcomer ids clashed between simulations in one process,** which broke determinism when tests ran together. Ids now carry a hash of what generated them.
 - **The soak's random builder aimed across the whole bigger map,** so most of its builds failed and one town flagged an idle baker. It now builds within the settled valley, and never "removes" wild land.
+
+
+**Winter stores criteria (predeclared 2026-10-04, before any granary code).** Measured in the quiet town on seeds 1–5 unless stated. A failure is reported as a failure, not redefined.
+
+1. **Juniper raises the quest:** on every seed with the considerate steward, Juniper asks for a granary before the first day of winter (day 22).
+2. **Nothing is lost while there is room.** With a granary standing, food that would have gone over the larder's cap goes into the granary. A unit test checks that larder plus granary rise by exactly what was made, up to the granary's capacity. Over 28 days the larder no longer sits at its cap on more than 2 days, against 4–8 days today.
+3. **The target can be met, and needs the player:**
+   - The favour-asking steward, which builds what is asked for and asks one favour a day, has 150 or more in the granary on the first day of winter on at least 3 of 5 seeds.
+   - For the considerate steward, which only builds what is asked for, the result is measured and reported, with no bound.
+4. **Full stores feed the winter.** On every seed where the target is met, there is no food shortage from day 22 to day 28.
+5. **The outcome is felt and narrated.** A met target brings every resident a warmer view of Juniper and brings Juniper a warmer view of the steward. A missed one is narrated as missed. On every seed, the quest is posted again in the second year.
+6. **In the browser:**
+   - The board shows a Winter stores card with the count, the target and the days to winter.
+   - The HUD shows the granary's count once one stands.
+   - The granary is in the build tray.
+7. **No regressions:**
+   - All earlier unit and browser tests pass.
+   - Determinism holds.
+   - The one-year soak with newcomers (10 seeds) shows no degenerate state.
+
+
+**Winter stores status (2026-10-04): all seven met.** The tests are in `test/stores.test.ts` and `e2e/stores.spec.ts`. Two design changes were made after the first measurements and before the criteria were checked; they are recorded in DECISIONS.md: a spring feast empties the granary each year, and capacity is 300 per granary.
+
+1. **Juniper raises the quest: met.** With the considerate steward, Juniper raises it on day 7–9 on every seed and asks for a granary. The steward builds it on day 13–16.
+2. **Nothing is lost while there is room: met.** Over the larder's cap goes into the granary, exactly, up to its capacity. The larder sits at its cap on 0–2 days in 28 (it was 4–8).
+3. **The target can be met, and needs the player: met.**
+   - The favour-asking steward meets it on 3 of 5 seeds (257/200, 300/250, 300/200 met; 168/325 and 257/300 short). Its town grows quickly with newcomers, so its target is higher.
+   - The considerate steward, reported without a bound, meets 150 on all 5 seeds (154–209). In a six-person town, building the granary promptly is enough. The quest gets harder as the town grows, and a player who leaves the granary unbuilt for long misses it.
+4. **Full stores feed the winter: met.** There are no shortages from day 22 to day 28 on any seed that met the target.
+5. **The outcome is felt and narrated: met.**
+   - Every resident present feels kindly towards Juniper.
+   - A missed target is narrated as missed.
+   - In year two, the spring feast shares out the leftovers and the quest is posted again.
+6. **In the browser: met.** The board's Winter stores card shows "N of 150 … 5 days to winter". The HUD shows the granary's count against the target. The granary is in the tray at 12 timber.
+7. **No regressions: met.**
+   - All earlier unit tests pass: 57, plus the one expected failure.
+   - All browser tests pass: 18.
+   - The one-year soak with newcomers (bakery, 10 seeds × 112 days) found no degenerate state.
+   - One harness change: the e2e popup helper now waits for rendered frames rather than a fixed 500 ms. A slow frame let a proposal popup arrive after the old window, and that popup covered the tabs.
+
+
+**M4 criteria: a fun game on phones and desktops (predeclared 2026-10-04, before any M4 code).** Measured in the quiet town on seeds 1–5 over 28 days unless stated. A failure is reported as a failure, not redefined. The numbers in brackets are what the harsh review measured.
+
+1. **Writing and minds (review quick wins):**
+   - No "a" before a vowel-sounding building name, no plural building names after "a", and no "?," or doubled tics anywhere in the 28-day log on any seed.
+   - Opinions of people never use the place-opinion lines.
+   - The steward is mentioned in at most 12% of quoted lines in the 21-day log with the favour-asking steward [24%].
+   - No line is quoted more than 10 times in that log [29], and at least 65% of quoted lines are unique [53%].
+   - A dream step that waits on a building advances within the hour the building goes up.
+2. **Tension in the economy:**
+   - With the favour-asking steward, timber sits at its cap on at most 5 of 28 days [7 or more].
+   - A favour costs the resident's own job output for those hours (unit test).
+   - With no granary, at least 3 of 5 seeds have a food shortage in winter. With the stores met, none do.
+3. **Today's goals:**
+   - Every morning has 3 goals, and each can be completed that day by something the player can do. A unit test completes each goal kind through commands.
+   - A scripted "goal-keeping steward" completes at least 2 a day on average.
+4. **Renown and tiers:**
+   - The goal-keeping steward reaches Hamlet by day 7 and Village by day 28 on every seed.
+   - A do-nothing steward is still a Clearing on day 28 on every seed.
+   - Each tier raises the resident cap and unlocks its building. Nothing that was buildable before M4 becomes locked.
+5. **The Folk album:**
+   - Asking a resident all four questions on two different days reveals at least 80% of their facts.
+   - Facts are revealed only by talk commands, so a replay reveals the same facts.
+   - Every revealed fact matches the resident's state.
+6. **On a phone (390×844, in the browser):**
+   - A bottom tab bar with 5 tabs.
+   - Every control is at least 44px.
+   - No horizontal scrolling.
+   - With a sheet at peek, at least 55% of the screen height shows the town.
+   - Tapping a resident in the world opens a card with Talk, Favour and Profile.
+   - The touch build flow still works.
+7. **On a desktop (1440×900, in the browser):**
+   - The dashboard shows Goals, Folk, Board and Log, and the selection, as docked widgets.
+   - Each widget can be collapsed and brought back.
+   - The town keeps at least 40% of the window width unobstructed in the middle.
+8. **Save:**
+   - Reloading the page restores the same town (tick, buildings, residents, revealed facts and renown) from the saved command log.
+   - "New valley" starts a fresh one.
+9. **No regressions:**
+   - All earlier unit and browser tests pass. If an M4 change moves an earlier measured number, the earlier criterion is re-measured and reported.
+   - Determinism holds.
+   - The one-year soak with newcomers (10 seeds) shows no degenerate state.
+
+
+**M4 status (2026-10-04): eight of nine met; criterion 9 met with one earlier number reported as missed.** The tests are in `test/m4.test.ts`, `e2e/m4-phone.spec.ts` and `e2e/m4-desktop.spec.ts`. Measured with the favour-asking steward over 21 days unless stated.
+
+1. **Writing and minds: met.**
+   - There are no broken articles, plural names after "a", or "?," over 28 days on any seed.
+   - The steward appears in 6.4–7.3% of quoted lines [24%].
+   - The most repeated line appears 5–7 times [29].
+   - 66–74% of quoted lines are unique [53%].
+   - Person opinions never use the place lines.
+   - Juniper's glasshouse step advances within the hour it is built, on every seed.
+2. **Tension in the economy: met.**
+   - Bram bakes 0.5 food on a day he cuts timber for you, against 1.2 on a day he doesn't.
+   - Timber never sits at its cap with the favour-asking steward (0 of 28 days on every seed).
+   - With no granary, all 5 seeds go short in winter (4–5 days each). Where the stores are met, none do.
+   - The owner confirmed that a winter shortage under a careless steward is the sim working as intended.
+3. **Today's goals: met.**
+   - Every morning has 3 goals.
+   - All 7 kinds of goal were completed by commands alone.
+   - The goal-keeping steward completes 2.36–2.43 a day.
+4. **Renown and tiers: met.**
+   - The goal-keeper reaches Hamlet on day 2, Village on day 7–8 and Townlet on day 22–24.
+   - A do-nothing town is a Clearing on day 28 on every seed (12–24 renown, all from dreams that need nothing from you).
+   - Nothing that was buildable before M4 is locked.
+5. **The Folk album: met.**
+   - Two days of the four questions reveal 8 of 10 facts.
+   - Facts come only from talk commands, and replay identically.
+   - Facts are read from live state.
+6. **On a phone: met.**
+   - The tab bar has five tabs.
+   - No visible control is under 44px on any of the five screens.
+   - The page never scrolls sideways.
+   - At peek the town fills 75% of the screen.
+   - Tapping a resident opens the card, and Talk gets an answer.
+   - The touch build flow passes through the tab bar.
+7. **On a desktop: met.**
+   - Goals, Folk and the board/log/journal panel are docked.
+   - Each folds and hides, and comes back from the panels menu.
+   - The town keeps 52% of a 1440px window.
+8. **Save: met.**
+   - Reloading restores the same buildings, residents, revealed facts and renown, with the clock a minute or two on because the game runs on.
+   - "Start a new valley" gives a new seed.
+9. **No regressions: met, with one earlier number reported as missed.**
+   - All 69 unit tests and 22 browser tests pass, plus the two expected failures (below).
+   - The one-year soak with newcomers (bakery, 10 seeds × 112 days) finds no degenerate state: 2.9 rival pairs a run, an argument in every run, and the busiest place takes 45% of socialising. The year-long M3c tests (`npm run test:slow`) pass, 5 of 5.
+   - Several earlier measurements moved, and are reported here rather than tuned away:
+     - **Rivalries.** Arguments were being smoothed away so fast that no rival pairs formed in the considerate town. Grudges now linger for a week after an argument. The M1 soak has 1.1 rival pairs a run (band 0.5–4), and the M3a rival check passes again.
+     - **Missed: friends keep company under a careless steward.** The ratio is 1.94× (2.19× when M3a closed). Each lever tried to win it back worked against something else:
+       - a pull towards friends herded the town into one place and broke the M1 spread band;
+       - more calling-round pulled Fen off the bench he loves and broke an M1 twin test.
+       It is kept as a visible expected failure.
+     - **Winter stores.** The target is now 30 food per resident, so meeting it covers a winter (25 did not, once winters bit). The favour-asking steward meets it on 3 of 5 seeds and the considerate steward on 4 of 5. The considerate steward now retries a build it couldn't afford, and the stores e2e reads the target from state.
+     - **Harness.** The browser popup helpers now also put off the tier celebration. The phone build test uses the tab bar. The 12-resident speed test starts as a Hamlet, because a Clearing holds 8.
 
 ---
 

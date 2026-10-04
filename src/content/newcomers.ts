@@ -12,6 +12,8 @@ interface Trade {
   id: string;
   /** Buildings that draw this kind of person: each one in town makes them likelier to come. */
   drawnBy: string[];
+  /** Only drawn by what is built (M4: a trade for a tier building never appears before it). */
+  onlyIfDrawn?: boolean;
   past: string[];
   job: string;
   fallbackJob: string;
@@ -22,6 +24,18 @@ interface Trade {
 }
 
 const TRADES: Trade[] = [
+  {
+    id: 'henkeeper',
+    drawnBy: ['coop', 'beehives'],
+    onlyIfDrawn: true,
+    past: ['Kept hens and bees on a farm downriver', 'A smallholder whose farm was sold'],
+    job: 'coop',
+    fallbackJob: 'garden',
+    ages: [26, 64],
+    traits: { steady: 0.4, generous: 0.3 },
+    values: { nature: 0.75, community: 0.6 },
+    hopes: ['Keep a few hens and a hive or two.', 'Have eggs to give away to the neighbours.'],
+  },
   {
     id: 'potter',
     drawnBy: ['workshop', 'flowerbed'],
@@ -214,7 +228,7 @@ export interface Welcome {
  */
 export function generateNewcomer(seed: number, n: number, welcome: Welcome, takenNames: Set<string> = new Set()): ResidentDef {
   const h: RngHolder = { rng: deriveSeed(seed, `newcomer:${n}:${welcome.tick}:${welcome.home[0]},${welcome.home[1]}`) };
-  const weights = TRADES.map((t) => 1 + t.drawnBy.reduce((s, b) => s + 0.6 * Math.min(3, welcome.built[b] ?? 0) + (welcome.near.includes(b) ? 2 : 0), 0));
+  const weights = TRADES.map((t) => (t.onlyIfDrawn ? 0 : 1) + t.drawnBy.reduce((s, b) => s + 0.6 * Math.min(3, welcome.built[b] ?? 0) + (welcome.near.includes(b) ? 2 : 0), 0));
   let roll0 = rand(h) * weights.reduce((a, b) => a + b, 0);
   let trade = TRADES[TRADES.length - 1] as Trade;
   for (let i = 0; i < TRADES.length; i++) {

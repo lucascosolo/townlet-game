@@ -6,6 +6,12 @@ import type { Register } from '../sim/types.js';
 
 export type Lines = Partial<Record<Register, string[]>> & { plain: string[] };
 
+/** More ways to say something (M4: the review counted the same line 29 times in 21 days). */
+export function addLines(target: Lines | undefined, more: Partial<Record<Register, string[]>>): void {
+  if (!target) return;
+  for (const [reg, lines] of Object.entries(more) as Array<[Register, string[]]>) target[reg] = [...(target[reg] ?? []), ...lines];
+}
+
 /** How a belief reads on the notice board: "Ada has decided {statement}". */
 export const BELIEF_STATEMENTS: Record<string, string> = {
   noisy_at_night: '{s} keeps {obj} up at night',
@@ -360,3 +366,73 @@ export const ASKS: Record<string, Lines> = {
     dreamy: ['I keep seeing a {what} here, as if it already were.'],
   },
 };
+
+// ---------------------------------------------------------------- more variety (M4)
+
+addLines(REACTIONS.work, {
+  plain: ['Work nearby. Fair enough.', 'That will keep someone busy.', 'Useful. Good.'],
+  formal: ['A sound investment in the town, I should think.', 'Industry, at last. Very proper.', 'That will put some backbone in the place.'],
+  warm: ["Someone's going to love working there.", 'Oh, more going on round here. I like it.', "That'll bring some life to this end."],
+  chatty: ['Ooh, what will they make there?', 'Busy hands, busy town! Love it!', 'Now THAT is progress!'],
+  dreamy: ['The town is learning a new trade.', 'Hammers and hands, soon.', 'Something new will be made there.'],
+});
+addLines(REACTIONS.pretty, {
+  plain: ['That helps the look of things.', 'Nicer now.', 'Good. Colour.'],
+  formal: ['A most becoming addition.', 'The view is improved, I grant you.', 'Charming. Quite charming.'],
+  warm: ['Oh, look at that. Lovely.', "That's brightened my whole walk.", 'I stopped just to look at it.'],
+  chatty: ['Look at THAT!', 'Pretty as a picture!', 'The town is showing off now!'],
+  dreamy: ['The lane is smiling.', 'Colour, where there was none.', 'It looks like it was always there.'],
+});
+addLines(REACTIONS.gather, {
+  plain: ['Good. Somewhere to go of an evening.', 'Should be busy there.'],
+  formal: ['A fine place for the town to meet.', 'Society will be the better for it.'],
+  warm: ["I'll see everyone there, I bet.", 'Somewhere to be together. That matters.'],
+  chatty: ['Meet you there tonight!', 'Gossip headquarters! Wonderful!'],
+  dreamy: ['A place for evenings to collect.', 'Voices will gather there like rain.'],
+});
+addLines(REACTIONS.sit, {
+  formal: ['A bench is the mark of a civilised lane.', 'A seat for the weary. Most thoughtful.'],
+  warm: ["I'll have my tea there.", 'Oh, a place to rest my legs.'],
+  chatty: ['Bagsy that bench!', 'Sit-down chats! Yes!'],
+  dreamy: ['A bench, waiting for someone.', 'Somewhere to sit and be still.'],
+});
+addLines(REACTIONS.greener, {
+  plain: ['Green. Better.', 'Something growing. Good.'],
+  chatty: ['More green! Keep it coming!', 'Flowers! At my door!'],
+  dreamy: ['Leaves at my window now.', 'Something alive, close by.'],
+});
+addLines(THOUGHTS['my_workplace+'], {
+  plain: ['Work to do. Good.', 'I know where I am now.'],
+  formal: ['I shall do good work here.', 'A place to be useful, at last.'],
+  warm: ["Somewhere I'm needed. That means a lot.", "I'll make the town proud here."],
+  chatty: ['My new place! Come and see!', 'First day! Wish me luck!'],
+  dreamy: ['My hands have somewhere to belong.', 'Work, like a door opening.'],
+});
+addLines(THOUGHTS['good_times+'], {
+  plain: ['Good company at {s}.', 'Always someone at {s}.'],
+  formal: ['{S} is the heart of the town, I think.', 'One always finds good company at {s}.'],
+  warm: ['{S} is where I feel at home.', 'I love an evening at {s}.'],
+  chatty: ['See you at {s}! Everyone goes!', '{S} tonight? Obviously!'],
+  dreamy: ['{S} glows a little, of an evening.', 'The evenings pool at {s}.'],
+});
+addLines(THOUGHTS['peaceful_spot+'], {
+  plain: ['Peaceful, {s}.', 'Good for thinking, {s}.'],
+  formal: ['{S} is a fine place for reflection.', 'I find {s} very restoring.'],
+  warm: ['{S} is my little hideaway.', "{S}'s so calm. I needed that."],
+  chatty: ['Shh! Thinking! At {s}!', '{S}: my secret spot. Well, not now!'],
+  dreamy: ['The quiet at {s} is a soft blanket.', 'Time goes slow at {s}.'],
+});
+addLines(THOUGHTS['nice_addition+'], {
+  plain: ['{S}. Good call.', 'Glad of {s}.'],
+  formal: ['{S} was a fine idea.', 'I approve of {s}, I must say.'],
+  warm: ['I do like {s}.', '{S} was just what we needed.'],
+  chatty: ['{S}! Love it! Who thought of it?', 'Great idea, {s}!'],
+  dreamy: ['{S} fits, somehow.', '{S} makes the town make sense.'],
+});
+addLines(SPEECH.thanks, {
+  plain: ['Thank you. I mean it.', "Good. That's what I wanted."],
+  formal: ['I am most grateful, steward.', 'You have my thanks. Sincerely.'],
+  warm: ["You remembered! Thank you so much.", 'I could hug you. Thank you.'],
+  chatty: ['You legend! Thank you!', 'Yes! YES! Thank you!'],
+  dreamy: ['You heard me. Thank you.', 'It is just as I pictured it.'],
+});

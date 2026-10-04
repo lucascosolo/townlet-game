@@ -37,9 +37,11 @@ import {
   recentAsks,
   type FavourVerdict,
 } from './favours.js';
-import { aspirationMinute, aspirationMorning, type AspirationHost } from './story/aspirations.js';
+import { aspirationMinute, aspirationMorning, aspirationsAfterBuild, waitingOnStage, type AspirationHost } from './story/aspirations.js';
 import { activeGatherings, newStoryState, storyStep } from './story/director.js';
 import { closeDilemma } from './story/dilemmas.js';
+import { progressDawn, progressEvent, progressHourly, residentCap } from './progress.js';
+import { LARDER_CAP, drawFromGranary, overflowToGranary, storesDawn, storesHourly } from './stores.js';
 import { DAWN_MINUTE, TICKS_PER_DAY, dayOf, minuteOf, seasonOf } from './time.js';
 import {
   NEEDS,
@@ -94,7 +96,8 @@ const DEFAULT_WILD = 24;
 /** Someone moves into an empty home this long after it is built. */
 const NEWCOMER_DELAY = 2 * 60;
 /** The valley's limit, for now: the sim and the screen stay comfortable. */
-export const MAX_RESIDENTS = 18;
+/** The most the valley ever holds; each tier allows fewer (progress.ts residentCap). */
+export const MAX_RESIDENTS = 20;
 
 const REQUEST_LAPSE_TICKS = 5 * TICKS_PER_DAY;
 /** How far a resident can see a change to the town, in tiles. */
@@ -105,15 +108,25 @@ const SIGHT = 6;
 export const WORD_OF_MOUTH = 8 * 60;
 /** Food one meal takes from the town's stores. */
 export const MEAL = 0.5;
-export const STOCK_CAP: Record<Resource, number> = { food: 80, timber: 100 };
+/** Meals take this much more in winter. */
+export const WINTER_APPETITE = 2;
+export const STOCK_CAP: Record<Resource, number> = { food: LARDER_CAP, timber: 100 };
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
 /** Seasonal yield of buildings that grow food on their own. */
 const PASSIVE_SEASON: Record<string, Record<ReturnType<typeof seasonOf>, number>> = {
   orchard: { spring: 0.2, summer: 0.6, autumn: 2, winter: 0 },
-  glasshouse: { spring: 0.5, summer: 0.5, autumn: 0.7, winter: 1 },
+  glasshouse: { spring: 0.5, summer: 0.5, autumn: 0.7, winter: 0.7 },
+  beehives: { spring: 1, summer: 1.3, autumn: 0.6, winter: 0 },
 };
-/** Gardens grow little in winter and plenty at harvest. */
-const GARDEN_SEASON: Record<ReturnType<typeof seasonOf>, number> = { spring: 0.8, summer: 1.1, autumn: 1.3, winter: 0.25 };
+/**
+ * Food work by season: gardens grow little in winter and plenty at harvest; flour runs short and
+ * the brook ices over in winter (M4: the winter stores have to matter).
+ */
+const FOOD_SEASON: Record<string, Record<ReturnType<typeof seasonOf>, number>> = {
+  garden: { spring: 0.8, summer: 1.1, autumn: 1.3, winter: 0.25 },
+  bakery: { spring: 1, summer: 1, autumn: 1.1, winter: 0.5 },
+  jetty: { spring: 1, summer: 1.1, autumn: 1, winter: 0.35 },
+};
 
 /** What a change in one ambient quality means to the person noticing it. */
 function detailFor(q: Quality, change: number): string {
@@ -323,6 +336,7 @@ export class Simulation implements AspirationHost {
 
   private emit = (e: SimEvent): void => {
     for (const l of this.listeners) l(e);
+    progressEvent(this, e);
   };
 
   private ctx(): MindContext {
@@ -384,6 +398,13 @@ export class Simulation implements AspirationHost {
       if (state.produced && Object.keys(state.produced).length > 0) this.emit({ t: state.tick, type: 'production', by: state.produced });
       state.produced = {};
       this.emit({ t: state.tick, type: 'dawn', day: dayOf(state.tick) });
+      for (const r of this.activeResidents()) {
+        const log = (r.standingLog ??= []);
+        log.push(r.rel[STEWARD]?.affinity ?? 0);
+        if (log.length > 3) log.shift();
+      }
+      storesDawn(this);
+      progressDawn(this);
     }
 
     for (const id of state.order) {
@@ -401,7 +422,11 @@ export class Simulation implements AspirationHost {
     if (c.kind === 'build') {
       // A scheduled build whose spot has since been taken, or that the town can no longer
       // afford, is dropped, as a player would.
-      if (canPlace(this.state, c.type, c.x, c.y, c.rot ?? 0) === null && this.canAfford(c.type)) this.build(c.type, c.x, c.y, c.rot ?? 0);
+      if (canPlace(this.state, c.type, c.x, c.y, c.rot ?? 0) === null && this.canAfford(c.type)) {
+        const waiting = waitingOnStage(this);
+        this.build(c.type, c.x, c.y, c.rot ?? 0);
+        aspirationsAfterBuild(this, waiting);
+      }
     } else if (c.kind === 'remove') this.remove(c.x, c.y);
     else if (c.kind === 'talk') {
       if (this.state.residents[c.who]) this.talk(c.who, c.question, c.about);
@@ -498,7 +523,7 @@ export class Simulation implements AspirationHost {
     const state = this.state;
     const got = favourYield(state, r, f.kind);
     for (const [res, v] of Object.entries(got) as Array<[Resource, number]>) {
-      state.stock[res] = Math.min(STOCK_CAP[res], state.stock[res] + v);
+      this.addStock(res, v);
       this.addProduced(r.id, res, v);
     }
     favourSatisfaction(r);
@@ -512,6 +537,14 @@ export class Simulation implements AspirationHost {
     }
     r.favour = null;
     this.emit({ t: state.tick, type: 'favour', who: r.id, phase: 'done', kind: f.kind, yield: got, placeId: f.placeId, ...(f.other ? { other: f.other } : {}) });
+  }
+
+  /** Into the town's stores: food over the larder's cap goes to the granary, if there is one. */
+  private addStock(res: Resource, v: number): void {
+    const stock = this.state.stock;
+    const over = stock[res] + v - STOCK_CAP[res];
+    if (res === 'food' && over > 0) overflowToGranary(this.state, over);
+    stock[res] = Math.min(STOCK_CAP[res], stock[res] + v);
   }
 
   private addProduced(by: string, res: Resource, v: number): void {
@@ -533,7 +566,7 @@ export class Simulation implements AspirationHost {
    */
   private newcomers(): void {
     const state = this.state;
-    if (this.activeResidents().length >= MAX_RESIDENTS) return;
+    if (this.activeResidents().length >= Math.min(MAX_RESIDENTS, residentCap(this.state))) return;
     const home = this.emptyHomes().find((b) => state.tick - b.placedTick >= NEWCOMER_DELAY);
     if (!home) return;
     const defs = (state.newcomerDefs ??= []);
@@ -707,8 +740,15 @@ export class Simulation implements AspirationHost {
   /** Start a meal: it draws on the town's food, and a bare larder makes it meagre. */
   private serveMeal(r: ResidentState, act: ActivityState): void {
     const state = this.state;
-    if (state.stock.food >= MEAL) {
-      state.stock.food -= MEAL;
+    // Cold days make for bigger appetites (M4: winter has to pinch without stores put by).
+    const meal = seasonOf(state.tick) === 'winter' ? MEAL * WINTER_APPETITE : MEAL;
+    if (state.stock.food >= meal) {
+      state.stock.food -= meal;
+      return;
+    }
+    // A bare larder: the granary feeds the town, if anything is put by.
+    if ((state.granary ?? 0) >= meal) {
+      drawFromGranary(state, meal);
       return;
     }
     act.meagre = true;
@@ -824,9 +864,9 @@ export class Simulation implements AspirationHost {
       const made = buildingDef(getBuilding(state, r.at).type).produces;
       if (made) {
         for (const [res, rate] of Object.entries(made) as Array<[Resource, number]>) {
-          const season = res === 'food' && getBuilding(state, r.at).type === 'garden' ? GARDEN_SEASON[seasonOf(tick)] : 1;
+          const season = res === 'food' ? (FOOD_SEASON[getBuilding(state, r.at).type]?.[seasonOf(tick)] ?? 1) : 1;
           const v = (rate / 60) * season * (0.5 + 0.5 * r.mood);
-          state.stock[res] = Math.min(STOCK_CAP[res], state.stock[res] + v);
+          this.addStock(res, v);
           this.addProduced(r.id, res, v);
         }
       }
@@ -913,7 +953,8 @@ export class Simulation implements AspirationHost {
       .filter(([id, x]) => id !== STEWARD && (x.tags.includes('friend') || x.affinity >= 0.35))
       .map(([id]) => state.residents[id] as ResidentState)
       .filter((o) => o && free(o) && !(o.activity && o.at === next.placeId))
-      .sort((a, b) => rel(r, b.id).affinity - rel(r, a.id).affinity);
+      // Friends first, then whoever they like best (M4: friends seen together, not just liked ones).
+      .sort((a, b) => Number(rel(r, b.id).tags.includes('friend')) - Number(rel(r, a.id).tags.includes('friend')) || rel(r, b.id).affinity - rel(r, a.id).affinity);
     const friend = friends[0];
     if (!friend) return;
     const fx = rel(friend, r.id);
@@ -1059,10 +1100,12 @@ export class Simulation implements AspirationHost {
       if (!passive) continue;
       const factor = PASSIVE_SEASON[b.type]?.[season] ?? 1;
       for (const [res, rate] of Object.entries(passive) as Array<[Resource, number]>) {
-        this.state.stock[res] = Math.min(STOCK_CAP[res], this.state.stock[res] + rate * factor);
+        this.addStock(res, rate * factor);
         if (rate * factor > 0) this.addProduced(b.type, res, rate * factor);
       }
     }
+    storesHourly(this.state);
+    progressHourly(this);
     for (const r of this.activeResidents()) {
       const def = residentDef(r.id);
       decayEmotions(r);

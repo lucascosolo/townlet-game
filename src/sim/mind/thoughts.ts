@@ -47,7 +47,8 @@ export function mindTopics(state: SimState, r: ResidentState): MindTopic[] {
 
   for (const n of NEEDS) {
     const u = urgency(r.needs[n], r.setpoints[n]);
-    if (u > 0.35) topics.push({ key: `need:${n}`, weight: 1.2 * u, vars: {}, reason: `${n} is low (${r.needs[n].toFixed(2)} of the ${r.setpoints[n].toFixed(2)} they need)` });
+    // A resident with a job who still feels idle wants something of their own, not "a job".
+    if (u > 0.35) topics.push({ key: n === 'purpose' && r.jobId !== null ? 'need:purpose_job' : `need:${n}`, weight: 1.2 * u, vars: {}, reason: `${n} is running ${u > 0.7 ? 'very ' : ''}low` });
   }
   const crowd = companyOvershoot(r.needs.company, r.setpoints.company, def);
   if (crowd > 0.1) topics.push({ key: 'need:crowded', weight: 0.8 + crowd, vars: {}, reason: 'too much company for their liking' });
@@ -60,7 +61,7 @@ export function mindTopics(state: SimState, r: ResidentState): MindTopic[] {
       ...(about ? { about } : {}),
       weight: 1.4 * e.intensity,
       vars: { x: about ? subjectWord(state, about) : '' },
-      reason: `${e.kind}${about ? ` about ${subjectWord(state, about)}` : ''} (${e.intensity.toFixed(2)})`,
+      reason: `${e.intensity > 0.6 ? 'strong ' : ''}${e.kind}${about ? ` about ${subjectWord(state, about)}` : ''}`,
     });
   }
 
@@ -68,7 +69,7 @@ export function mindTopics(state: SimState, r: ResidentState): MindTopic[] {
   if (step) {
     const fresh = tick - r.aspiration.since < TICKS_PER_DAY;
     const waiting = state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open');
-    topics.push({ key: waiting ? 'dream:waiting' : 'dream', weight: 0.45 + (fresh ? 0.3 : 0) + (waiting ? 0.25 : 0), vars: { next: firstPerson(step.charAt(0).toLowerCase() + step.slice(1)) }, reason: `their hope: ${step.toLowerCase()}` });
+    topics.push({ key: waiting ? 'dream:waiting' : 'dream', weight: 0.45 + (fresh ? 0.3 : 0) + (waiting ? 0.25 : 0), vars: { next: firstPerson(step.charAt(0).toLowerCase() + step.slice(1)) }, reason: waiting ? 'waiting on you' : 'what they are working towards' });
   }
 
   const festival = state.story.gatherings.find((g) => g.kind === 'festival' && g.from > tick && g.from - tick < TICKS_PER_DAY);
@@ -90,9 +91,12 @@ export function mindTopics(state: SimState, r: ResidentState): MindTopic[] {
     }
   }
 
+  // The steward is on their mind when their view has moved lately, not just because it is high
+  // (review: a quarter of everything said was about the steward, mostly settled praise).
   const standing = r.rel.steward?.affinity ?? 0;
-  if (Math.abs(standing) > 0.35) {
-    topics.push({ key: standing > 0 ? 'steward:+' : 'steward:-', about: STEWARD, weight: 0.2 + 0.4 * Math.abs(standing), vars: {}, reason: `their view of the steward (${standing.toFixed(2)})` });
+  const moved = standing - (r.standingLog?.[0] ?? 0);
+  if (Math.abs(standing) > 0.35 && Math.abs(moved) > 0.08) {
+    topics.push({ key: standing > 0 ? 'steward:+' : 'steward:-', about: STEWARD, weight: 0.12 + 0.12 * Math.abs(standing) + 1.2 * Math.abs(moved), vars: {}, reason: standing > 0 ? 'how the steward has treated them' : 'how the steward has let them down' });
   }
 
   // A belief formed in the last two days is still news to them.
@@ -126,11 +130,11 @@ export function voiceTopic(state: SimState, r: ResidentState, listener?: string,
   const recent = (r.lastThoughts ??= {});
   const top = topOfMind(state, r, 3).map((t, rank) => ({ t, rank }));
   // Nobody tells you, to your face, what they think of you in the third person.
-  const fresh = top.filter(({ t }) => state.tick - (recent[topicId(t)] ?? -Infinity) >= THOUGHT_REPEAT && (!listener || t.about !== `r:${listener}`));
+  const fresh = top.filter(({ t }) => state.tick - (recent[topicId(t)] ?? -Infinity) >= (t.about === STEWARD ? TICKS_PER_DAY : THOUGHT_REPEAT) && (!listener || t.about !== `r:${listener}`));
   const chosen = weighted(rng, fresh, ({ t }) => t.weight);
   if (!chosen) return null;
   recent[topicId(chosen.t)] = state.tick;
-  for (const [k, v] of Object.entries(recent)) if (state.tick - v > THOUGHT_REPEAT) delete recent[k];
+  for (const [k, v] of Object.entries(recent)) if (state.tick - v > TICKS_PER_DAY) delete recent[k];
   const { t, rank } = chosen;
   return { key: t.key, ...(t.about ? { about: t.about } : {}), vars: t.vars, rank };
 }

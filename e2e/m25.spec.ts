@@ -36,7 +36,9 @@ test('criterion 1: the introduction says you are the steward, and narration call
 });
 
 test('criterion 2: right-drag turns the view freely, Q snaps a quarter turn', async ({ page }) => {
-  await ready(page, 'intro=0&scenario=quiet&seed=1&speed=0');
+  // Low quality from the start: on a software renderer the automatic switch would otherwise come
+  // mid-test and freeze frames while shaders recompile. This test is about the camera, not looks.
+  await ready(page, 'intro=0&scenario=quiet&seed=1&speed=0&fx=low');
   const yaw0 = await h(page)(() => (window as unknown as { __townlet: Handle }).__townlet.yaw());
   await page.mouse.move(400, 400);
   await page.mouse.down({ button: 'right' });
@@ -48,10 +50,15 @@ test('criterion 2: right-drag turns the view freely, Q snaps a quarter turn', as
   const q = Math.PI / 2;
   expect(Math.abs(((yaw1 - Math.PI / 4) / q) % 1)).toBeGreaterThan(0.05);
   await page.keyboard.press('q');
-  await page.waitForTimeout(800);
-  const yaw2 = await h(page)(() => (window as unknown as { __townlet: Handle }).__townlet.yaw());
-  const k = (yaw2 - Math.PI / 4) / q;
-  expect(Math.abs(k - Math.round(k))).toBeLessThan(0.05);
+  // The snap eases in; poll rather than sleep. On a cold software-rendered runner the one-off
+  // switch to low quality recompiles shaders and can freeze frames for several seconds mid-ease.
+  await expect
+    .poll(async () => {
+      const yaw2 = await h(page)(() => (window as unknown as { __townlet: Handle }).__townlet.yaw());
+      const k = (yaw2 - Math.PI / 4) / q;
+      return Math.abs(k - Math.round(k));
+    }, { timeout: 20_000 })
+    .toBeLessThan(0.05);
 });
 
 test('criterion 4: R rotates the ghost, and the built workshop occupies its turned footprint', async ({ page }) => {

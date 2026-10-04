@@ -40,8 +40,12 @@ test('criterion 6: the board shows the winter stores, the HUD the granary, and t
   await page.getByTestId('tab-board').click();
   const card = page.getByTestId('stores-card');
   await expect(card).toContainText("Winter stores · Juniper's worry");
-  await expect(card.getByTestId('stores-progress')).toContainText(/\d+ of 150 food put by in the granary · 5 days to winter/);
-  const put = await page.evaluate(() => Math.floor((window as unknown as { __townlet: Handle }).__townlet.game.sim.state.granary ?? 0));
+  const { put, target } = await page.evaluate(() => {
+    const state = (window as unknown as { __townlet: Handle }).__townlet.game.sim.state as { granary?: number; stores?: { target: number } };
+    return { put: Math.floor(state.granary ?? 0), target: state.stores?.target ?? 0 };
+  });
+  expect(target).toBeGreaterThanOrEqual(150);
+  await expect(card.getByTestId('stores-progress')).toContainText(`${put} of ${target} food put by in the granary · 5 days to winter`);
   await expect(page.getByTestId('granary-stock')).toBeVisible();
-  await expect(page.getByTestId('granary-stock')).toContainText(`${put}/150`);
+  await expect(page.getByTestId('granary-stock')).toContainText(`${put}/${target}`);
 });

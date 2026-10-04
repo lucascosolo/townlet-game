@@ -372,35 +372,58 @@ function formNewDream(h: AspirationHost, r: ResidentState): void {
 export function aspirationMorning(h: AspirationHost): void {
   for (const r of active(h.state)) {
     formNewDream(h, r);
-    const def = dreamOf(h.state, r);
-    const stage = currentStage(h.state, r);
-    if (!def || !stage || !stage.check(h, r)) continue;
-    stage.enter?.(h, r);
-    r.aspiration.stage++;
-    r.aspiration.since = h.state.tick;
-    r.aspiration.minutes = 0;
-    r.aspiration.done = r.aspiration.stage >= def.stages.length;
-    if (r.aspiration.done) {
-      r.aspiration.completed = (r.aspiration.completed ?? 0) + 1;
-      r.aspiration.doneTick = h.state.tick;
-    }
-    // Every step forward feels like something.
-    addEmotion(r, { kind: r.aspiration.done ? 'pride' : 'joy', intensity: r.aspiration.done ? 0.8 : 0.4, tick: h.state.tick });
-    r.needs.purpose = clamp(r.needs.purpose + (r.aspiration.done ? 0.4 : 0.15));
-    h.emitEvent({
-      t: h.state.tick,
-      type: 'aspiration',
-      who: r.id,
-      stage: stage.id,
-      index: r.aspiration.stage,
-      done: r.aspiration.done,
-      ...(r.aspiration.partner ? { partner: r.aspiration.partner } : {}),
-      ...(r.aspiration.outcome ? { outcome: r.aspiration.outcome } : {}),
-      ...(r.aspiration.kind ? { kind: r.aspiration.kind } : {}),
-      ...(r.aspiration.subject ? { subject: r.aspiration.subject } : {}),
-    });
-    if (r.aspiration.outcome === 'leave') h.depart(r);
+    advanceStage(h, r);
   }
+}
+
+/** Residents whose current step is not yet reached: checked again after the steward builds something. */
+export function waitingOnStage(h: AspirationHost): Set<string> {
+  const out = new Set<string>();
+  for (const r of active(h.state)) {
+    const stage = currentStage(h.state, r);
+    if (dreamOf(h.state, r) && stage && !stage.check(h, r)) out.add(r.id);
+  }
+  return out;
+}
+
+/**
+ * Right after a build (review: "I'm going to find a bakery to work in!" an hour after the bakery
+ * went up): a step that was waiting and is now met advances at once, not at the next dawn.
+ */
+export function aspirationsAfterBuild(h: AspirationHost, waiting: Set<string>): void {
+  for (const r of active(h.state)) if (waiting.has(r.id)) advanceStage(h, r);
+}
+
+/** Move a resident on to the next step of their dream if this one is reached. */
+function advanceStage(h: AspirationHost, r: ResidentState): void {
+  const def = dreamOf(h.state, r);
+  const stage = currentStage(h.state, r);
+  if (!def || !stage || !stage.check(h, r)) return;
+  stage.enter?.(h, r);
+  r.aspiration.stage++;
+  r.aspiration.since = h.state.tick;
+  r.aspiration.minutes = 0;
+  r.aspiration.done = r.aspiration.stage >= def.stages.length;
+  if (r.aspiration.done) {
+    r.aspiration.completed = (r.aspiration.completed ?? 0) + 1;
+    r.aspiration.doneTick = h.state.tick;
+  }
+  // Every step forward feels like something.
+  addEmotion(r, { kind: r.aspiration.done ? 'pride' : 'joy', intensity: r.aspiration.done ? 0.8 : 0.4, tick: h.state.tick });
+  r.needs.purpose = clamp(r.needs.purpose + (r.aspiration.done ? 0.4 : 0.15));
+  h.emitEvent({
+    t: h.state.tick,
+    type: 'aspiration',
+    who: r.id,
+    stage: stage.id,
+    index: r.aspiration.stage,
+    done: r.aspiration.done,
+    ...(r.aspiration.partner ? { partner: r.aspiration.partner } : {}),
+    ...(r.aspiration.outcome ? { outcome: r.aspiration.outcome } : {}),
+    ...(r.aspiration.kind ? { kind: r.aspiration.kind } : {}),
+    ...(r.aspiration.subject ? { subject: r.aspiration.subject } : {}),
+  });
+  if (r.aspiration.outcome === 'leave') h.depart(r);
 }
 
 function atStagePlace(state: SimState, r: ResidentState, stage: Stage): boolean {

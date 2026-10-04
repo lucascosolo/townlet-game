@@ -255,8 +255,8 @@ describe('criterion 4 (M3b criterion 4): talking to a resident', () => {
         expect(mind?.topics?.map((t) => t.key)).toEqual(top.map((t) => t.key));
         for (const other of sim.state.order.filter((o) => o !== id)) {
           const a = sim.talk(id, 'opinion', `r:${other}`);
-          expect(Math.sign(a?.value ?? 0)).toBe(Math.sign(feelingAbout(r, `r:${other}`)));
-          expect(a?.band).toBe(feelingBand(feelingAbout(r, `r:${other}`)));
+          expect(Math.sign(a?.value ?? 0)).toBe(Math.sign(feelingAbout(r, `r:${other}`, sim.state.tick)));
+          expect(a?.band).toBe(feelingBand(feelingAbout(r, `r:${other}`, sim.state.tick)));
         }
         const me = sim.talk(id, 'me');
         expect(me?.band).toBe(feelingBand(r.rel.steward?.affinity ?? 0));

@@ -94,6 +94,7 @@ export const BUILDINGS: Record<string, BuildingDef> = {
     blurb: 'Plots that feed the town.',
     produces: { food: 0.9 },
     name: 'Garden plots',
+    singular: 'garden plot',
     kind: 'work',
     size: [2, 2],
     emits: { green: 0.5 },
@@ -133,7 +134,7 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   woodlot: {
     type: 'woodlot',
-    cost: 2,
+    cost: 6,
     blurb: 'Trees tended for timber.',
     produces: { timber: 0.3 },
     name: 'Woodlot',
@@ -185,7 +186,7 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   },
   flowerbed: {
     type: 'flowerbed',
-    cost: 0,
+    cost: 1,
     blurb: 'Colour and scent.',
     name: 'Flower bed',
     kind: 'decor',
@@ -261,4 +262,10 @@ export function buildingDef(type: string): BuildingDef {
   const def = BUILDINGS[type];
   if (!def) throw new Error(`unknown building type: ${type}`);
   return def;
+}
+
+/** One of a building, lower case: "garden plot", not "garden plots" (review: "a garden plots"). */
+export function singularName(type: string): string {
+  const def = buildingDef(type);
+  return def.singular ?? def.name.toLowerCase();
 }

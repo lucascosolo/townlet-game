@@ -1,4 +1,4 @@
-import type { Lines } from './voice.js';
+import { addLines, type Lines } from './voice.js';
 
 // What residents think and say about what is on their mind (M3a). Keys match MindTopic.key.
 // {x} is who or what it is about, {next} the next step of their hope, {label} an event.
@@ -46,6 +46,13 @@ export const MIND_LINES: Record<string, Lines> = {
     warm: ["I'd like to be useful to someone today."],
     chatty: ['Idle hands! Give me a job, anyone!'],
     dreamy: ['I want to make something. Anything.'],
+  },
+  'need:purpose_job': {
+    plain: ['Work is work. I want something that is mine.', 'Same tasks again today.'],
+    formal: ['My work is honest, but I should like a purpose of my own.'],
+    warm: ["I do my bit, but I'd love something to work towards."],
+    chatty: ['Same job, same day! I need a project!'],
+    dreamy: ['My hands are busy, but the rest of me is waiting.'],
   },
   'need:delight': {
     plain: ['Same old, same old.', 'Could use something to look forward to.'],
@@ -218,6 +225,7 @@ export const TOPIC_LABELS: Record<string, string> = {
   'need:company': 'Wants company',
   'need:crowded': 'Wants some quiet',
   'need:purpose': 'Wants something useful to do',
+  'need:purpose_job': 'Wants a project of their own',
   'need:delight': 'Wants something to look forward to',
   'feel:joy': 'Happy',
   'feel:gratitude': 'Grateful to {x}',
@@ -248,3 +256,27 @@ export function topicLabel(key: string, vars: Record<string, string>): string {
   const out = t.replace(/\{x\}/g, vars.x ?? '').replace(/\{next\}/g, vars.next ?? '').replace(/\{label\}/g, vars.label ?? '');
   return out.charAt(0).toUpperCase() + out.slice(1);
 }
+
+// ---------------------------------------------------------------- more variety (M4)
+
+addLines(MIND_LINES['feel:joy'], {
+  plain: ['Decent day.', 'Things are going right.', 'Feeling good. Odd, that.'],
+  formal: ['I am content, I find.', 'A thoroughly pleasant day.', 'One could get used to days like this.'],
+  warm: ['Everything feels a bit golden today.', "I keep smiling at nothing.", "I'm so glad I live here.", "Today's been kind to me."],
+  chatty: ['Everything is brilliant today!', "Ask me how I am! Wonderful, that's how!", 'Is it just me or is today perfect?'],
+  dreamy: ['The day is singing.', 'I am full of small suns.', 'Even the stones look happy.'],
+});
+addLines(MIND_LINES.dream, {
+  plain: ['Still on it. {next}.', 'Getting there. {next}, then.'],
+  formal: ['I am making progress. Next, I must {next}.', 'Patience. I need to {next}.'],
+  warm: ["I'm working on something. Next, I {next}.", "It's coming along. I just have to {next}.", "Wish me luck. I'm trying to {next}."],
+  chatty: ['Progress report: next I {next}!', "Nearly there! Well, sort of! I've got to {next}!"],
+  dreamy: ['The next stone on the path: {next}.', 'I need to {next}, and then we will see.'],
+});
+addLines(MIND_LINES['need:crowded'], {
+  plain: ['Bit much, all this.', 'Need a quiet hour.'],
+  formal: ['I find myself in want of solitude.'],
+  warm: ["I'm going to find a quiet spot for a bit.", 'Just need a moment to myself.'],
+  chatty: ['Too much natter, even for me!'],
+  dreamy: ['I want to be a pebble somewhere quiet.'],
+});

@@ -345,3 +345,6 @@ button.primary:hover { background: #a3572f; }
 .card.quest .card-title svg { color: #9a6b2c; flex: none; }
 .card.quest .track .fill { background: #c99a4a; }
 .stock .res-granary svg { color: #9a6b2c; }
+
+/* Speaker names on bubbles (M4, review: anonymous lines). */
+.bubble .speaker { display: inline-block; margin: -2px 6px 2px -2px; padding: 0 7px; border-radius: 999px; color: #fff; font-family: 'Nunito', sans-serif; font-style: normal; font-weight: 800; font-size: 11px; letter-spacing: 0.02em; vertical-align: 1px; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25); }

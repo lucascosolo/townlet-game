@@ -138,7 +138,8 @@ export function favourYield(state: SimState, r: ResidentState, kind: FavourKind)
     case 'timber':
       return { timber: round((4 + 2 * def.values.craft) * heart) };
     case 'catch':
-      return { food: round(5 * heart) };
+      // The brook ices over in winter (M4).
+      return { food: round(5 * heart * (seasonOf(state.tick) === 'winter' ? 0.4 : 1)) };
     case 'garden': {
       const season = { spring: 0.8, summer: 1.1, autumn: 1.3, winter: 0.25 }[seasonOf(state.tick)];
       return { food: round(4.5 * heart * season) };

@@ -72,7 +72,11 @@ export function nightlyRelationships(ctx: MindContext, r: ResidentState, steward
     // Left alone, affinity settles toward how well the two fit: kindred spirits warm, poor
     // matches cool a little. Beliefs about the person push on top of that.
     const baseline = (compatibility(ctx.def(r.id), ctx.def(other)) - 0.6) * 1.5;
-    x.affinity = clamp(x.affinity + 0.03 * (baseline - x.affinity) + 0.06 * opinion(r, `r:${other}`), -1, 1);
+    // A grudge doesn't fade overnight: for a week after words, nothing warms them back up on its
+    // own (M4: arguments were smoothed away so fast that rivalries almost never formed).
+    const sore = x.lastArgue >= 0 && ctx.tick - x.lastArgue < 7 * 1440;
+    const drift = 0.03 * (baseline - x.affinity);
+    x.affinity = clamp(x.affinity + (sore ? Math.min(0, drift) : drift) + 0.06 * opinion(r, `r:${other}`), -1, 1);
     if (x.lastContact < ctx.tick - 1440) x.familiarity *= 0.99;
     const tags = tagsFor(x);
     const added = tags.filter((t) => !x.tags.includes(t));

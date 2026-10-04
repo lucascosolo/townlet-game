@@ -1,5 +1,5 @@
 import type { FavourKind, RefusalReason } from '../sim/types.js';
-import type { Lines } from './voice.js';
+import { addLines, type Lines } from './voice.js';
 
 // Talking to a resident (M3b) and asking favours (M3c). Lines are in the resident's own voice,
 // one set per register; {s} is who or what they are asked about, {title} and {next} their hope,
@@ -101,39 +101,78 @@ export const TALK_REASON: Lines = {
 
 export const TALK_ME: Record<string, Lines> = {
   love: {
-    plain: ['You do right by us. I mean that.'],
-    formal: ['You have been a true credit to this valley.'],
-    warm: ['I think the world of you, you know.'],
-    chatty: ['You? Best steward going!'],
-    dreamy: ['You make the valley feel looked after.'],
+    plain: ['You do right by us. I mean that.', 'No complaints. Not one.', 'You keep your word. That counts.'],
+    formal: ['You have been a true credit to this valley.', 'I could not ask for a better steward.', 'You have earned my trust, and that is not easily done.'],
+    warm: ['I think the world of you, you know.', "You've made this place feel like home.", "Honestly? I'm so glad it's you looking after us."],
+    chatty: ['You? Best steward going!', "You're a marvel, you know that?", 'Ask anyone! Well, ask me. You are brilliant!'],
+    dreamy: ['You make the valley feel looked after.', 'When you are near, things go right.', 'You are the kind of weather we needed.'],
   },
   like: {
-    plain: ['You\'re all right.'],
-    formal: ['I think well of you, steward.'],
-    warm: ["I like you. You listen."],
-    chatty: ['You\'re doing fine! Mostly!'],
-    dreamy: ['You are a kind wind, mostly.'],
+    plain: ["You're all right.", 'You do fine by me.', 'Good so far.'],
+    formal: ['I think well of you, steward.', 'You are doing creditably, I would say.', 'So far, I have been glad of you.'],
+    warm: ['I like you. You listen.', "You're good to us, mostly.", "I'm getting fond of you, you know."],
+    chatty: ["You're doing fine! Mostly!", 'Not bad at all, you!', 'Keep it up and I might even brag about you!'],
+    dreamy: ['You are a kind wind, mostly.', 'You feel like a good start.', 'I think you mean well. That is plenty.'],
   },
   neutral: {
-    plain: ['Haven\'t made my mind up about you.'],
-    formal: ['I am still forming my view of you.'],
-    warm: ["I don't know you well enough yet, I think."],
-    chatty: ['Jury\'s out on you!'],
-    dreamy: ['You are still a stranger to me, a little.'],
+    plain: ["Haven't made my mind up about you.", "Don't know you yet.", 'We will see.'],
+    formal: ['I am still forming my view of you.', 'It is early days, steward.', 'I reserve judgement, for now.'],
+    warm: ["I don't know you well enough yet, I think.", "Give me time. I'll know you better soon.", "You seem nice. I'm not sure yet."],
+    chatty: ["Jury's out on you!", 'Ask me next week!', "Still sizing you up, if I'm honest!"],
+    dreamy: ['You are still a stranger to me, a little.', 'You are a door I have not opened yet.', 'I have not quite heard you yet.'],
   },
   dislike: {
-    plain: ['Not sure you\'re listening.'],
-    formal: ['I have my doubts about you, steward.'],
-    warm: ["I'm not sure you care about us, honestly."],
-    chatty: ['You? Hmm! Could do better!'],
-    dreamy: ['You feel far off from us.'],
+    plain: ["Not sure you're listening.", "You've let a few things slide.", "Could be better, couldn't it."],
+    formal: ['I have my doubts about you, steward.', 'I had hoped for more attention to our concerns.', 'You have disappointed me, if I may say so.'],
+    warm: ["I'm not sure you care about us, honestly.", "I wish you'd listen a bit more.", "It's been hard to feel looked after lately."],
+    chatty: ['You? Hmm! Could do better!', "Not your best season, is it?", "I've had words about you. Not nice ones!"],
+    dreamy: ['You feel far off from us.', 'Your hands are elsewhere.', 'Something between us has gone cold.'],
   },
   hate: {
-    plain: ['You don\'t listen. Never have.'],
-    formal: ['Frankly, you have failed us.'],
-    warm: ["I'm sorry, but you've let us down."],
-    chatty: ['You?! Don\'t make me laugh!'],
-    dreamy: ['Nobody is steering this place.'],
+    plain: ["You don't listen. Never have.", 'I have nothing to say to you.', 'Leave me be.'],
+    formal: ['Frankly, you have failed us.', 'I cannot pretend to think well of you.', 'You have lost my good opinion entirely.'],
+    warm: ["I'm sorry, but you've let us down.", "I don't think you care about us at all.", "It hurts to say it, but I don't trust you."],
+    chatty: ["You?! Don't make me laugh!", 'Oh, it is YOU.', "Worst steward I've known, and I've known one!"],
+    dreamy: ['Nobody is steering this place.', 'You are a storm that never breaks.', 'The valley does not feel yours anymore.'],
+  },
+};
+
+/** "What do you think of…" a person: never the place lines (review: "Ada? I like it, yes"). */
+export const TALK_OPINION_PERSON: Record<string, Lines> = {
+  love: {
+    plain: ['{S}? One of the best.', "I'd do anything for {s}.", '{S} is family, near enough.'],
+    formal: ['I think the world of {s}.', '{S} is a dear friend, and I am lucky in it.', 'I hold {s} in the highest regard.'],
+    warm: ['Oh, {s}! I adore {s}.', "{S}'s one of my favourite people.", 'I light up when {s} comes by.'],
+    chatty: ['{S}! Love {s}! Have you met {s}? You must!', "Best company in the valley, {s} is!", '{S}? My favourite!'],
+    dreamy: ['{S} is like a lamp in a window.', 'Days with {s} in them are better days.', '{S} understands me.'],
+  },
+  like: {
+    plain: ['{S} is good people.', 'Get on fine with {s}.', 'Like {s}. Good sort.'],
+    formal: ['I think well of {s}.', '{S} is pleasant company.', 'I find {s} most agreeable.'],
+    warm: ["I'm fond of {s}.", "{S}'s lovely, really.", 'I always enjoy a chat with {s}.'],
+    chatty: ['{S}? Good fun!', 'We get on, {s} and me!', "{S}'s all right, you know!"],
+    dreamy: ['{S} is easy to be near.', 'I like the way {s} sees things.', '{S} hums a nice tune.'],
+  },
+  neutral: {
+    plain: ["Don't know {s} well.", "{S}? We've barely spoken.", 'No view on {s}.'],
+    formal: ['I have not had much to do with {s}.', 'I am not well acquainted with {s}.', 'I could not say, of {s}.'],
+    warm: ["I don't really know {s} yet.", "I'd like to know {s} better, actually.", "{S}? We say hello. That's all so far."],
+    chatty: ['{S}? Hardly know {s}!', 'Haven\'t had a proper natter with {s} yet!', 'Ask me again about {s} later!'],
+    dreamy: ['{S} is a closed book to me, still.', 'We pass each other like boats.', "I haven't found {s}'s tune yet."],
+  },
+  dislike: {
+    plain: ["{S} and I don't get on.", 'Not keen on {s}.', 'Rather keep clear of {s}.'],
+    formal: ['{S} and I do not see eye to eye.', 'I find {s} rather trying.', 'I am not fond of {s}.'],
+    warm: ["I'm not sure about {s}, honestly.", "{S} gets on my nerves a bit.", "Things are a bit off between {s} and me."],
+    chatty: ['{S}? Sore point!', 'Bit of a thorn, {s}!', "Don't sit me next to {s}!"],
+    dreamy: ['{S} and I clash, like the wrong notes.', 'There is a draught between {s} and me.', '{S} feels prickly.'],
+  },
+  hate: {
+    plain: ["Can't stand {s}.", "Don't talk to me about {s}.", "{S}. Don't."],
+    formal: ['I would rather not speak of {s}.', '{S} has wronged me, and I have not forgotten.', 'I cannot abide {s}.'],
+    warm: ["I'm sorry, I just can't be around {s}.", '{S} really hurt me.', "I'm still upset with {s}."],
+    chatty: ['{S}?! Ugh! Next question!', "Don't even say the name {s}!", 'We are NOT friends, {s} and me!'],
+    dreamy: ['{S} is a stone in my shoe.', 'When {s} walks in, the room goes grey.', '{S} and I are winter to each other.'],
   },
 };
 
@@ -268,3 +307,27 @@ export const FAVOUR_DONE: Record<FavourKind, string> = {
   visit: '{name} has been round to see {other}. {other} is glad of the company.',
   mend: '{name} has gone to make peace with {other}.',
 };
+
+// ---------------------------------------------------------------- more variety (M4)
+
+addLines(FAVOUR_YES.timber, {
+  plain: ['Fine. Timber.', "I'll fetch the axe."],
+  formal: ['Timber, then. I shall return with plenty.'],
+  warm: ['Happy to. A bit of fresh air will do me good.', "Leave it with me. I'll bring a good load."],
+  chatty: ['Chop chop! Literally!', 'Axe, gloves, off I go!'],
+  dreamy: ['The trees and I have an understanding.'],
+});
+addLines(FAVOUR_YES.catch, {
+  plain: ['Fish it is.'],
+  formal: ['I shall try my luck at the water.'],
+  warm: ["I'd love to. It's peaceful by the water."],
+  chatty: ['Supper, coming up! Hopefully!'],
+  dreamy: ['I will ask the brook nicely.'],
+});
+addLines(FAVOUR_YES.garden, {
+  plain: ['Garden. Right.'],
+  formal: ['I would be glad to tend the garden.'],
+  warm: ['I love a bit of time in the garden.'],
+  chatty: ['Dirt under the nails! Lovely!'],
+  dreamy: ['The garden has been calling me anyway.'],
+});

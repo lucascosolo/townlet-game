@@ -2,7 +2,7 @@
 // log, journal, and how the town sees you); the build menu; decision popups; the introduction;
 // and thought bubbles. Everything it changes, it changes through Game.command.
 
-import { buildingDef } from '../../../src/content/buildings.js';
+import { buildingDef, singularName } from '../../../src/content/buildings.js';
 import { residentDef } from '../../../src/content/residents.js';
 import { DILEMMA_NAMES, PROPOSALS } from '../../../src/content/story.js';
 import { residentReport, type ResidentReport } from '../../../src/inspect/inspector.js';
@@ -754,7 +754,11 @@ export class Ui {
       this.bubbles.set(id, b);
     }
     b.el.className = `bubble ${mood}`;
-    b.el.textContent = text.length > 90 ? `${text.slice(0, 87)}…` : text;
+    // Who is speaking, so a line never floats over an anonymous figure (review).
+    const who = el('span', { class: 'speaker' }, residentDef(id).name);
+    who.style.background = cssColor(residentColor(id));
+    b.el.replaceChildren(who, document.createTextNode(text.length > 90 ? `${text.slice(0, 87)}…` : text));
+    b.el.dataset.who = id;
     b.born = performance.now();
     b.until = b.born + 4500;
     b.major = mood === 'major' || mood === 'up' || mood === 'down';
@@ -810,7 +814,7 @@ export class Ui {
     for (const q of requests) {
       const card = el('div', { class: 'card', 'data-testid': `request-${q.id}` });
       const who = residentDef(q.by);
-      card.appendChild(el('div', { class: 'card-title' }, `${who.name} ${ASK_TITLES[q.kind]}${q.wants ? `: a ${buildingDef(q.wants).name.toLowerCase()}` : ''}`));
+      card.appendChild(el('div', { class: 'card-title' }, `${who.name} ${ASK_TITLES[q.kind]}${q.wants ? `: ${/^[aeiou]/.test(singularName(q.wants)) ? 'an' : 'a'} ${singularName(q.wants)}` : ''}`));
       if (q.kind === 'quieter_home') card.appendChild(el('p', {}, `${cap(this.game.narrator.statement(q.by, { subject: q.subject, aspect: 'noisy_at_night' }))}.`));
       if (q.kind === 'more_green') card.appendChild(el('p', { 'data-testid': 'green-progress' }, this.greenLine(q.by)));
       card.appendChild(el('p', { class: 'quiet' }, ASK_HINTS[q.kind]));

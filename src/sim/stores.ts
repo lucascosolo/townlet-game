@@ -11,18 +11,18 @@ import { STEWARD, type ResidentState, type SimState } from "./types.js";
 import { liveBuildings } from "./world.js";
 
 /** What the larder holds; the town's food stock is capped here (sim.ts STOCK_CAP). */
-export const LARDER_CAP = 80;
+export const LARDER_CAP = 40;
 /** How much one granary holds; a bigger town needs more than one. */
 export const GRANARY_CAP = 300;
 /** What the larder keeps for everyday meals; above this, surplus goes across to the granary. */
-export const LARDER_KEEP = 24;
+export const LARDER_KEEP = 20;
 /** Carried across to the granary per daylight hour. */
 export const HAUL_PER_HOUR = 2;
 /** The first day of winter, as a day of the year (1–28). */
 export const WINTER_DAY = 3 * DAYS_PER_SEASON + 1;
 /** The first day of autumn: the quest is raised by then at the latest. */
 const AUTUMN_DAY = 2 * DAYS_PER_SEASON + 1;
-export const STORES_PER_RESIDENT = 25;
+export const STORES_PER_RESIDENT = 30;
 export const MIN_STORES_TARGET = 150;
 /** The larder counts as overflowing at this share of its cap. */
 const OVERFLOWING = 0.9;
@@ -137,6 +137,14 @@ export function storesDawn(h: AspirationHost): void {
       q.by = k.id;
       q.target = storesTarget(state);
       event(granary ? "reminded" : "asked", k.id);
+    }
+    // Progress worth telling: a quarter, half and three quarters of the way there.
+    if (q.asked && !q.outcome) {
+      const quarter = Math.min(3, Math.floor((4 * stored()) / q.target));
+      if (quarter > (q.told ?? 0)) {
+        q.told = quarter;
+        h.emitEvent({ t: state.tick, type: 'stores', phase: 'progress', who: q.by ?? k.id, stored: stored(), target: q.target, daysLeft: daysToWinter(state.tick) });
+      }
     }
     // Until there is room for the target, the keeper keeps asking for a granary (not while a request is waiting).
     if (q.asked && granaryRoom(state) < q.target) {

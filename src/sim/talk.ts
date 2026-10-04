@@ -4,6 +4,7 @@
 // acquaintance with the steward; asking again the same day changes nothing.
 
 import { opinion } from './mind/memory.js';
+import { TICKS_PER_DAY } from './time.js';
 import { rel } from './mind/relationships.js';
 import { topOfMind } from './mind/thoughts.js';
 import { dreamTitle, nextStep } from './story/aspirations.js';
@@ -24,11 +25,14 @@ function strongestBelief(r: ResidentState, subject: SubjectId): Belief | undefin
 }
 
 /** How a resident feels about someone or something, for "what do you think of…": people by affinity and belief, places by belief. */
-export function feelingAbout(r: ResidentState, subject: SubjectId): number {
+export function feelingAbout(r: ResidentState, subject: SubjectId, now: number): number {
   if (subject === STEWARD) return rel(r, STEWARD).affinity;
   if (subject.startsWith('r:')) {
     const x = r.rel[subject.slice(2)];
-    return (x?.affinity ?? 0) * 0.7 + opinion(r, subject) * 0.3;
+    const v = (x?.affinity ?? 0) * 0.7 + opinion(r, subject) * 0.3;
+    // A fresh argument colours the answer, whatever the long view (review: "something went sour
+    // between me and Ada" one day, "I haven't felt anything about Ada yet" the next).
+    return x && x.lastArgue >= 0 && now - x.lastArgue < 2 * TICKS_PER_DAY ? Math.min(v, -0.1) : v;
   }
   return opinion(r, subject);
 }
@@ -50,12 +54,12 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
       return { question, hope: { title: dreamTitle(state, r) ?? '', next: nextStep(state, r), done: r.aspiration.done } };
     case 'opinion': {
       const subject = about ?? STEWARD;
-      const v = feelingAbout(r, subject);
+      const v = feelingAbout(r, subject, state.tick);
       const b = strongestBelief(r, subject);
       return { question, about: subject, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
     }
     case 'me': {
-      const v = feelingAbout(r, STEWARD);
+      const v = feelingAbout(r, STEWARD, state.tick);
       const b = strongestBelief(r, STEWARD);
       return { question, about: STEWARD, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
     }

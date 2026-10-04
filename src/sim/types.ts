@@ -33,6 +33,8 @@ export type BuildingKind = 'home' | 'work' | 'social' | 'civic' | 'decor' | 'nat
 export interface BuildingDef {
   type: string;
   name: string;
+  /** For a name that is plural ("Garden plots"): one of them. */
+  singular?: string;
   kind: BuildingKind;
   size: [number, number];
   /** Ambient qualities emitted at all times. Negative values absorb (hedges absorb noise). */
@@ -252,6 +254,8 @@ export interface ResidentState {
   buffer: Episode[];
   /** Long-term episodic memory, bounded. */
   episodes: Episode[];
+  /** Their view of the steward at the last few dawns, oldest first (M4: talk follows change, not level). */
+  standingLog?: number[];
   traces: Record<string, Trace>;
   beliefs: Record<string, Belief>;
   rel: Record<string, Relationship>;
@@ -467,7 +471,7 @@ export interface SimState {
   /** Food put by in the granary (winter stores, 2026-10-04). */
   granary?: number;
   /** This year's winter-stores quest. */
-  stores?: { year: number; target: number; asked: boolean; by?: string; outcome?: 'met' | 'short' };
+  stores?: { year: number; target: number; asked: boolean; by?: string; outcome?: 'met' | 'short'; /** Quarters of the way there already told. */ told?: number };
   /** Work done towards clearing each wild plot, in minutes, by building id (M3c). */
   clearing?: Record<string, number>;
 }
@@ -476,7 +480,7 @@ export interface SimState {
 
 export type SimEvent =
   | { t: number; type: 'dawn'; day: number }
-  | { t: number; type: 'stores'; phase: 'asked' | 'reminded' | 'met' | 'short' | 'feast'; who: string; stored: number; target: number; daysLeft: number }
+  | { t: number; type: 'stores'; phase: 'asked' | 'reminded' | 'progress' | 'met' | 'short' | 'feast'; who: string; stored: number; target: number; daysLeft: number }
   | { t: number; type: 'built'; building: number; btype: string; by: 'steward' }
   | { t: number; type: 'removed'; building: number; btype: string; by: 'steward' }
   | { t: number; type: 'took_job'; who: string; building: number }

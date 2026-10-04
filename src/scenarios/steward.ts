@@ -91,6 +91,7 @@ export function attachSteward(sim: Simulation, policy: StewardPolicy): void {
   if (policy === 'none') return;
   const rng: RngHolder = { rng: deriveSeed(sim.state.seed, `steward:${policy}`) };
   const wanted: number[] = [];
+  const tried = new Map<number, { at: number; types: string[] }>();
   sim.on((e) => {
     if (e.type === 'dilemma_posted') {
       const d = e.dilemma;
@@ -129,6 +130,19 @@ export function attachSteward(sim: Simulation, policy: StewardPolicy): void {
         }
         const at = e.t + (policy === 'considerate' || policy === 'favours' ? REPLY_DELAY : TICKS_PER_DAY);
         sim.schedule(plan.map((p) => ({ at, kind: 'build' as const, ...p })));
+        // A build the stores couldn't pay for is tried again tomorrow, as a player would (M4:
+        // with dearer buildings, a dropped build used to mean a lapsed ask).
+        if (policy === 'considerate' || policy === 'favours') tried.set(id, { at, types: plan.map((p) => p.type) });
+      }
+      for (const [id, t] of tried) {
+        const q = sim.state.requests.find((x) => x.id === id);
+        if (!q || q.status !== 'open') {
+          tried.delete(id);
+          continue;
+        }
+        const built = sim.state.buildings.some((b) => b.placedBy === 'steward' && b.placedTick >= t.at && t.types.includes(b.type));
+        if (built) tried.delete(id);
+        else if (e.t > t.at && !still.includes(id)) still.push(id);
       }
       wanted.splice(0, wanted.length, ...still);
     }

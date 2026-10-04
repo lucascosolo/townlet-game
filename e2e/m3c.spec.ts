@@ -143,3 +143,22 @@ test('criterion 5c: a cottage brings a newcomer, and the sim stays fast with 12 
   console.log(`stepMs with ${count} residents at 10x: ${stepMs.toFixed(3)}`);
   expect(stepMs).toBeLessThan(2);
 });
+
+test('playtest: from a resident to their home and back; clearing helpers sorted likeliest first', async ({ page }) => {
+  await ready(page, 'intro=0&scenario=quiet&seed=1&speed=0');
+  await runTo(page, at(2, 9));
+  await page.getByTestId('tab-journal').click();
+  await page.getByTestId('roster-fen').click();
+  await page.getByTestId('open-home').click();
+  await expect(page.getByTestId('building-card')).toContainText('tent');
+  await page.getByTestId('open-resident-fen').click();
+  await expect(page.getByTestId('journal').locator('h2')).toContainText('Fen');
+  // The wild plot's helper list puts likely yeses first.
+  const plot = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.sim.state.buildings.find((b: { type: string; x: number }) => b.type === 'wild' && b.x === 24).id as number);
+  await page.evaluate((id) => (window as unknown as { __townlet: Handle & { ui: { select(t: object): void } } }).__townlet.ui.select({ kind: 'building', id }), plot);
+  const options = await page.getByTestId('clear-who').locator('option').allInnerTexts();
+  expect(options.length).toBeGreaterThan(3);
+  const firstNo = options.findIndex((o) => o.includes('unlikely'));
+  if (firstNo >= 0) expect(options.slice(firstNo).every((o) => o.includes('unlikely'))).toBe(true);
+  expect(options[0]).toMatch(/asked \d+× this week/);
+});

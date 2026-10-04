@@ -7,7 +7,7 @@ import { residentDef } from '../../../src/content/residents.js';
 import { DILEMMA_NAMES, PROPOSALS } from '../../../src/content/story.js';
 import { residentReport, type ResidentReport } from '../../../src/inspect/inspector.js';
 import type { NarratorEntry } from '../../../src/narrate/narrator.js';
-import { CLEAR_MINUTES, FAVOUR_MINUTES, openPlots, recentAsks } from '../../../src/sim/favours.js';
+import { CLEAR_MINUTES, FAVOUR_MINUTES, considerFavour, openPlots, recentAsks } from '../../../src/sim/favours.js';
 import { opinion } from '../../../src/sim/mind/memory.js';
 import { ambientPrefs, prefScore } from '../../../src/sim/needs.js';
 import { wishProgress } from '../../../src/sim/story/director.js';
@@ -70,6 +70,20 @@ const TRAIT_ENDS: Record<string, [string, string]> = {
   curious: ['settled', 'curious'],
   generous: ['guarded', 'generous'],
   tidy: ['messy', 'tidy'],
+};
+
+/** A refusal reason, briefly, for lists. */
+const REFUSAL_WORDS: Record<string, string> = {
+  asleep: 'asleep',
+  busy: 'busy with another favour',
+  unwell: 'unwell',
+  tired: 'tired',
+  low: 'feeling low',
+  asked_often: 'asked a lot lately',
+  distrust: "doesn't trust you enough",
+  not_speaking: 'not speaking to them',
+  nowhere: 'nowhere to do it',
+  gone: 'gone',
 };
 
 type LogFilter = 'highlights' | 'story' | 'everything';
@@ -922,6 +936,18 @@ export class Ui {
     card.appendChild(
       el('p', { class: 'quiet' }, b.removed ? 'Gone now.' : `${buildingDef(b.type).kind} · ${b.placedBy === 'founding' ? 'here before you' : `built on day ${dayOf(b.placedTick)}`} · gives off ${this.givesOff(b.type)}`),
     );
+    if (buildingDef(b.type).kind === 'home') {
+      const living = state.order.filter((rid) => !state.residents[rid]?.departed && state.residents[rid]?.homeId === b.id);
+      const row = el('div', { class: 'talk-row', 'data-testid': 'home-of' });
+      row.appendChild(el('span', { class: 'quiet' }, living.length ? 'Home of:' : 'Nobody lives here yet. Someone new will move in soon.'));
+      for (const rid of living) {
+        const go = el('button', { 'data-testid': `open-resident-${rid}` }, residentDef(rid).name);
+        go.style.borderColor = cssColor(residentColor(rid));
+        go.addEventListener('click', () => this.select({ kind: 'resident', id: rid }));
+        row.appendChild(go);
+      }
+      card.appendChild(row);
+    }
     card.appendChild(el('h3', {}, 'How people feel about it'));
     const list = el('ul');
     for (const rid of state.order) {
@@ -947,8 +973,19 @@ export class Ui {
     }
     card.appendChild(el('p', {}, `Open for clearing: about ${Math.ceil((CLEAR_MINUTES - done) / 360)} more days of someone's work. Clearing brings in timber, and the land is yours to build on.`));
     const row = el('div', { class: 'talk-row' });
+    // Likeliest to say yes first, then whoever you've asked least lately.
     const who = el('select', { 'data-testid': 'clear-who' });
-    for (const rid of state.order) if (!state.residents[rid]?.departed) who.appendChild(el('option', { value: rid }, residentDef(rid).name));
+    const people = state.order
+      .filter((rid) => !state.residents[rid]?.departed)
+      .map((rid) => {
+        const r = this.game.sim.resident(rid);
+        return { rid, v: considerFavour(state, r, 'clear', undefined, id), asked: recentAsks(r, state.tick) };
+      })
+      .sort((a, b) => Number(b.v.yes) - Number(a.v.yes) || a.asked - b.asked || b.v.score - a.v.score);
+    for (const p of people) {
+      const odds = p.v.yes ? 'likely yes' : `unlikely: ${REFUSAL_WORDS[p.v.reason ?? 'distrust']}`;
+      who.appendChild(el('option', { value: p.rid }, `${residentDef(p.rid).name} · ${odds} · asked ${p.asked}× this week`));
+    }
     const ask = el('button', { 'data-testid': 'clear-ask' }, 'Ask to help clear it');
     ask.addEventListener('click', () => {
       this.game.command({ kind: 'favour', who: who.value, favour: 'clear', plot: id });
@@ -1030,11 +1067,11 @@ export class Ui {
     const homeB = this.game.sim.state.buildings.find((b) => b.id === this.game.sim.resident(rep.id).homeId);
     if (homeB) {
       const homeRow = el('p', { class: 'quiet', 'data-testid': 'home' }, `Lives in: ${this.game.narrator.subjectName(`b:${homeB.id}`)} `);
-      const show = el('button', { class: 'link' }, 'Show me');
+      const show = el('button', { class: 'link', 'data-testid': 'open-home' }, 'Go to home');
       show.addEventListener('click', () => {
         const [w, h] = buildingDef(homeB.type).size;
         this.view.focusOn(homeB.x + w / 2, homeB.y + h / 2);
-        this.view.highlightBuilding(homeB.id);
+        this.select({ kind: 'building', id: homeB.id });
       });
       homeRow.appendChild(show);
       j.appendChild(homeRow);

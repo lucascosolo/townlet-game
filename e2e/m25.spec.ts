@@ -84,8 +84,10 @@ test('criterion 5: the build menu is closed by default and its cards show cost a
   const body = page.locator('.scroll-body');
   const before = (await body.boundingBox())!.height;
   await page.getByTestId('roll').click();
-  await page.waitForTimeout(700);
-  expect((await body.boundingBox())!.height).toBeLessThan(before / 4);
+  // The roll is a CSS transition; on a slow software-rendered runner a frame can take longer than
+  // the transition, so wait for it to finish rather than measuring once.
+  await expect(page.getByTestId('scroll')).toHaveClass(/rolled/);
+  await expect.poll(async () => (await body.boundingBox())!.height, { timeout: 5000 }).toBeLessThan(before / 4);
   await page.getByTestId('roll').click();
   await h(page)((t: number) => {
     const x = (window as unknown as { __townlet: Handle }).__townlet;

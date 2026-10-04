@@ -48,13 +48,14 @@ test('criterion 2: right-drag turns the view freely, Q snaps a quarter turn', as
   const q = Math.PI / 2;
   expect(Math.abs(((yaw1 - Math.PI / 4) / q) % 1)).toBeGreaterThan(0.05);
   await page.keyboard.press('q');
-  // The snap eases in; poll rather than sleep, since a slow frame can stretch the ease.
+  // The snap eases in; poll rather than sleep. On a cold software-rendered runner the one-off
+  // switch to low quality recompiles shaders and can freeze frames for several seconds mid-ease.
   await expect
     .poll(async () => {
       const yaw2 = await h(page)(() => (window as unknown as { __townlet: Handle }).__townlet.yaw());
       const k = (yaw2 - Math.PI / 4) / q;
       return Math.abs(k - Math.round(k));
-    }, { timeout: 5000 })
+    }, { timeout: 20_000 })
     .toBeLessThan(0.05);
 });
 

@@ -36,7 +36,9 @@ test('criterion 1: the introduction says you are the steward, and narration call
 });
 
 test('criterion 2: right-drag turns the view freely, Q snaps a quarter turn', async ({ page }) => {
-  await ready(page, 'intro=0&scenario=quiet&seed=1&speed=0');
+  // Low quality from the start: on a software renderer the automatic switch would otherwise come
+  // mid-test and freeze frames while shaders recompile. This test is about the camera, not looks.
+  await ready(page, 'intro=0&scenario=quiet&seed=1&speed=0&fx=low');
   const yaw0 = await h(page)(() => (window as unknown as { __townlet: Handle }).__townlet.yaw());
   await page.mouse.move(400, 400);
   await page.mouse.down({ button: 'right' });

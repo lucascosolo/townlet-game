@@ -60,14 +60,16 @@ test('criterion 6: a tab bar of five, 44px controls, no sideways scroll, and the
     expect(spill, `controls off the right edge on ${screen}`).toEqual([]);
   }
   await page.getByTestId('nav-town').tap();
-  await page.waitForTimeout(600);
-  const view = await page.evaluate(() => {
-    const hud = document.querySelector('.hud')!.getBoundingClientRect();
-    const sheet = document.querySelector('.scroll')!.getBoundingClientRect();
-    return { top: hud.bottom, bottom: sheet.top, height: window.innerHeight };
-  });
-  console.log(`town in view at peek: ${(((view.bottom - view.top) / view.height) * 100).toFixed(0)}% of the screen`);
-  expect((view.bottom - view.top) / view.height).toBeGreaterThanOrEqual(0.55);
+  // The sheet closes with a short animation; on a slow runner it can still be moving after a fixed
+  // wait, so measure once it has settled.
+  const share = () =>
+    page.evaluate(() => {
+      const hud = document.querySelector('.hud')!.getBoundingClientRect();
+      const sheet = document.querySelector('.scroll')!.getBoundingClientRect();
+      return (sheet.top - hud.bottom) / window.innerHeight;
+    });
+  await expect.poll(share, { timeout: 10_000 }).toBeGreaterThanOrEqual(0.55);
+  console.log(`town in view at peek: ${((await share()) * 100).toFixed(0)}% of the screen`);
 });
 
 test('criterion 6: tapping someone in the town opens a card with Talk, Favour and Profile', async ({ page }) => {

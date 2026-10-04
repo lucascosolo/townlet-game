@@ -740,6 +740,49 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - The one-year soak with newcomers (bakery, 10 seeds × 112 days) found no degenerate state.
    - One harness change: the e2e popup helper now waits for rendered frames rather than a fixed 500 ms. A slow frame let a proposal popup arrive after the old window, and that popup covered the tabs.
 
+
+**M4 criteria: a fun game on phones and desktops (predeclared 2026-10-04, before any M4 code).** Measured in the quiet town on seeds 1–5 over 28 days unless stated. A failure is reported as a failure, not redefined. The numbers in brackets are what the harsh review measured.
+
+1. **Writing and minds (review quick wins):**
+   - No "a" before a vowel-sounding building name, no plural building names after "a", and no "?," or doubled tics anywhere in the 28-day log on any seed.
+   - Opinions of people never use the place-opinion lines.
+   - The steward is mentioned in at most 12% of quoted lines in the 21-day log with the favour-asking steward [24%].
+   - No line is quoted more than 10 times in that log [29], and at least 65% of quoted lines are unique [53%].
+   - A dream step that waits on a building advances within the hour the building goes up.
+2. **Tension in the economy:**
+   - With the favour-asking steward, timber sits at its cap on at most 5 of 28 days [7 or more].
+   - A favour costs the resident's own job output for those hours (unit test).
+   - With no granary, at least 3 of 5 seeds have a food shortage in winter. With the stores met, none do.
+3. **Today's goals:**
+   - Every morning has 3 goals, and each can be completed that day by something the player can do. A unit test completes each goal kind through commands.
+   - A scripted "goal-keeping steward" completes at least 2 a day on average.
+4. **Renown and tiers:**
+   - The goal-keeping steward reaches Hamlet by day 7 and Village by day 28 on every seed.
+   - A do-nothing steward is still a Clearing on day 28 on every seed.
+   - Each tier raises the resident cap and unlocks its building. Nothing that was buildable before M4 becomes locked.
+5. **The Folk album:**
+   - Asking a resident all four questions on two different days reveals at least 80% of their facts.
+   - Facts are revealed only by talk commands, so a replay reveals the same facts.
+   - Every revealed fact matches the resident's state.
+6. **On a phone (390×844, in the browser):**
+   - A bottom tab bar with 5 tabs.
+   - Every control is at least 44px.
+   - No horizontal scrolling.
+   - With a sheet at peek, at least 55% of the screen height shows the town.
+   - Tapping a resident in the world opens a card with Talk, Favour and Profile.
+   - The touch build flow still works.
+7. **On a desktop (1440×900, in the browser):**
+   - The dashboard shows Goals, Folk, Board and Log, and the selection, as docked widgets.
+   - Each widget can be collapsed and brought back.
+   - The town keeps at least 40% of the window width unobstructed in the middle.
+8. **Save:**
+   - Reloading the page restores the same town (tick, buildings, residents, revealed facts and renown) from the saved command log.
+   - "New valley" starts a fresh one.
+9. **No regressions:**
+   - All earlier unit and browser tests pass. If an M4 change moves an earlier measured number, the earlier criterion is re-measured and reported.
+   - Determinism holds.
+   - The one-year soak with newcomers (10 seeds) shows no degenerate state.
+
 ---
 
 ## 10. Risks

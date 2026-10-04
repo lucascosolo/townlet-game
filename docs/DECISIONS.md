@@ -2,6 +2,56 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-04: M4, a fun game on phones and desktops — directions chosen
+
+**The ask (owner):** "Make it a super fun mobile game with a good UI for mobile, but the desktop UI should be fun on desktop and use the extra space appropriately."
+
+**The harsh gameplay review** (docs/reviews/2026-10-04-gameplay-review.md) scored the game 4/10. Its main findings:
+- Player choices barely move how residents feel.
+- Timber and food pile up, and favours are almost always yes.
+- There are dead stretches with nothing to decide.
+- Residents talk about the steward too much.
+- Lines repeat.
+- There is no save.
+- There are no tiers or long arc.
+
+**The owner's answers:**
+- **Phone: portrait first.** One-handed play: a bottom tab bar, controls within thumb reach, and sheets that peek so the town stays visible. Landscape still works, with less polish.
+- **The fun to push: goals and rewards, and collecting residents.**
+- **Desktop: dashboard style.** Docked widgets (goals, people, board and log, the selection, stores) that the player can show or hide around the town.
+
+**Chosen for M4:**
+- **Today's goals.** Each morning brings three small goals, drawn from what the town needs right now (answer an ask, talk to someone you haven't, fill the granary by an amount, ask a favour, build what someone wants). Each completed goal earns renown, with a bonus for all three.
+- **Renown and tiers.** The spec's tiers arrive: Clearing → Hamlet → Village → Townlet.
+  - **Renown comes from** goals, granted asks and wishes, dreams seen through, the winter stores and newcomers.
+  - **Each tier** raises the resident cap and unlocks a new building: beehives at Hamlet, a chicken coop at Village, a fountain at Townlet.
+  - **Each tier-up** is celebrated.
+  - **Buildings already in the game stay unlocked**, so earlier milestones keep their meaning.
+- **The Folk album.** A card for every resident. You fill it in by talking: each question reveals facts (what they like and dislike, what they value, their quirks, their dream, their closest friend). Each new fact earns a little renown. Residents you haven't spoken to show as "not met yet".
+- **The review's quick wins**, which are cheap and remove things a reviewer would screenshot:
+  - grammar (a/an, singular building names, stacked tics);
+  - separate opinion lines for people and for places;
+  - the steward topic weighted by recent change rather than standing;
+  - dream steps that advance when their building appears;
+  - a digest of belief updates on the board;
+  - speaker names on bubbles;
+  - progress lines for the stores quest;
+  - fewer repeated lines.
+- **Economy tension:**
+  - A favour's hours come out of the resident's own job output.
+  - Flower beds and woodlots cost more.
+  - The bakery and jetty make less in winter, so the stores matter.
+- **Save.** The game already keeps a replayable command log and a seed. Both are saved in the browser and replayed on load. There is also a "New valley" button.
+- **Layouts:**
+  - **Phone (portrait):** a bottom tab bar with Town, Goals, Folk, Build and Log. Sheets have peek, half and full heights. Tapping a resident opens a small card with Talk, Favour and Profile.
+  - **Desktop:** a dashboard of docked widgets in left and right columns. The town keeps the middle, and the build tray stays along the bottom.
+
+**Deferred, and why:**
+- *Making needs depend on the player's town* (review #1). This is the deepest fun problem, but it changes the mood model under every M1–M3 criterion. It needs its own chunk, with its own criteria and soaks.
+- *More dilemmas* (review #4) and *seeded friction between residents* (review #12). These are content-heavy, and they are the natural next chunk after M4.
+- *The charter and the Almanac.* Townlet tier is reached in M4. The ceremony comes later.
+- *A random seed by default.* The six founders are authored, so a new seed changes less than the review implies. "New valley" picks a random seed, and the default stays seed 1 for now.
+
 ## 2026-10-04: Winter stores — Juniper's quest and the granary
 
 **The ask (owner):** "Juniper is obsessed with storing up food for winter. That may be reasonable, but instead of a food number just climbing higher, we could make it a goal: store 150 food for the winter, and it goes in a special building for storing food. Like a quest."

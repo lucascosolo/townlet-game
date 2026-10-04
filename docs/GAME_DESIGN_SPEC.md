@@ -667,7 +667,7 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - The log's default view stays readable: in a 7-day browser run, the Story filter shows at most 40 lines a day on average.
 
 
-**M3c status (2026-10-04): all six met, pending the 10-year soak with newcomers (below).** The tests are in `test/m3c.test.ts`, `test/m3c-year.slow.test.ts` and `e2e/m3c.spec.ts`.
+**M3c status (2026-10-04): all six met.** The tests are in `test/m3c.test.ts`, `test/m3c-year.slow.test.ts` and `e2e/m3c.spec.ts`.
 
 1. **Favours: met.**
    - Every refusal reason is checked against a state that makes it true: tired, unwell, asked too often, a poor view of the steward, low, not on speaking terms, already busy.
@@ -694,12 +694,31 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - All earlier unit and browser tests pass. Long tests got more time, because the bigger map and more residents are slower. One harness detail changed: popups are now put off on the next frame too.
    - The log's Story view averages 20–27 lines a day in the first week, against at most 40.
    - The one-year soak with newcomers (10 seeds) shows no degenerate state, after a fix: see below.
-   - The 10-year soak with newcomers (3 seeds) is still running at the time of writing; its result will be added here.
+   - The 10-year soak with newcomers (3 seeds) is clean: no degenerate state on seeds 1–3. It now runs nightly in `.github/workflows/slow.yml`.
 
 **Found and fixed on the way:**
 - **Jobless newcomers.** Workplaces have limited places, so a newcomer whose trade was full had no job, and their purpose ran dry; 6 of 10 one-year soaks flagged it. They now help out at their trade's workplace, and their "place to work" ask fires when every place of that kind is full. That gives the player something to build.
 - **Newcomer ids clashed between simulations in one process,** which broke determinism when tests ran together. Ids now carry a hash of what generated them.
 - **The soak's random builder aimed across the whole bigger map,** so most of its builds failed and one town flagged an idle baker. It now builds within the settled valley, and never "removes" wild land.
+
+
+**Winter stores criteria (predeclared 2026-10-04, before any granary code).** Measured in the quiet town on seeds 1–5 unless stated. A failure is reported as a failure, not redefined.
+
+1. **Juniper raises the quest:** on every seed with the considerate steward, Juniper asks for a granary before the first day of winter (day 22).
+2. **Nothing is lost while there is room.** With a granary standing, food that would have gone over the larder's cap goes into the granary. A unit test checks that larder plus granary rise by exactly what was made, up to the granary's capacity. Over 28 days the larder no longer sits at its cap on more than 2 days, against 4–8 days today.
+3. **The target can be met, and needs the player:**
+   - The favour-asking steward, which builds what is asked for and asks one favour a day, has 150 or more in the granary on the first day of winter on at least 3 of 5 seeds.
+   - For the considerate steward, which only builds what is asked for, the result is measured and reported, with no bound.
+4. **Full stores feed the winter.** On every seed where the target is met, there is no food shortage from day 22 to day 28.
+5. **The outcome is felt and narrated.** A met target brings every resident a warmer view of Juniper and brings Juniper a warmer view of the steward. A missed one is narrated as missed. On every seed, the quest is posted again in the second year.
+6. **In the browser:**
+   - The board shows a Winter stores card with the count, the target and the days to winter.
+   - The HUD shows the granary's count once one stands.
+   - The granary is in the build tray.
+7. **No regressions:**
+   - All earlier unit and browser tests pass.
+   - Determinism holds.
+   - The one-year soak with newcomers (10 seeds) shows no degenerate state.
 
 ---
 

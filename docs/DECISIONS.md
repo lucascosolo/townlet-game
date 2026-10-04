@@ -2,6 +2,25 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-04: Winter stores — Juniper's quest and the granary
+
+**The ask (owner):** "Juniper is obsessed with storing up food for winter. That may be reasonable, but instead of a food number just climbing higher, we could make it a goal: store 150 food for the winter, and it goes in a special building for storing food. Like a quest."
+
+**What the numbers showed first.** In the quiet town with the considerate steward, the larder reaches its cap of 80 by about day 7 and sits there. The town makes roughly 15 food a day and eats about 9, so 5–6 food a day was being thrown away at the cap. That is the "number just climbing higher", and it is also the missing food sink the owner asked for earlier.
+
+**Chosen:**
+- **A granary**, a new building (12 timber, 2×2). It holds up to 300 food, apart from the larder.
+- **A yearly town quest, raised by Juniper:** "Winter stores: put by 150 food in the granary before the first day of winter." Juniper asks for a granary once the larder is overflowing or autumn arrives, whichever comes first. The target grows with the town: 25 food per resident, never below 150.
+- **How food gets there.** Food that would spill over the larder's cap goes into the granary instead of being lost. In daylight, while the larder holds more than 24, surplus is carried across at 2 food an hour. The larder stops pinning at its cap, and the granary's count is the number that climbs, towards a target with a deadline.
+- **What the stores do in winter.** Every winter dawn, the granary tops the larder back up to 24. A meal that finds the larder empty draws from the granary. Stores that are full on the first day of winter mean a winter without shortages.
+- **The outcome is felt.** If the target is met on the first day of winter, the town is grateful to Juniper, and Juniper to the steward. If it falls short, Juniper says so, and the town eats what there is. The quest comes round again the next year.
+- **Shown on the board.** A quest card shows "N of 150 put by", a progress bar and the days left until winter. The HUD shows the granary's count next to the larder once a granary stands.
+
+**Rejected:**
+- *Adding the stores as more stages of Juniper's authored dream.* That would lengthen her first dream past winter, and it would move the M3a and M3b dream criteria without anyone deciding to. A quest beside the dream keeps those criteria as they were declared.
+- *An automatic granary with no deadline.* Without "before winter" there is no goal, only a second number climbing.
+- *Feasts, weddings and the trade cart as sinks.* They are planned for M3d (families and the food economy). The granary comes first because the owner asked for it by name.
+
 ## 2026-10-03: M3c, agency — playtest, and directions chosen
 
 **The playtest (owner, after M3b part 1 went live):**

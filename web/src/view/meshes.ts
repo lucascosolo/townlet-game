@@ -152,7 +152,7 @@ function house(w: number, d: number, roofColor: number, opts: { chimney?: boolea
     [bw / 2 + 0.01, 0, Math.PI / 2],
     [0, -bd / 2 - 0.01, 0],
   ] as const) {
-    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.2), glow.window);
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.27), glow.window);
     win.position.set(x, 0.42, z);
     win.rotation.y = ry;
     g.add(win);
@@ -170,6 +170,35 @@ function house(w: number, d: number, roofColor: number, opts: { chimney?: boolea
   return g;
 }
 
+/** A woodpile, a water butt, a bit of fence and a pot of flowers: a home that's lived in (review: no props). */
+function homeProps(w: number, d: number, variant: number): THREE.Group {
+  const g = new THREE.Group();
+  const side = variant % 2 ? 1 : -1;
+  // Woodpile against a side wall.
+  for (let i = 0; i < 3; i++) {
+    const log = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.36, 6), mat(PALETTE.wood));
+    log.rotation.z = Math.PI / 2;
+    log.position.set(side * (w * 0.41 + 0.08), 0.06 + Math.floor(i / 2) * 0.09, -0.15 + (i % 2) * 0.11 + (i >= 2 ? 0.05 : 0));
+    log.castShadow = true;
+    g.add(log);
+  }
+  // A water butt by the door.
+  const butt = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.18, 8), mat(PALETTE.darkWood));
+  butt.position.set(w * 0.2, 0.09, d * 0.41 + 0.12);
+  butt.castShadow = true;
+  g.add(butt);
+  // A short picket run along the front.
+  for (let i = 0; i < 4; i++) g.add(box(0.03, 0.16, 0.03, mat(0xd8cbb0), -w * 0.45 + i * 0.12, 0.08, d * 0.5 + 0.08));
+  g.add(box(0.4, 0.025, 0.02, mat(0xd8cbb0), -w * 0.45 + 0.18, 0.12, d * 0.5 + 0.08));
+  // Flowers in a pot.
+  const pot = box(0.1, 0.08, 0.1, mat(0xb5653e), w * 0.38, 0.04, d * 0.41 + 0.1);
+  g.add(pot);
+  const bloom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.06, 0), mat([0xe76f8a, 0xf2c14e, 0xb48be0][variant % 3] as number));
+  bloom.position.set(w * 0.38, 0.12, d * 0.41 + 0.1);
+  g.add(bloom);
+  return g;
+}
+
 /** A mesh group for a building type, centred on its footprint, sitting on y = 0. */
 export function buildingMesh(type: string, variant = 0): THREE.Group {
   const [w, d] = buildingDef(type).size;
@@ -177,6 +206,7 @@ export function buildingMesh(type: string, variant = 0): THREE.Group {
   switch (type) {
     case 'cottage':
       g = house(w, d, ROOFS[variant % ROOFS.length] as number, { chimney: true });
+      g.add(homeProps(w, d, variant));
       break;
     case 'bakery':
       g = house(w, d, 0xc98b4b, { chimney: true, oven: true });

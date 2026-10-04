@@ -14,8 +14,10 @@ export const ICONS = {
   turnRight: svg('<path d="M20 9a8 8 0 1 0-1.7 7.5"/><path d="M20 4v5h-5"/>'),
   help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.9"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor"/>'),
   wheat: svg('<path d="M12 21V9"/><path d="M12 9c-3-1-4-4-3.5-6 2 .5 4 2.5 3.5 6zM12 9c3-1 4-4 3.5-6-2 .5-4 2.5-3.5 6z"/><path d="M12 14c-3-.5-4.5-3-4.5-5 2.2 0 4.5 2 4.5 5zM12 14c3-.5 4.5-3 4.5-5-2.2 0-4.5 2-4.5 5z"/>', 20),
-  log: svg('<ellipse cx="6" cy="12" rx="3" ry="5"/><path d="M6 7h12c1.7 0 3 2.2 3 5s-1.3 5-3 5H6"/><ellipse cx="6" cy="12" rx="1" ry="2"/>', 20),
+  // Two stacked logs with end-grain rings (review: the old icon read as a battery).
+  log: svg('<rect x="3" y="5" width="17" height="6" rx="3"/><circle cx="6" cy="8" r="1.3"/><rect x="5" y="13" width="17" height="6" rx="3"/><circle cx="8" cy="16" r="1.3"/>', 20),
   sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>', 18),
+  cloud: svg('<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.3 1.5A3.3 3.3 0 0 0 7 18z"/><path d="M9 21l1-2M13 21l1-2" />', 18),
   moon: svg('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>', 18),
   look: svg('<path d="M5 3l14 8-6 1.5L10 19z" fill="currentColor" stroke="none"/>', 16),
   build: svg('<path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M10 21v-6h4v6"/>', 16),

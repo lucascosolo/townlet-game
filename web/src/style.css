@@ -229,8 +229,12 @@ button.primary:hover { background: #a3572f; }
 
 /* Phones: the scroll is a bottom sheet, touch targets are 44px, the top bar is compact. */
 @media (max-width: 600px) {
-  .hud { left: 8px; right: 8px; top: 8px; min-height: 0; padding: 6px 8px; gap: 8px; flex-wrap: nowrap; overflow-x: auto; }
+  .hud { left: 8px; right: 8px; top: 8px; min-height: 0; padding: 6px 8px; display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'clock stock' 'speeds rot'; gap: 6px 8px; overflow: hidden; }
   .hud .title { display: none; }
+  .hud .clock { grid-area: clock; }
+  .hud .stock { grid-area: stock; justify-self: end; }
+  .hud .speeds { grid-area: speeds; }
+  .hud .speeds.rot { grid-area: rot; justify-self: end; }
   .hud .clock { white-space: nowrap; font-size: 13px; gap: 4px; }
   .hud .clock .season { display: none; }
   .hud .speeds button[data-testid="speed-3"] { display: none; }
@@ -268,3 +272,25 @@ button.primary:hover { background: #a3572f; }
   .scroll.rolled ~ .place-bar { bottom: 128px; }
   .place-bar .quiet { display: none; }
 }
+
+.intro-faces { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 4px; }
+.intro-faces figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; }
+
+/* Night sky: a moon and stars behind the transparent canvas (review: flat navy sky). */
+#stage { isolation: isolate; }
+#stage::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity 1.5s ease; pointer-events: none;
+  background:
+    radial-gradient(circle at 82% 14%, #fdf6d8 0 26px, rgba(253, 246, 216, 0.25) 27px 40px, transparent 41px),
+    radial-gradient(1.2px 1.2px at 12% 18%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 24% 8%, #fff 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 38% 22%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 52% 6%, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 64% 16%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 71% 30%, #fff 50%, transparent 51%),
+    radial-gradient(1.3px 1.3px at 92% 26%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 6% 34%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 30% 36%, #fff 50%, transparent 51%),
+    radial-gradient(1.1px 1.1px at 47% 40%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 44%, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 18% 50%, #fff 50%, transparent 51%); }
+#stage.night::before { opacity: 0.9; }

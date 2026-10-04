@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { buildingDef } from '../../../src/content/buildings.js';
 import { minuteOf, seasonOf, type Season } from '../../../src/sim/time.js';
 import type { BuildingState, ResidentState } from '../../../src/sim/types.js';
-import { footprint, placeTile, sizeOf } from '../../../src/sim/world.js';
+import { footprint, liveBuildings, placeTile, route, sizeOf } from '../../../src/sim/world.js';
 import type { Game } from '../game.js';
 import { buildingMesh, glow, mat, residentMesh } from './meshes.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -16,6 +16,8 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 /** Real point lights placed at the lamps nearest the view (the rest glow by their ground pools). */
 const LAMP_LIGHTS = 10;
 const LAMP_COLOR = 0xffb75e;
+/** Places people stand on rather than around. */
+const OPEN_GROUND = new Set(['commons', 'garden', 'jetty', 'bench', 'flowerbed', 'brook']);
 
 export type Pick = { kind: 'resident'; id: string } | { kind: 'building'; id: number } | { kind: 'ground'; x: number; y: number };
 
@@ -60,6 +62,8 @@ export class TownView {
   private azimuth = Math.PI / 4;
   private readonly sun = new THREE.DirectionalLight(0xffffff, 1.4);
   private readonly hemi = new THREE.HemisphereLight(0xdfefff, 0x6b5a3a, 0.6);
+  /** Cool moonlight from behind the camera at night, so roofs keep their shape (review: silhouettes). */
+  private readonly moon = new THREE.DirectionalLight(0x9fb3e6, 0);
   private readonly ground: THREE.Mesh;
   private readonly groundMat = new THREE.MeshLambertMaterial({ color: SEASON_GROUND.spring });
   private readonly leafMat = mat(SEASON_LEAF.spring);
@@ -78,6 +82,10 @@ export class TownView {
   private readonly dust: Array<{ mesh: THREE.Mesh; v: THREE.Vector3; born: number }> = [];
   private readonly dustMat = new THREE.MeshLambertMaterial({ color: 0xcdb48c, transparent: true, opacity: 0.8 });
   private firstSync = true;
+  /** Worn dirt paths between homes, work and the places people gather (review: no paths). */
+  private readonly pathCanvas = document.createElement('canvas');
+  private readonly pathTexture: THREE.CanvasTexture;
+  private pathsKey = '';
   /** A soft ring under the selected resident. */
   private readonly ring: THREE.Mesh;
   private ringFor: string | null = null;
@@ -121,7 +129,7 @@ export class TownView {
     const s = Math.max(width, height) * 0.75;
     Object.assign(this.sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 1, far: 120 });
     this.sun.target.position.copy(this.target);
-    this.scene.add(this.sun, this.sun.target, this.hemi);
+    this.scene.add(this.sun, this.sun.target, this.hemi, this.moon, this.moon.target);
 
     // Grass with a little variation tile to tile, so the valley isn't one flat colour.
     const groundGeo = new THREE.PlaneGeometry(width, height, width, height);
@@ -158,6 +166,20 @@ export class TownView {
     skirt(-0.06, 0.12, SEASON_GROUND.spring, 0.02);
     skirt(-0.7, 1.15, 0x6b4a32, 0);
     skirt(-1.45, 0.4, 0x4e3626, 0.03);
+    // Paths: an alpha map over the ground, drawn from the routes people walk.
+    this.pathCanvas.width = width * 4;
+    this.pathCanvas.height = height * 4;
+    this.pathTexture = new THREE.CanvasTexture(this.pathCanvas);
+    this.pathTexture.magFilter = THREE.LinearFilter;
+    const paths = new THREE.Mesh(
+      new THREE.PlaneGeometry(width, height),
+      new THREE.MeshLambertMaterial({ color: 0xb89a6a, alphaMap: this.pathTexture, transparent: true, depthWrite: false }),
+    );
+    paths.rotation.x = -Math.PI / 2;
+    paths.position.set(width / 2, 0.012, height / 2);
+    paths.receiveShadow = true;
+    paths.renderOrder = 0;
+    this.scene.add(paths);
     // The tile grid shows only while building.
     this.grid = new THREE.GridHelper(width, width, 0x000000, 0x000000);
     (this.grid.material as THREE.Material).opacity = 0.08;
@@ -312,6 +334,47 @@ export class TownView {
     const state = this.game.sim.state;
     this.syncBuildingList(state);
     this.firstSync = false;
+    this.syncPaths();
+  }
+
+  /** Redraw the worn paths when the town changes: from every home to work and to where people gather. */
+  private syncPaths(): void {
+    const state = this.game.sim.state;
+    const live = liveBuildings(state);
+    const key = `${live.length}:${state.order.length}:${live.reduce((s, b) => s + b.id, 0)}`;
+    if (key === this.pathsKey) return;
+    this.pathsKey = key;
+    const wear = new Map<string, number>();
+    const walk = (a: [number, number], b: [number, number], w: number) => {
+      for (const [x, y] of route(a, b)) wear.set(`${x},${y}`, (wear.get(`${x},${y}`) ?? 0) + w);
+    };
+    const doorOf = (id: number | null) => {
+      const b = id !== null ? live.find((x) => x.id === id) : undefined;
+      return b ? placeTile(b) : null;
+    };
+    const gathering = live.filter((b) => ['commons', 'teahouse', 'well', 'oak', 'bakery'].includes(b.type));
+    for (const id of state.order) {
+      const r = state.residents[id] as ResidentState;
+      if (r.departed) continue;
+      const home = doorOf(r.homeId);
+      if (!home) continue;
+      const job = doorOf(r.jobId);
+      if (job) walk(home, job, 2);
+      for (const g of gathering) walk(home, placeTile(g), 1);
+    }
+    const ctx = this.pathCanvas.getContext('2d') as CanvasRenderingContext2D;
+    ctx.clearRect(0, 0, this.pathCanvas.width, this.pathCanvas.height);
+    for (const [k, w] of wear) {
+      const [x, y] = k.split(',').map(Number) as [number, number];
+      // Under buildings no path shows (the building covers it anyway); worn more, darker.
+      const a = Math.min(0.85, 0.25 + w * 0.06);
+      const g = ctx.createRadialGradient(x * 4 + 2, y * 4 + 2, 0, x * 4 + 2, y * 4 + 2, 3.2);
+      g.addColorStop(0, `rgba(255,255,255,${a})`);
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x * 4 - 2, y * 4 - 2, 8, 8);
+    }
+    this.pathTexture.needsUpdate = true;
   }
 
   private puff(x: number, z: number, size: number): void {
@@ -410,11 +473,13 @@ export class TownView {
     const here = index.get(b.id) ?? [r.id];
     const i = here.indexOf(r.id);
     const n = here.length;
-    const radius = Math.max(w, d) / 2 + 0.25;
+    const radius = Math.max(w, d) / 2 + (b.type === 'oak' ? 0.75 : 0.25);
     const angle = (i / Math.max(n, 1)) * Math.PI * 2 + 0.6;
     const cx = b.x + w / 2;
     const cz = b.y + d / 2;
-    if (def.kind === 'home' || def.kind === 'work') return new THREE.Vector3(cx + Math.cos(angle) * radius, 0, cz + Math.sin(angle) * radius);
+    // Solid things (houses, the oak, the well, the teahouse...) are stood around, not inside
+    // (review: a villager standing in the tree trunk). Open ground is stood on.
+    if (!OPEN_GROUND.has(b.type)) return new THREE.Vector3(cx + Math.cos(angle) * radius, 0, cz + Math.sin(angle) * radius);
     const spread = n > 1 ? 0.45 : 0;
     return new THREE.Vector3(tx + 0.5 + Math.cos(angle) * spread * Math.min(w, 2), 0, ty + 0.5 + Math.sin(angle) * spread * Math.min(d, 2));
   }
@@ -497,9 +562,15 @@ export class TownView {
     const zenith = new THREE.Color(0x9cc3e0).lerp(new THREE.Color(0x1b2238), night).lerp(new THREE.Color(0x6f7880), gloom);
     const horizon = new THREE.Color(0xf6e7c8).lerp(new THREE.Color(0x3b4a72), night).lerp(new THREE.Color(0x9aa2a8), gloom);
     this.paintSky(zenith, horizon);
+    this.renderer.domElement.parentElement?.classList.toggle('night', night > 0.6 && gloom === 0);
+    // The moon sits up behind the viewer: rim light on roofs and walls facing the camera.
+    this.moon.position.set(this.target.x + Math.cos(this.azimuth) * 20, 25, this.target.z + Math.sin(this.azimuth) * 20);
+    this.moon.target.position.copy(this.target);
+    this.moon.intensity = night * 0.55;
 
     glow.window.emissiveIntensity = night * 2.2;
-    glow.lantern.emissiveIntensity = 0.2 + night * 2.4;
+    // Lamps are lit from dusk to dawn only (review: lanterns glowing at noon).
+    glow.lantern.emissiveIntensity = night * 2.6;
     glow.pool.opacity = night * 0.55;
     glow.pool.visible = night > 0.02;
     this.placeLamps(night);

@@ -224,7 +224,7 @@ export class Ui {
       speeds.appendChild(b);
       this.speedButtons.push(b);
     });
-    const rot = el('div', { class: 'speeds' });
+    const rot = el('div', { class: 'speeds rot' });
     const left = el('button', { class: 'icon', title: 'Turn left (Q). Or right-drag, or twist two fingers, to turn freely.', 'aria-label': 'Turn left' });
     const right = el('button', { class: 'icon', title: 'Turn right (E). Or right-drag, or twist two fingers, to turn freely.', 'aria-label': 'Turn right' });
     const help = el('button', { class: 'icon', title: 'How to play', 'aria-label': 'How to play', 'data-testid': 'help' });
@@ -308,6 +308,8 @@ export class Ui {
     game.onEvent((e) => this.onEvent(e));
     this.setSpeed(game.speedIndex);
     this.setTool({ kind: 'select' });
+    // On a phone the scroll starts rolled up, so the town is what you see first.
+    if (window.innerWidth <= 600) this.toggleScroll();
     if (opts.intro) this.showIntro();
   }
 
@@ -498,11 +500,28 @@ export class Ui {
       return;
     }
     const c = el('div', { 'data-testid': 'intro' });
+    c.appendChild(el('div', { class: 'eyebrow' }, `${page + 1} of ${INTRO.length}`));
     c.appendChild(el('h2', {}, p.title));
+    // The first page puts faces to the six names.
+    if (page === 0) {
+      const faces = el('div', { class: 'intro-faces' });
+      for (const id of this.game.sim.state.order.slice(0, 6)) {
+        const f = el('figure');
+        f.append(portrait(id, 52), el('figcaption', {}, residentDef(id).name));
+        faces.appendChild(f);
+      }
+      c.appendChild(faces);
+    }
     c.appendChild(el('p', {}, p.body));
     const row = el('div', { class: 'modal-buttons' });
-    const next = el('button', { class: 'primary', 'data-testid': 'intro-next' }, page === INTRO.length - 1 ? 'Begin' : 'Next');
-    next.addEventListener('click', () => this.showIntro(page + 1));
+    const last = page === INTRO.length - 1;
+    const next = el('button', { class: 'primary', 'data-testid': 'intro-next' }, last ? 'Begin' : 'Next');
+    // The scroll stays rolled up behind the welcome (review: a cluttered first frame) and unrolls at the end.
+    if (page === 0 && !this.scroll.classList.contains('rolled')) this.toggleScroll();
+    next.addEventListener('click', () => {
+      if (last && this.scroll.classList.contains('rolled') && window.innerWidth > 600) this.toggleScroll();
+      this.showIntro(page + 1);
+    });
     row.appendChild(next);
     c.appendChild(row);
     this.openModal(c);
@@ -751,16 +770,23 @@ export class Ui {
       pane.appendChild(card);
     }
 
+    // This morning: only what matters, the rest is in the log (review: the board repeated the log).
     pane.appendChild(el('h3', {}, 'This morning'));
-    if (this.morning.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'Nothing new on the board.'));
+    const worth = this.morning.filter((e) => e.importance === 'major');
+    const rest = this.morning.filter((e) => e.importance !== 'major').length;
+    if (worth.length === 0) pane.appendChild(el('p', { class: 'quiet' }, rest ? 'A quiet night. Nothing needs you.' : 'Nothing new on the board.'));
     const list = el('ul');
-    for (const e of this.morning) {
-      if (e.importance === 'minor') continue;
+    for (const e of worth) {
       const li = el('li', { class: e.importance });
       for (const n of this.nameLinks(e.text)) li.appendChild(n);
       list.appendChild(li);
     }
     pane.appendChild(list);
+    if (rest) {
+      const more = el('button', { class: 'link', 'data-testid': 'morning-more' }, `${rest} more in the Town log`);
+      more.addEventListener('click', () => this.showTab('log'));
+      pane.appendChild(more);
+    }
   }
 
   /** How green it is around someone's home, against what satisfies them. */
@@ -1235,7 +1261,7 @@ export class Ui {
     const clockText = `Day ${dayOf(t)} · ${cap(seasonOf(t))} · ${clock(t)}${w}`;
     if (this.clockEl.dataset.text !== clockText) {
       this.clockEl.dataset.text = clockText;
-      this.clockEl.innerHTML = `${hour >= 6 && hour < 20 ? ICONS.sun : ICONS.moon}<span><span class="day">Day ${dayOf(t)}</span><span class="season"> · ${cap(seasonOf(t))}</span> · ${clock(t)}<span class="season">${w}</span></span>`;
+      this.clockEl.innerHTML = `${w ? ICONS.cloud : hour >= 6 && hour < 20 ? ICONS.sun : ICONS.moon}<span><span class="day">Day ${dayOf(t)}</span><span class="season"> · ${cap(seasonOf(t))}</span> · ${clock(t)}<span class="season">${w}</span></span>`;
       this.clockEl.title = clockText;
     }
     for (const res of ['food', 'timber'] as const) {

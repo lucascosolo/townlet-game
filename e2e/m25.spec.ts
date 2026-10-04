@@ -48,10 +48,14 @@ test('criterion 2: right-drag turns the view freely, Q snaps a quarter turn', as
   const q = Math.PI / 2;
   expect(Math.abs(((yaw1 - Math.PI / 4) / q) % 1)).toBeGreaterThan(0.05);
   await page.keyboard.press('q');
-  await page.waitForTimeout(800);
-  const yaw2 = await h(page)(() => (window as unknown as { __townlet: Handle }).__townlet.yaw());
-  const k = (yaw2 - Math.PI / 4) / q;
-  expect(Math.abs(k - Math.round(k))).toBeLessThan(0.05);
+  // The snap eases in; poll rather than sleep, since a slow frame can stretch the ease.
+  await expect
+    .poll(async () => {
+      const yaw2 = await h(page)(() => (window as unknown as { __townlet: Handle }).__townlet.yaw());
+      const k = (yaw2 - Math.PI / 4) / q;
+      return Math.abs(k - Math.round(k));
+    }, { timeout: 5000 })
+    .toBeLessThan(0.05);
 });
 
 test('criterion 4: R rotates the ghost, and the built workshop occupies its turned footprint', async ({ page }) => {

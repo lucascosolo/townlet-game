@@ -153,6 +153,15 @@ export const StructuredMind: Mind = {
         if (shift && inWindow(minute, shift[0], shift[1] - 20)) {
           add('work', r.jobId, 1.2 + 0.4 * unit(def.traits.steady) - (def.quirks.includes('restless') ? 0.2 : 0));
         }
+      } else {
+        // No place of their own: they help out where their trade is done, in working hours (M3c).
+        for (const type of [def.job, def.fallbackJob]) {
+          if (!type) continue;
+          for (const b of liveBuildings(ctx.state)) {
+            const shift = b.type === type ? buildingDef(b.type).shift : undefined;
+            if (shift && inWindow(minute, shift[0], shift[1] - 20)) add('work', b.id, 0.7 + 0.3 * unit(def.traits.steady));
+          }
+        }
       }
       const evening = inWindow(minute, 17 * 60, def.sleep);
       // A dream pulls them to where it happens (or a student to their teacher).

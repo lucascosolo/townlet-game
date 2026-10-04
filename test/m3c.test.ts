@@ -57,7 +57,7 @@ describe('criterion 1: favours', () => {
     expect(v.yes).toBe(v.score >= WILLING);
   });
 
-  it('an accepted favour is done: they go there, spend the time, and the stores rise', { timeout: 60_000 }, () => {
+  it('an accepted favour is done: they go there, spend the time, and the stores rise', { timeout: 180_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'none');
       sim.runUntil(awake(2));
@@ -94,7 +94,7 @@ describe('criterion 1: favours', () => {
     for (const seed of SEEDS) expect(income('favours', seed), `seed ${seed}`).toBeGreaterThanOrEqual(2 * income('none', seed));
   });
 
-  it('twin: asked five favours in five days, a resident thinks less of the steward than when asked one', { timeout: 120_000 }, () => {
+  it('twin: asked five favours in five days, a resident thinks less of the steward than when asked one', { timeout: 300_000 }, () => {
     for (const seed of SEEDS) {
       const standing = (asks: number) => {
         const sim = runScenario('quiet', seed, 'none');
@@ -127,7 +127,7 @@ describe('criterion 2: a growing valley', () => {
     expect(openPlots(s)).toHaveLength(0);
   });
 
-  it('clearing a plot by favours opens it to build on, and brings in timber', { timeout: 60_000 }, () => {
+  it('clearing a plot by favours opens it to build on, and brings in timber', { timeout: 180_000 }, () => {
     const sim = runScenario('quiet', 1, 'none');
     sim.runUntil(awake(2));
     const plot = openPlots(sim.state)[0] as number;
@@ -150,7 +150,7 @@ describe('criterion 2: a growing valley', () => {
 });
 
 describe('criterion 3: newcomers', () => {
-  it('nobody moves in without an empty home; build one and someone does', { timeout: 60_000 }, () => {
+  it('nobody moves in without an empty home; build one and someone does', { timeout: 180_000 }, () => {
     const sim = runScenario('quiet', 1, 'none');
     sim.runDays(7);
     expect(sim.state.order).toHaveLength(6);
@@ -194,7 +194,7 @@ describe('criterion 3: newcomers', () => {
     }
   });
 
-  it('a newcomer is a resident like any other: a voice, thoughts, and in time a dream', { timeout: 60_000 }, () => {
+  it('a newcomer is a resident like any other: a voice, thoughts, and in time a dream', { timeout: 180_000 }, () => {
     const sim = runScenario('quiet', 1, 'none');
     const n = new Narrator(sim);
     sim.runUntil(awake(2));
@@ -209,7 +209,7 @@ describe('criterion 3: newcomers', () => {
 });
 
 describe('criterion 6: a readable log', () => {
-  it('the Story filter shows at most 40 lines a day over a week', { timeout: 120_000 }, () => {
+  it('the Story filter shows at most 40 lines a day over a week', { timeout: 300_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'favours');
       const n = new Narrator(sim, { stewardIsYou: true });

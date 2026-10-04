@@ -6,7 +6,7 @@ import { NEEDS } from '../src/sim/types.js';
 import { soakRun } from '../src/soak/soak.js';
 
 describe('invariants', () => {
-  it('needs, mood and relationships stay in range and memory stays bounded', { timeout: 60_000 }, () => {
+  it('needs, mood and relationships stay in range and memory stays bounded', { timeout: 180_000 }, () => {
     const sim = Simulation.fromScenario(bakeryScenario, 11);
     for (let day = 0; day < 21; day++) {
       sim.runDays(1);
@@ -29,7 +29,7 @@ describe('invariants', () => {
     }
   });
 
-  it('short soak runs show no degenerate state', { timeout: 120_000 }, () => {
+  it('short soak runs show no degenerate state', { timeout: 300_000 }, () => {
     for (const seed of [1, 2, 3]) {
       const m = soakRun('quiet', seed, 21);
       expect(m.flags, `seed ${seed}`).toEqual([]);

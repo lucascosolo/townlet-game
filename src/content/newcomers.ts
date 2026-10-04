@@ -160,6 +160,13 @@ const noise = (h: RngHolder) => (rand(h) + rand(h) + rand(h) - 1.5) / 1.5;
 const round = (v: number) => Math.round(v * 100) / 100;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+function welcomeHash(w: Welcome): string {
+  const text = JSON.stringify([w.tick, w.home, Object.entries(w.built).sort(), [...w.near].sort()]);
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
+  return h.toString(36);
+}
+
 /** Why they came, read off who they are. */
 function reasonFor(values: Record<Value, number>, traits: Record<Trait, number>): string {
   const top = (Object.entries(values) as Array<[Value, number]>).sort((a, b) => b[1] - a[1])[0]?.[0];
@@ -240,7 +247,8 @@ export function generateNewcomer(seed: number, n: number, welcome: Welcome, take
   const background = `${pick(h, trade.past)}, ${name} ${reasonFor(values, traits)}.`;
   const tics = [...TICS[register]].sort(() => rand(h) - 0.5).slice(0, 2);
   return {
-    id: `nc${seed}-${n}`,
+    // The id carries what made them, so two towns can never register different people under one id.
+    id: `nc${seed}-${n}-${welcomeHash(welcome)}`,
     name,
     pronouns: { ...pron },
     age,

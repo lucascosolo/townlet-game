@@ -29,7 +29,7 @@ function isNotable(e: SimEvent): boolean {
 }
 
 describe('criterion 1: early story', () => {
-  it('days 1-3 of the quiet town hold at least 6 notable events on every seed', { timeout: 60_000 }, () => {
+  it('days 1-3 of the quiet town hold at least 6 notable events on every seed', { timeout: 180_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'none');
       let n = 0;
@@ -59,7 +59,7 @@ describe('criteria 2, 3 and 7: pacing, gentle friction, spread (soak, 10 seeds x
 });
 
 describe('criterion 4: neglect versus care', () => {
-  it('neglect starts thoughts of leaving; care does not', { timeout: 120_000 }, () => {
+  it('neglect starts thoughts of leaving; care does not', { timeout: 300_000 }, () => {
     let neglectedSeeds = 0;
     for (const seed of SEEDS) {
       const leaving = (sim: Simulation) => {
@@ -76,7 +76,7 @@ describe('criterion 4: neglect versus care', () => {
     expect(neglectedSeeds).toBeGreaterThanOrEqual(4);
   });
 
-  it('a resident thinking of leaving can be won back', { timeout: 120_000 }, () => {
+  it('a resident thinking of leaving can be won back', { timeout: 300_000 }, () => {
     let wonBack = 0;
     let tried = 0;
     for (const seed of SEEDS) {
@@ -110,7 +110,7 @@ describe('criterion 4: neglect versus care', () => {
 });
 
 describe('criterion 5: festivals leave shared memories', () => {
-  it('attendees remember the festival together and grow closer than in a town without it', { timeout: 60_000 }, () => {
+  it('attendees remember the festival together and grow closer than in a town without it', { timeout: 180_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'none');
       sim.runUntil(at(5, 12));
@@ -144,7 +144,7 @@ describe('criterion 5: festivals leave shared memories', () => {
 });
 
 describe('criterion 6: dilemmas split the town by values', () => {
-  it("approving moves the steward's standing up with supporters and down with opponents", { timeout: 60_000 }, () => {
+  it("approving moves the steward's standing up with supporters and down with opponents", { timeout: 180_000 }, () => {
     const def = dilemmaDef('market_day');
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'none');

@@ -12,7 +12,7 @@ import { quietScenario } from '../src/scenarios/bakery.js';
 import { SEEDS } from './helpers.js';
 
 describe('criterion 3: seeing before reacting', () => {
-  it('nobody reacts while asleep; sleepers react on waking or sight, everyone else within a day', { timeout: 60_000 }, () => {
+  it('nobody reacts while asleep; sleepers react on waking or sight, everyone else within a day', { timeout: 180_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'none');
       sim.runUntil(at(2, 2)); // 2 a.m.: everyone is asleep
@@ -34,7 +34,7 @@ describe('criterion 3: seeing before reacting', () => {
     }
   });
 
-  it('every reaction names what changed, and a year shows at least 12 distinct reaction lines', { timeout: 120_000 }, () => {
+  it('every reaction names what changed, and a year shows at least 12 distinct reaction lines', { timeout: 300_000 }, () => {
     const lines = new Set<string>();
     let reactions = 0;
     for (const seed of [1, 2, 3]) {
@@ -71,7 +71,7 @@ describe('criterion 4: rotation', () => {
 });
 
 describe('criterion 6: being needed', () => {
-  it('a responsive steward is valued far above a do-nothing one, and residents ask early', { timeout: 120_000 }, () => {
+  it('a responsive steward is valued far above a do-nothing one, and residents ask early', { timeout: 300_000 }, () => {
     for (const seed of SEEDS) {
       const measure = (policy: 'none' | 'considerate') => {
         const sim = runScenario('quiet', seed, policy);

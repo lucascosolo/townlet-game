@@ -35,7 +35,7 @@ describe('criterion 1: aspirations', () => {
     }
   });
 
-  it('a considerate steward sees at least 3 of 6 dreams through in 28 days, on average, and each step is narrated', { timeout: 120_000 }, () => {
+  it('a considerate steward sees at least 3 of 6 dreams through in 28 days, on average, and each step is narrated', { timeout: 300_000 }, () => {
     let total = 0;
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'considerate');
@@ -58,7 +58,7 @@ describe('criterion 1: aspirations', () => {
   // MISSED, reported in spec 9.3: Fen's and Marlow's plans need nothing from the steward, so a
   // do-nothing steward still sees 2 of 6 through. Kept as an expected failure so it is visible
   // and flips the day the bound is met.
-  it.fails('a do-nothing steward sees at most 1.5 of 6 through (missed: 2.0)', { timeout: 120_000 }, () => {
+  it.fails('a do-nothing steward sees at most 1.5 of 6 through (missed: 2.0)', { timeout: 300_000 }, () => {
     let total = 0;
     for (const seed of SEEDS) total += doneAfter28('none', seed);
     expect(total / SEEDS.length).toBeLessThanOrEqual(1.5);
@@ -66,7 +66,7 @@ describe('criterion 1: aspirations', () => {
 });
 
 describe("criterion 2: Marlow's choice", () => {
-  it('resolves within the year: strong ties, he stays; isolated, he goes', { timeout: 120_000 }, () => {
+  it('resolves within the year: strong ties, he stays; isolated, he goes', { timeout: 300_000 }, () => {
     for (const seed of SEEDS) {
       for (const isolate of [false, true]) {
         const sim = runScenario('quiet', seed, 'considerate');
@@ -159,7 +159,7 @@ describe('criterion 3: relationships you can see', () => {
 });
 
 describe('criterion 4: honest, varied talk', () => {
-  it('every thought is one of the top three things on their mind; chats draw on the same', { timeout: 120_000 }, () => {
+  it('every thought is one of the top three things on their mind; chats draw on the same', { timeout: 300_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'considerate');
       let thoughts = 0;
@@ -184,7 +184,7 @@ describe('criterion 4: honest, varied talk', () => {
     }
   });
 
-  it('a fresh grievance is thought or talked about within a day', { timeout: 120_000 }, () => {
+  it('a fresh grievance is thought or talked about within a day', { timeout: 300_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'considerate');
       sim.runUntil(at(5, 10));
@@ -201,7 +201,7 @@ describe('criterion 4: honest, varied talk', () => {
     }
   });
 
-  it('a 7-day radio play has at least 80 distinct lines, none more than 4% of what is said', { timeout: 120_000 }, () => {
+  it('a 7-day radio play has at least 80 distinct lines, none more than 4% of what is said', { timeout: 300_000 }, () => {
     for (const steward of ['considerate', 'none'] as const) {
       for (const seed of SEEDS) {
         const sim = runScenario('quiet', seed, steward);

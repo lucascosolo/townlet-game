@@ -2,6 +2,37 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-03: M3c, agency — playtest, and directions chosen
+
+**The playtest (owner, after M3b part 1 went live):**
+1. "There's a LOT going on in the logs / journals, so much that I'm not even following along."
+2. "I have little agency or anything I can really do beyond use the initial Timber store to build some things. I can't make someone cut down wood to get more resources for me to build with. I can see this small space looking cluttered quickly if I keep building, and I feel like this is a really surface level interaction with the characters."
+3. "The thought / chat bubbles overlap my scroll UI."
+
+Points 1 and 3 were fixed at once:
+- every line carries an importance;
+- the log has Highlights, Story and Everything filters, and folds runs of lines about the same resident;
+- the journal folds its detail sections;
+- bubbles hide while they would overlap a panel.
+
+**Chosen for point 2:**
+- **Ask residents favours.** Favours are the main way the player acts on people. From the talk panel, you ask someone to cut timber, bring in a catch, work the garden, clear land, visit someone who needs company, or make up with someone.
+  - Whether they agree depends on how they see you, how they are doing, and how much you have asked of them lately.
+  - A refusal gives its real reason.
+  - Work done fills the stores, and asking too much costs goodwill.
+  - Resources come from people, not from a fixed pile.
+- **Grow the valley.** The map is bigger than the settled land, and wild land around the town opens in plots as the town thrives. Clearing a plot is work, done as a favour, and it yields timber.
+- **More residents.** Newcomers move in when there is a free home, food to spare, and a town that is doing well. Homes become buildable, and a pool of authored newcomers joins the original six.
+
+**Not chosen this time:** assigning jobs directly (it treats people as units), and town projects.
+
+**Changed mid-chunk (owner):** "just make it so i can build an empty house and a new person moves in. each new person should be unique with their own semi-random but coherent personality and sliders", then "things should be seeded also by the actions of the player". So the pool of six authored newcomers and the arrival gates (food, mood) were dropped.
+- **Who comes:** newcomers are generated from a trade. Traits and values come from the trade's leanings plus noise, and voice, habits and background are read off the result.
+- **What shapes them:** the steward's town draws matching trades, and the time and place of the new home seed the rest. Same seed and same actions give the same person.
+- **Limit:** 18 residents for now, for performance and screen space.
+
+**Order:** talking to a resident (from M3b) comes first, because favours live in it. Then favours, then the growing valley, then newcomers. M3b's moods and memories in talk follow after M3c. Their criteria stand as predeclared.
+
 ## 2026-10-03: M3b, deeper structured minds — directions chosen
 
 The owner chose to deepen the structured minds next ("the minds chunk"), rather than start the brain-sim creature (spec 4.6.3), which stays a later rung.

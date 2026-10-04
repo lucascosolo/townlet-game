@@ -1,7 +1,8 @@
 // The simulation loop. Owns the body and the world; delegates cognition to a Mind.
 
 import { buildingDef } from '../content/buildings.js';
-import { residentDef } from '../content/residents.js';
+import { generateNewcomer } from '../content/newcomers.js';
+import { registerResident, residentDef } from '../content/residents.js';
 import { chance, deriveSeed } from './rng.js';
 import {
   ACTIVITY_EFFECTS,
@@ -21,6 +22,21 @@ import { StructuredMind } from './mind/structured.js';
 import { ASK_KINDS, ASK_LAPSE_DAYS, assess } from './asks.js';
 import { voiceTopic } from './mind/thoughts.js';
 import { runExchange } from './social.js';
+import { talkAnswer } from './talk.js';
+import {
+  ASKS_BEFORE_GRATING,
+  CLEAR_MINUTES,
+  FAVOUR_EXPIRES,
+  FAVOUR_MINUTES,
+  considerFavour,
+  favourActivity,
+  favourPlace,
+  favourSatisfaction,
+  favourYield,
+  inFavourHours,
+  recentAsks,
+  type FavourVerdict,
+} from './favours.js';
 import { aspirationMinute, aspirationMorning, type AspirationHost } from './story/aspirations.js';
 import { activeGatherings, newStoryState, storyStep } from './story/director.js';
 import { closeDilemma } from './story/dilemmas.js';
@@ -30,6 +46,9 @@ import {
   QUALITIES,
   STEWARD,
   type ActivityState,
+  type FavourKind,
+  type TalkAnswer,
+  type TalkQuestion,
   type Quality,
   type Request,
   type Resource,
@@ -50,7 +69,11 @@ export type Command =
   | { at: number; kind: 'build'; type: string; x: number; y: number; rot?: number }
   | { at: number; kind: 'remove'; x: number; y: number }
   /** Answer the open dilemma of this type, if there is one. */
-  | { at: number; kind: 'decide'; dilemma: DilemmaType; option: 'approve' | 'decline' };
+  | { at: number; kind: 'decide'; dilemma: DilemmaType; option: 'approve' | 'decline' }
+  /** Talk with a resident: ask one of the fixed questions (M3b). */
+  | { at: number; kind: 'talk'; who: string; question: TalkQuestion; about?: SubjectId }
+  /** Ask a resident a favour (M3c). */
+  | { at: number; kind: 'favour'; who: string; favour: FavourKind; other?: string; plot?: number };
 
 export interface Scenario {
   name: string;
@@ -61,7 +84,17 @@ export interface Scenario {
   residents: Record<string, number>;
   relationships?: Array<{ a: string; b: string; affinity: number; familiarity: number; trust: number }>;
   commands?: Command[];
+  /** Tiles of wild land beyond the settled valley to the east and south, in 8x8 plots (M3c). Default 24; 0 for none. */
+  wild?: number;
 }
+
+/** The size of a wild plot, in tiles. */
+export const PLOT = 8;
+const DEFAULT_WILD = 24;
+/** Someone moves into an empty home this long after it is built. */
+const NEWCOMER_DELAY = 2 * 60;
+/** The valley's limit, for now: the sim and the screen stay comfortable. */
+export const MAX_RESIDENTS = 18;
 
 const REQUEST_LAPSE_TICKS = 5 * TICKS_PER_DAY;
 /** How far a resident can see a change to the town, in tiles. */
@@ -133,13 +166,59 @@ export const DETAIL_NOTES: Record<string, string> = {
 export const LEAVING_BELOW = 0.48;
 export const STAYING_ABOVE = 0.55;
 
+/** A resident's starting state, in their home; at tick 0 for the founding cast, later for newcomers. */
+export function newResidentState(seed: number, id: string, home: BuildingState, tick: number): ResidentState {
+  const def = residentDef(id);
+  const [x, y] = placeTile(home);
+  return {
+    id,
+    homeId: home.id,
+    jobId: null,
+    x,
+    y,
+    at: home.id,
+    path: [],
+    activity: tick === 0 ? { id: 'sleep', placeId: home.id, until: def.wake, night: true } : null,
+    pending: null,
+    needs: { rest: 0.8, food: 0.6, comfort: 0.7, company: 0.5, purpose: 0.6, delight: 0.6 },
+    setpoints: setpointsFor(def),
+    mood: 0.7,
+    disposition: 0.65,
+    dayMoodSum: 0,
+    dayMoodN: 0,
+    lowDays: 0,
+    leaving: null,
+    departed: false,
+    emotions: [],
+    buffer: [],
+    episodes: [],
+    traces: {},
+    beliefs: {},
+    rel: {},
+    told: {},
+    lastExchange: {},
+    sleepNoiseMax: 0,
+    disturbedBy: [],
+    visitAppraised: true,
+    lastScentDay: 0,
+    lastVisit: {},
+    coldUntil: -1,
+    unseen: [],
+    ...(tick > 0 ? { arrivedTick: tick } : {}),
+    // Newcomers have no authored first dream: one forms from life here (M3b templates).
+    aspiration: tick === 0 ? { stage: 0, since: 0, minutes: 0, done: false } : { stage: 0, since: tick, minutes: 0, done: true, doneTick: tick, completed: 0 },
+    rng: deriveSeed(seed, `r:${id}`),
+  };
+}
+
 export function createState(scenario: Scenario, seed: number): SimState {
   const state: SimState = {
     version: 2,
     seed,
     tick: 0,
-    width: scenario.width,
-    height: scenario.height,
+    width: scenario.width + (scenario.wild ?? DEFAULT_WILD),
+    height: scenario.height + (scenario.wild ?? DEFAULT_WILD),
+    settled: { width: scenario.width, height: scenario.height },
     buildings: [],
     nextBuildingId: 1,
     residents: {},
@@ -156,49 +235,20 @@ export function createState(scenario: Scenario, seed: number): SimState {
     if (err) throw new Error(`scenario ${scenario.name}: ${b.type} at ${b.x},${b.y}: ${err}`);
     state.buildings.push({ id: state.nextBuildingId++, type: b.type, x: b.x, y: b.y, placedTick: 0, placedBy: 'founding', removed: false });
   }
+  // Wild land to the east (across the brook) and south, after the founding buildings so their ids keep.
+  const wildPlots: Array<[number, number]> = [];
+  for (let y = 0; y < state.height; y += PLOT) {
+    for (let x = 0; x < state.width; x += PLOT) {
+      if (x >= scenario.width || y >= scenario.height) wildPlots.push([x, y]);
+    }
+  }
+  for (const [x, y] of wildPlots) {
+    state.buildings.push({ id: state.nextBuildingId++, type: 'wild', x, y, placedTick: 0, placedBy: 'founding', removed: false });
+  }
   for (const [id, homeIdx] of Object.entries(scenario.residents)) {
-    const def = residentDef(id);
     const home = state.buildings[homeIdx];
     if (!home || buildingDef(home.type).kind !== 'home') throw new Error(`scenario ${scenario.name}: ${id} has no home`);
-    const [x, y] = placeTile(home);
-    const r: ResidentState = {
-      id,
-      homeId: home.id,
-      jobId: null,
-      x,
-      y,
-      at: home.id,
-      path: [],
-      activity: { id: 'sleep', placeId: home.id, until: def.wake, night: true },
-      pending: null,
-      needs: { rest: 0.8, food: 0.6, comfort: 0.7, company: 0.5, purpose: 0.6, delight: 0.6 },
-      setpoints: setpointsFor(def),
-      mood: 0.7,
-      disposition: 0.65,
-      dayMoodSum: 0,
-      dayMoodN: 0,
-      lowDays: 0,
-      leaving: null,
-      departed: false,
-      emotions: [],
-      buffer: [],
-      episodes: [],
-      traces: {},
-      beliefs: {},
-      rel: {},
-      told: {},
-      lastExchange: {},
-      sleepNoiseMax: 0,
-      disturbedBy: [],
-      visitAppraised: true,
-      lastScentDay: 0,
-      lastVisit: {},
-      coldUntil: -1,
-      unseen: [],
-      aspiration: { stage: 0, since: 0, minutes: 0, done: false },
-      rng: deriveSeed(seed, `r:${id}`),
-    };
-    state.residents[id] = r;
+    state.residents[id] = newResidentState(seed, id, home, 0);
   }
   for (const id of state.order) {
     const r = state.residents[id] as ResidentState;
@@ -226,6 +276,7 @@ export class Simulation implements AspirationHost {
   private worked = new Set<number>();
 
   constructor(state: SimState, mind: Mind = StructuredMind) {
+    for (const def of state.newcomerDefs ?? []) registerResident(def);
     this.state = state;
     this.mind = mind;
     this.assignJobs();
@@ -325,9 +376,15 @@ export class Simulation implements AspirationHost {
     for (const [id, from, until] of state.story.extraShifts) if (state.tick >= from && state.tick < until) this.worked.add(id);
     storyStep(this);
     if (minuteOf(state.tick) === 6 * 60 + 5) aspirationMorning(this);
+    if (minuteOf(state.tick) % 60 === 30) this.newcomers();
     const ctx = this.ctx();
     const minute = minuteOf(state.tick);
-    if (minute === DAWN_MINUTE) this.emit({ t: state.tick, type: 'dawn', day: dayOf(state.tick) });
+    if (minute === DAWN_MINUTE) {
+      // Yesterday's work goes on the morning board.
+      if (state.produced && Object.keys(state.produced).length > 0) this.emit({ t: state.tick, type: 'production', by: state.produced });
+      state.produced = {};
+      this.emit({ t: state.tick, type: 'dawn', day: dayOf(state.tick) });
+    }
 
     for (const id of state.order) {
       const r = state.residents[id] as ResidentState;
@@ -346,10 +403,171 @@ export class Simulation implements AspirationHost {
       // afford, is dropped, as a player would.
       if (canPlace(this.state, c.type, c.x, c.y, c.rot ?? 0) === null && this.canAfford(c.type)) this.build(c.type, c.x, c.y, c.rot ?? 0);
     } else if (c.kind === 'remove') this.remove(c.x, c.y);
-    else {
+    else if (c.kind === 'talk') {
+      if (this.state.residents[c.who]) this.talk(c.who, c.question, c.about);
+    } else if (c.kind === 'favour') {
+      if (this.state.residents[c.who]) this.askFavour(c.who, c.favour, c.other, c.plot);
+    } else {
       const d = this.state.story.dilemmas.find((x) => x.type === c.dilemma && x.status === 'open');
       if (d) this.decide(d.id, c.option);
     }
+  }
+
+  /** Run any commands due now, without stepping: lets the browser answer a talk at once, replay-safe. */
+  flushCommands(): void {
+    while (this.commands.length > 0 && (this.commands[0] as Command).at <= this.state.tick) this.execute(this.commands.shift() as Command);
+  }
+
+  /** The steward talks with a resident. The first talk of the day keeps them a little company. */
+  talk(who: string, question: TalkQuestion, about?: SubjectId): TalkAnswer | null {
+    const state = this.state;
+    const r = this.resident(who);
+    if (r.departed || (r.activity?.id === 'sleep' && r.at === r.homeId)) return null;
+    const day = dayOf(state.tick);
+    const counted = r.lastTalkDay !== day;
+    if (counted) {
+      r.lastTalkDay = day;
+      r.needs.company = clamp(r.needs.company + 0.06);
+      adjust(r, STEWARD, { familiarity: 0.03 }, state.tick);
+    }
+    const answer = talkAnswer(state, r, question, about);
+    this.emit({ t: state.tick, type: 'talk', who, answer, counted });
+    return answer;
+  }
+
+  /**
+   * The steward asks a resident a favour. They weigh it and answer; a yes means they will go and
+   * do it soon. Being asked too often in a week grates, whatever the answer.
+   */
+  askFavour(who: string, kind: FavourKind, other?: string, plot?: number): FavourVerdict {
+    const state = this.state;
+    const r = this.resident(who);
+    const verdict = considerFavour(state, r, kind, other, plot);
+    if (verdict.reason === 'asleep' || verdict.reason === 'gone') {
+      this.emit({ t: state.tick, type: 'favour', who, phase: 'refused', kind, reason: verdict.reason, ...(other ? { other } : {}) });
+      return verdict;
+    }
+    r.favoursAsked = [...(r.favoursAsked ?? []).filter((t) => state.tick - t < 7 * TICKS_PER_DAY), state.tick];
+    if (recentAsks(r, state.tick) > ASKS_BEFORE_GRATING) {
+      this.mind.perceive(this.ctx(), r, { subject: STEWARD, aspect: 'asks_too_much', valence: -0.6, base: 0.5, source: 'witnessed', note: 'asked me for yet another favour' });
+    }
+    if (!verdict.yes) {
+      this.emit({ t: state.tick, type: 'favour', who, phase: 'refused', kind, ...(verdict.reason ? { reason: verdict.reason } : {}), ...(other ? { other } : {}) });
+      return verdict;
+    }
+    state.nextFavourId = (state.nextFavourId ?? 1) + 1;
+    r.favour = { id: state.nextFavourId, kind, placeId: verdict.placeId as number, askedTick: state.tick, minutesNeeded: FAVOUR_MINUTES[kind], minutes: 0, ...(other ? { other } : {}) };
+    // Drop what they're doing (unless asleep or eating) and get on with it.
+    if (r.activity && r.activity.id !== 'eat' && inFavourHours(state.tick)) r.activity.until = state.tick;
+    this.emit({ t: state.tick, type: 'favour', who, phase: 'agreed', kind, placeId: r.favour.placeId, ...(other ? { other } : {}) });
+    return verdict;
+  }
+
+  /** Each waking minute: the favour's work counts, and finishes, or is given up when too late. */
+  private favourMinute(ctx: MindContext, r: ResidentState): void {
+    const f = r.favour;
+    if (!f) return;
+    const state = this.state;
+    if (state.tick - f.askedTick > FAVOUR_EXPIRES) {
+      r.favour = null;
+      this.emit({ t: state.tick, type: 'favour', who: r.id, phase: 'abandoned', kind: f.kind, ...(f.other ? { other: f.other } : {}) });
+      return;
+    }
+    if (r.at === null || r.path.length > 0) return;
+    if (f.kind === 'visit' || f.kind === 'mend') {
+      const o = f.other ? state.residents[f.other] : undefined;
+      if (!o || o.departed) {
+        r.favour = null;
+        return;
+      }
+      if (o.at !== r.at) return;
+      if (f.kind === 'mend' && f.minutes === 0) runExchange(ctx, this.mind, r, o, 'apologize', 'together', r.at);
+    } else if (r.at !== f.placeId || r.activity?.id !== favourActivity(f.kind)) return;
+    f.minutes++;
+    if (f.kind === 'clear') {
+      const key = String(f.placeId);
+      const clearing = (state.clearing ??= {});
+      clearing[key] = (clearing[key] ?? 0) + 1;
+      if (clearing[key] >= CLEAR_MINUTES) this.clearPlot(f.placeId);
+    }
+    if (f.minutes < f.minutesNeeded) return;
+    this.finishFavour(ctx, r, f);
+  }
+
+  private finishFavour(ctx: MindContext, r: ResidentState, f: NonNullable<ResidentState['favour']>): void {
+    const state = this.state;
+    const got = favourYield(state, r, f.kind);
+    for (const [res, v] of Object.entries(got) as Array<[Resource, number]>) {
+      state.stock[res] = Math.min(STOCK_CAP[res], state.stock[res] + v);
+      this.addProduced(r.id, res, v);
+    }
+    favourSatisfaction(r);
+    adjust(r, STEWARD, { trust: 0.03 }, state.tick);
+    if (f.kind === 'visit' && f.other) {
+      const o = this.resident(f.other);
+      o.needs.company = clamp(o.needs.company + 0.25);
+      o.needs.delight = clamp(o.needs.delight + 0.1);
+      this.mind.perceive(ctx, o, { subject: `r:${r.id}`, aspect: 'kind_to_me', valence: 0.7, base: 0.45, source: 'witnessed', note: `${residentDef(r.id).name} came to see me` });
+      this.mind.perceive(ctx, o, { subject: STEWARD, aspect: 'looks_out_for_me', valence: 0.5, base: 0.3, source: 'told', from: r.id, note: `the steward sent ${residentDef(r.id).name} round` });
+    }
+    r.favour = null;
+    this.emit({ t: state.tick, type: 'favour', who: r.id, phase: 'done', kind: f.kind, yield: got, placeId: f.placeId, ...(f.other ? { other: f.other } : {}) });
+  }
+
+  private addProduced(by: string, res: Resource, v: number): void {
+    const produced = (this.state.produced ??= {});
+    const mine = (produced[by] ??= {});
+    mine[res] = (mine[res] ?? 0) + v;
+  }
+
+  /** Homes nobody lives in. */
+  emptyHomes(): BuildingState[] {
+    const state = this.state;
+    const lived = new Set(state.order.map((id) => state.residents[id] as ResidentState).filter((r) => !r.departed).map((r) => r.homeId));
+    return liveBuildings(state).filter((b) => buildingDef(b.type).kind === 'home' && !lived.has(b.id));
+  }
+
+  /**
+   * Each hour: an empty home that has stood a couple of hours gets someone new, generated for this
+   * town (owner, M3c: "just make it so I can build an empty house and a new person moves in").
+   */
+  private newcomers(): void {
+    const state = this.state;
+    if (this.activeResidents().length >= MAX_RESIDENTS) return;
+    const home = this.emptyHomes().find((b) => state.tick - b.placedTick >= NEWCOMER_DELAY);
+    if (!home) return;
+    const defs = (state.newcomerDefs ??= []);
+    const taken = new Set(state.order.map((id) => residentDef(id).name));
+    const built: Record<string, number> = {};
+    for (const b of liveBuildings(state)) built[b.type] = (built[b.type] ?? 0) + 1;
+    const [hx, hy] = placeTile(home);
+    const near = [...new Set(liveBuildings(state).filter((b) => b.id !== home.id && distanceTo(b, hx, hy) <= 5).map((b) => b.type))];
+    const def = generateNewcomer(state.seed, defs.length, { tick: state.tick, home: [hx, hy], built, near }, taken);
+    defs.push(def);
+    registerResident(def);
+    const r = newResidentState(state.seed, def.id, home, state.tick);
+    state.residents[def.id] = r;
+    state.order.push(def.id);
+    for (const other of state.order) {
+      if (other === def.id) continue;
+      r.rel[other] = { ...newRelationship(), familiarity: 0.1 };
+      (state.residents[other] as ResidentState).rel[def.id] = { ...newRelationship(), familiarity: 0.1 };
+    }
+    r.rel[STEWARD] = { ...newRelationship(), affinity: 0.25, familiarity: 0.3, trust: 0.5 };
+    this.assignJobs();
+    this.emit({ t: state.tick, type: 'arrived', who: def.id, home: home.id });
+  }
+
+  /** A wild plot's last tree is down: the land is open to build on (M3c). */
+  clearPlot(id: number): void {
+    const state = this.state;
+    const b = state.buildings.find((x) => x.id === id);
+    if (!b || b.removed) return;
+    b.removed = true;
+    state.stock.timber = Math.min(STOCK_CAP.timber, state.stock.timber + 10);
+    const by = this.activeResidents().filter((r) => r.favour?.kind === 'clear' && r.favour.placeId === id).map((r) => r.id);
+    for (const r of this.activeResidents()) if (r.favour?.kind === 'clear' && r.favour.placeId === id) r.favour.minutes = r.favour.minutesNeeded - 1;
+    this.emit({ t: state.tick, type: 'plot_cleared', building: id, by });
   }
 
   /** Can the town afford this building right now? */
@@ -607,7 +825,9 @@ export class Simulation implements AspirationHost {
       if (made) {
         for (const [res, rate] of Object.entries(made) as Array<[Resource, number]>) {
           const season = res === 'food' && getBuilding(state, r.at).type === 'garden' ? GARDEN_SEASON[seasonOf(tick)] : 1;
-          state.stock[res] = Math.min(STOCK_CAP[res], state.stock[res] + (rate / 60) * season * (0.5 + 0.5 * r.mood));
+          const v = (rate / 60) * season * (0.5 + 0.5 * r.mood);
+          state.stock[res] = Math.min(STOCK_CAP[res], state.stock[res] + v);
+          this.addProduced(r.id, res, v);
         }
       }
     }
@@ -615,6 +835,7 @@ export class Simulation implements AspirationHost {
     // Changes to the town are taken in only by someone awake to see them.
     if (!sleeping && tick % 5 === 0) this.checkUnseen(ctx, r, false);
     if (!sleeping) aspirationMinute(state, r);
+    if (!sleeping) this.favourMinute(ctx, r);
     // Now and then something on their mind surfaces as a passing thought.
     if (!sleeping && chance(r, THOUGHT_CHANCE / 60)) {
       const m = voiceTopic(state, r);
@@ -644,7 +865,7 @@ export class Simulation implements AspirationHost {
       r.activity = null;
       this.checkUnseen(ctx, r, true);
     }
-    const next = this.mind.decide(ctx, r);
+    const next = this.favourNext(r) ?? this.mind.decide(ctx, r);
     if (next.night && !(act?.id === 'sleep' && act.night)) {
       r.sleepNoiseMax = 0;
       r.disturbedBy = [];
@@ -661,6 +882,21 @@ export class Simulation implements AspirationHost {
     r.path = route([r.x, r.y], placeTile(getBuilding(state, next.placeId)));
     if (next.id === 'socialize' || next.id === 'stroll') this.maybeInvite(r, next);
     if (r.path.length === 0) this.arrive(ctx, r);
+  }
+
+  /** A favour they agreed to comes first, in working hours, unless hunger, tiredness or a cold say otherwise. */
+  private favourNext(r: ResidentState): ActivityState | null {
+    const f = r.favour;
+    const state = this.state;
+    if (!f || !inFavourHours(state.tick) || r.coldUntil > state.tick) return null;
+    if (r.needs.food < 0.2 || r.needs.rest < 0.15) return null;
+    if (f.kind === 'visit' || f.kind === 'mend') {
+      const place = favourPlace(state, r, f.kind, f.other);
+      if (place === null) return null;
+      f.placeId = place;
+    }
+    const left = Math.max(1, f.minutesNeeded - f.minutes);
+    return { id: favourActivity(f.kind), placeId: f.placeId, until: state.tick + Math.min(120, left + 5) };
   }
 
   /**
@@ -824,6 +1060,7 @@ export class Simulation implements AspirationHost {
       const factor = PASSIVE_SEASON[b.type]?.[season] ?? 1;
       for (const [res, rate] of Object.entries(passive) as Array<[Resource, number]>) {
         this.state.stock[res] = Math.min(STOCK_CAP[res], this.state.stock[res] + rate * factor);
+        if (rate * factor > 0) this.addProduced(b.type, res, rate * factor);
       }
     }
     for (const r of this.activeResidents()) {

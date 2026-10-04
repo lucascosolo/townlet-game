@@ -107,8 +107,15 @@ export const RESIDENTS: ResidentDef[] = [
   },
 ];
 
+/** Newcomers generated during play (M3c), registered by the simulation that holds them. */
+const GENERATED = new Map<string, ResidentDef>();
+
+export function registerResident(def: ResidentDef): void {
+  GENERATED.set(def.id, def);
+}
+
 export function residentDef(id: string): ResidentDef {
-  const def = RESIDENTS.find((r) => r.id === id);
+  const def = RESIDENTS.find((r) => r.id === id) ?? GENERATED.get(id);
   if (!def) throw new Error(`unknown resident: ${id}`);
   return def;
 }

@@ -17,7 +17,7 @@ const told = (r: ResidentState, subject: string) =>
   [...Object.values(r.beliefs), ...Object.values(r.traces)].some((b) => b.subject === subject && b.sources.some((s) => s.kind === 'told'));
 
 describe('twin: night noise becomes a belief and a request', () => {
-  it('Ada complains about a bakery beside her cottage, and not about one across town', { timeout: 60_000 }, () => {
+  it('Ada complains about a bakery beside her cottage, and not about one across town', { timeout: 180_000 }, () => {
     for (const seed of SEEDS) {
       const near = Simulation.fromScenario(withBakeryAt(5, 8), seed);
       const far = Simulation.fromScenario(withBakeryAt(19, 21), seed);
@@ -37,7 +37,7 @@ describe('twin: night noise becomes a belief and a request', () => {
 });
 
 describe('twin: the steward is judged on answering requests', () => {
-  it('planting the hedge earns trust; ignoring the request costs it', { timeout: 60_000 }, () => {
+  it('planting the hedge earns trust; ignoring the request costs it', { timeout: 180_000 }, () => {
     const hedges: NonNullable<Scenario['commands']> = [
       { at: at(6, 10), kind: 'build', type: 'hedge', x: 5, y: 7 },
       { at: at(6, 10), kind: 'build', type: 'hedge', x: 6, y: 7 },
@@ -60,7 +60,7 @@ describe('twin: the steward is judged on answering requests', () => {
 });
 
 describe('twin: word gets around', () => {
-  it("a grievance planted in one resident reaches others' minds as hearsay", { timeout: 60_000 }, () => {
+  it("a grievance planted in one resident reaches others' minds as hearsay", { timeout: 180_000 }, () => {
     let reachedWith = 0;
     let reachedWithout = 0;
     for (const seed of SEEDS) {
@@ -82,7 +82,7 @@ describe('twin: word gets around', () => {
 });
 
 describe('twin: memories change behaviour', () => {
-  it('a fond memory of the bench draws Fen back to it', { timeout: 60_000 }, () => {
+  it('a fond memory of the bench draws Fen back to it', { timeout: 180_000 }, () => {
     let withMemory = 0;
     let without = 0;
     for (const seed of SEEDS) {

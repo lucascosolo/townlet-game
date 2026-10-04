@@ -1,0 +1,38 @@
+name: Slow checks
+
+# Year-long criteria runs and long soaks: too slow for every pull request, so nightly and on
+# demand (Actions > Slow checks > Run workflow). A failure here is a real failure.
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  year:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:slow
+      - run: npm run soak -- --scenario bakery --seeds 10 --days 112 --newcomers
+
+  ten-years:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run soak -- --scenario bakery --seeds 1 --first-seed ${{ matrix.seed }} --days 1120 --newcomers

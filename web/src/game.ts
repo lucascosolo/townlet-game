@@ -89,5 +89,7 @@ export class Game {
     const cmd = { ...c, at: this.sim.tick } as Command;
     this.commandLog.push(cmd);
     this.sim.schedule([cmd]);
+    // Talk and favours answer at once, even when paused; the log replays them at the same tick.
+    if (cmd.kind === 'talk' || cmd.kind === 'favour') this.sim.flushCommands();
   }
 }

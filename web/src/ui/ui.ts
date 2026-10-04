@@ -7,22 +7,78 @@ import { residentDef } from '../../../src/content/residents.js';
 import { DILEMMA_NAMES, PROPOSALS } from '../../../src/content/story.js';
 import { residentReport, type ResidentReport } from '../../../src/inspect/inspector.js';
 import type { NarratorEntry } from '../../../src/narrate/narrator.js';
+import { CLEAR_MINUTES, FAVOUR_MINUTES, openPlots, recentAsks } from '../../../src/sim/favours.js';
 import { opinion } from '../../../src/sim/mind/memory.js';
 import { ambientPrefs, prefScore } from '../../../src/sim/needs.js';
 import { wishProgress } from '../../../src/sim/story/director.js';
 import { dilemmaDef, stanceScore } from '../../../src/sim/story/dilemmas.js';
 import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
-import type { Dilemma, QualityMap, Request, SimEvent } from '../../../src/sim/types.js';
+import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
-import { RESIDENT_COLORS } from '../view/meshes.js';
+import { residentColor } from '../view/meshes.js';
 import type { TownView } from '../view/scene.js';
 
 export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
   { category: 'Green and decor', types: ['hedge', 'flowerbed', 'bench'] },
   { category: 'Gathering', types: ['teahouse', 'commons', 'well'] },
   { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop'] },
+  { category: 'Homes', types: ['cottage'] },
   { category: 'Dreams', types: ['orchard', 'glasshouse', 'banner'] },
 ];
+interface TalkPanel {
+  root: HTMLElement;
+  reply: HTMLElement;
+  status: HTMLElement;
+  controls: Array<HTMLButtonElement | HTMLSelectElement>;
+  clear: HTMLButtonElement;
+  aboutSelect: HTMLSelectElement;
+  visitSelect: HTMLSelectElement;
+  mendSelect: HTMLSelectElement;
+}
+
+const QUESTIONS: Array<[TalkQuestion, string]> = [
+  ['how', 'How are you?'],
+  ['mind', "What's on your mind?"],
+  ['hope', 'What are you hoping for?'],
+  ['me', 'What do you think of me?'],
+];
+
+const FAVOUR_LABELS: Record<FavourKind, string> = {
+  timber: 'Cut timber',
+  catch: 'Bring in a catch',
+  garden: 'Work the garden',
+  clear: 'Help clear wild land',
+  visit: 'Look in on…',
+  mend: 'Make peace with…',
+};
+
+const FAVOUR_DOING: Record<FavourKind, string> = {
+  timber: 'cutting timber',
+  catch: 'fishing',
+  garden: 'working the garden',
+  clear: 'clearing wild land',
+  visit: 'going to see someone',
+  mend: 'going to make peace',
+};
+
+/** The two ends of each trait slider. */
+const TRAIT_ENDS: Record<string, [string, string]> = {
+  sociable: ['reserved', 'sociable'],
+  steady: ['excitable', 'steady'],
+  curious: ['settled', 'curious'],
+  generous: ['guarded', 'generous'],
+  tidy: ['messy', 'tidy'],
+};
+
+type LogFilter = 'highlights' | 'story' | 'everything';
+const LOG_FILTERS: Array<[LogFilter, string, string]> = [
+  ['highlights', 'Highlights', 'Only what really matters: asks, decisions, comings and goings, quarrels, dreams'],
+  ['story', 'Story', 'Everything except passing thoughts and small talk'],
+  ['everything', 'Everything', 'Every thought and word'],
+];
+/** Lines about the same resident within this many minutes fold together. */
+const FOLD_MINUTES = 60;
+
 export type Tool = { kind: 'select' } | { kind: 'build'; type: string } | { kind: 'remove' };
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, text?: string): HTMLElementTagNameMap[K] {
@@ -109,6 +165,14 @@ export class Ui {
   private lastJournalRender = 0;
   private lastYouRender = 0;
   private morning: NarratorEntry[] = [];
+  /** One talk panel per resident, kept across journal redraws so its choices stay put. */
+  private readonly talkPanels = new Map<string, TalkPanel>();
+  /** On-screen panels that speech bubbles must not cover. */
+  private readonly panels: HTMLElement[] = [];
+  /** The log's list, its filter, and the run of lines being folded together. */
+  private logList!: HTMLElement;
+  private logFilter: LogFilter = 'story';
+  private logGroup: { who: string; t: number; extra: HTMLElement; toggle: HTMLButtonElement; count: number } | null = null;
 
   constructor(root: HTMLElement, game: Game, view: TownView, opts: { intro: boolean }) {
     this.game = game;
@@ -137,6 +201,7 @@ export class Ui {
     rot.append(left, right, help);
     hud.append(el('div', { class: 'title' }, 'Townlet'), this.clockEl, this.stockEl, speeds, rot);
     root.appendChild(hud);
+    this.panels.push(hud);
 
     // The scroll: rolls up to its top rod.
     this.scroll = el('aside', { class: 'scroll', 'data-testid': 'scroll' });
@@ -162,9 +227,11 @@ export class Ui {
     }
     this.boardEl = this.tabs.get('board')!.pane;
     this.logEl = this.tabs.get('log')!.pane;
+    this.buildLogPane();
     this.journalEl = this.tabs.get('journal')!.pane;
     this.youEl = this.tabs.get('you')!.pane;
     root.appendChild(this.scroll);
+    this.panels.push(this.scroll);
     this.showTab('board');
 
     // The dock: look, build menu, remove, and a status line.
@@ -178,9 +245,11 @@ export class Ui {
     this.statusEl = el('div', { class: 'status', 'data-testid': 'palette-status' });
     dock.append(look, build, remove, this.statusEl);
     root.appendChild(dock);
+    this.panels.push(dock);
     this.menu = this.buildMenu();
     this.menu.hidden = true;
     root.appendChild(this.menu);
+    this.panels.push(this.menu);
 
     this.bubbleLayer = el('div', { class: 'bubbles' });
     root.appendChild(this.bubbleLayer);
@@ -232,6 +301,7 @@ export class Ui {
     }
     if (this.scroll.classList.contains('rolled')) this.toggleScroll();
     if (key === 'journal') this.renderJournal(true);
+    if (key === 'log') this.logEl.scrollTop = this.logEl.scrollHeight;
     if (key === 'you') this.renderYou(true);
   }
 
@@ -417,7 +487,7 @@ export class Ui {
       nodes.push(document.createTextNode(text.slice(last, m.index)));
       const id = ids.find((x) => residentDef(x).name === m[1]) as string;
       const a = el('a', { href: '#', class: 'who' }, m[1]);
-      a.style.borderBottomColor = cssColor(RESIDENT_COLORS[id] ?? 0x888888);
+      a.style.borderBottomColor = cssColor(residentColor(id));
       a.addEventListener('click', (ev) => {
         ev.preventDefault();
         this.select({ kind: 'resident', id });
@@ -429,25 +499,94 @@ export class Ui {
     return nodes;
   }
 
-  private onEntry(e: NarratorEntry): void {
-    if (e.kind === 'day') this.morning = [];
-    if (e.kind === 'board') this.morning.push(e);
-    const row = el('div', { class: `entry ${e.kind}` });
+  private buildLogPane(): void {
+    const bar = el('div', { class: 'log-filter', role: 'group', 'aria-label': 'Show' });
+    for (const [key, label, title] of LOG_FILTERS) {
+      const b = el('button', { 'data-testid': `log-${key}`, title }, label);
+      b.classList.toggle('on', key === this.logFilter);
+      b.addEventListener('click', () => {
+        this.logFilter = key;
+        for (const x of bar.querySelectorAll('button')) x.classList.toggle('on', x === b);
+        this.rerenderLog();
+      });
+      bar.appendChild(b);
+    }
+    this.logList = el('div', { class: 'log-list', 'data-testid': 'log-list' });
+    this.logEl.append(bar, this.logList);
+  }
+
+  private passes(e: NarratorEntry): boolean {
+    if (e.kind === 'day') return true;
+    if (this.logFilter === 'highlights') return e.importance === 'major';
+    if (this.logFilter === 'story') return e.importance !== 'minor';
+    return true;
+  }
+
+  private rerenderLog(): void {
+    this.logList.replaceChildren();
+    this.logGroup = null;
+    const shown = this.game.narrator.entries.filter((e) => this.passes(e)).slice(-400);
+    for (const e of shown) this.appendLog(e);
+    this.logEl.scrollTop = this.logEl.scrollHeight;
+  }
+
+  private logRow(e: NarratorEntry): HTMLElement {
+    const row = el('div', { class: `entry ${e.kind} ${e.importance}` });
     if (e.kind === 'day') row.textContent = e.text;
     else {
       if (e.kind === 'live' || e.kind === 'thought') row.appendChild(el('span', { class: 'time' }, clock(e.t)));
       for (const n of this.nameLinks(e.text)) row.appendChild(n);
     }
-    const atBottom = this.logEl.scrollTop + this.logEl.clientHeight >= this.logEl.scrollHeight - 30;
-    this.logEl.appendChild(row);
-    while (this.logEl.childElementCount > 400) this.logEl.firstElementChild?.remove();
-    if (atBottom) this.logEl.scrollTop = this.logEl.scrollHeight;
+    return row;
+  }
+
+  /** Add a line to the log, folding a run of lines about the same resident under the first. */
+  private appendLog(e: NarratorEntry): void {
+    const row = this.logRow(e);
+    const who = e.who[0];
+    const foldable = (e.kind === 'live' || e.kind === 'thought' || e.kind === 'aside') && e.importance !== 'major' && who !== undefined;
+    const g = this.logGroup;
+    if (foldable && g && g.who === who && e.t - g.t <= FOLD_MINUTES) {
+      g.extra.appendChild(row);
+      g.count++;
+      g.t = e.t;
+      g.toggle.hidden = false;
+      g.toggle.textContent = g.extra.hidden ? `+${g.count} more from ${residentDef(who).name}` : 'fewer';
+      return;
+    }
+    const group = el('div', { class: 'log-group' });
+    group.appendChild(row);
+    if (foldable) {
+      const extra = el('div', { class: 'fold' });
+      extra.hidden = true;
+      const toggle = el('button', { class: 'more', 'data-testid': 'log-more' });
+      toggle.hidden = true;
+      const fold = { who, t: e.t, extra, toggle, count: 0 };
+      toggle.addEventListener('click', () => {
+        extra.hidden = !extra.hidden;
+        toggle.textContent = extra.hidden ? `+${fold.count} more from ${residentDef(who).name}` : 'fewer';
+      });
+      group.append(extra, toggle);
+      this.logGroup = fold;
+    } else this.logGroup = null;
+    this.logList.appendChild(group);
+    while (this.logList.childElementCount > 400) this.logList.firstElementChild?.remove();
+  }
+
+  private onEntry(e: NarratorEntry): void {
+    if (e.kind === 'day') this.morning = [];
+    if (e.kind === 'board') this.morning.push(e);
+    if (this.passes(e)) {
+      const atBottom = this.logEl.scrollTop + this.logEl.clientHeight >= this.logEl.scrollHeight - 30;
+      this.appendLog(e);
+      if (atBottom) this.logEl.scrollTop = this.logEl.scrollHeight;
+    }
 
     // A quoted line becomes a bubble over whoever speaks first in it.
     const quote = /"([^"]+)"/.exec(e.text);
     if (quote && (e.kind === 'live' || e.kind === 'aside' || e.kind === 'thought') && e.who.length > 0) {
       const speaker = [...e.who].sort((a, b) => e.text.indexOf(residentDef(a).name) - e.text.indexOf(residentDef(b).name))[0] as string;
-      this.bubble(speaker, quote[1] as string, e.kind === 'thought' ? 'thought' : '');
+      this.bubble(speaker, quote[1] as string, e.kind === 'thought' ? 'thought' : e.importance === 'major' ? 'major' : '');
     }
     this.lastBoardKey = '';
   }
@@ -465,7 +604,7 @@ export class Ui {
     let b = this.bubbles.get(id);
     if (!b) {
       b = { el: el('div', { class: 'bubble' }), until: 0 };
-      b.el.style.borderColor = cssColor(RESIDENT_COLORS[id] ?? 0x888888);
+      b.el.style.borderColor = cssColor(residentColor(id));
       this.bubbleLayer.appendChild(b.el);
       this.bubbles.set(id, b);
     }
@@ -536,7 +675,8 @@ export class Ui {
     if (this.morning.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'Nothing new on the board.'));
     const list = el('ul');
     for (const e of this.morning) {
-      const li = el('li');
+      if (e.importance === 'minor') continue;
+      const li = el('li', { class: e.importance });
       for (const n of this.nameLinks(e.text)) li.appendChild(n);
       list.appendChild(li);
     }
@@ -570,7 +710,7 @@ export class Ui {
                 ? 'is unhappy with you'
                 : 'has lost faith in you';
       const title = el('div', { class: 'card-title' }, `${def.name} ${word}`);
-      title.style.borderLeft = `4px solid ${cssColor(RESIDENT_COLORS[id] ?? 0x888888)}`;
+      title.style.borderLeft = `4px solid ${cssColor(residentColor(id))}`;
       title.style.paddingLeft = '6px';
       card.appendChild(title);
       const track = el('div', { class: 'track two-sided' });
@@ -604,16 +744,144 @@ export class Ui {
     return det;
   }
 
+  // ---------------------------------------------------------------- talking and favours
+
+  private talkPanel(id: string): HTMLElement {
+    let p = this.talkPanels.get(id);
+    if (!p) {
+      p = this.buildTalkPanel(id);
+      this.talkPanels.set(id, p);
+    }
+    this.refreshTalkPanel(id, p);
+    return p.root;
+  }
+
+  private buildTalkPanel(id: string): TalkPanel {
+    const name = residentDef(id).name;
+    const root = el('div', { class: 'talk', 'data-testid': 'talk' });
+    root.appendChild(el('h3', {}, `Talk with ${name}`));
+    const controls: Array<HTMLButtonElement | HTMLSelectElement> = [];
+    const ask = (question: TalkQuestion, about?: string) => {
+      this.game.command({ kind: 'talk', who: id, question, ...(about ? { about } : {}) });
+      this.renderJournal(true);
+    };
+    const qs = el('div', { class: 'talk-row' });
+    for (const [q, label] of QUESTIONS) {
+      const b = el('button', { 'data-testid': `ask-${q}` }, label);
+      b.addEventListener('click', () => ask(q));
+      qs.appendChild(b);
+      controls.push(b);
+    }
+    root.appendChild(qs);
+    const aboutRow = el('div', { class: 'talk-row' });
+    const aboutSelect = el('select', { 'data-testid': 'ask-about' });
+    const aboutButton = el('button', { 'data-testid': 'ask-opinion' }, 'What do you think of…');
+    aboutButton.addEventListener('click', () => ask('opinion', aboutSelect.value));
+    aboutRow.append(aboutButton, aboutSelect);
+    root.appendChild(aboutRow);
+    controls.push(aboutSelect, aboutButton);
+
+    root.appendChild(el('h3', {}, 'Ask a favour'));
+    const favour = (kind: FavourKind, other?: string) => {
+      this.game.command({ kind: 'favour', who: id, favour: kind, ...(other ? { other } : {}) });
+      this.renderJournal(true);
+    };
+    const fs = el('div', { class: 'talk-row' });
+    let clear!: HTMLButtonElement;
+    for (const kind of ['timber', 'catch', 'garden', 'clear'] as FavourKind[]) {
+      const b = el('button', { 'data-testid': `favour-${kind}`, title: `About ${Math.round(FAVOUR_MINUTES[kind] / 60)} hours of work` }, FAVOUR_LABELS[kind]);
+      b.addEventListener('click', () => favour(kind));
+      fs.appendChild(b);
+      controls.push(b);
+      if (kind === 'clear') clear = b;
+    }
+    root.appendChild(fs);
+    const people = el('div', { class: 'talk-row' });
+    const visitSelect = el('select', { 'data-testid': 'favour-visit-who' });
+    const visit = el('button', { 'data-testid': 'favour-visit' }, FAVOUR_LABELS.visit);
+    visit.addEventListener('click', () => visitSelect.value && favour('visit', visitSelect.value));
+    const mendSelect = el('select', { 'data-testid': 'favour-mend-who' });
+    const mend = el('button', { 'data-testid': 'favour-mend' }, FAVOUR_LABELS.mend);
+    mend.addEventListener('click', () => mendSelect.value && favour('mend', mendSelect.value));
+    people.append(visit, visitSelect, mend, mendSelect);
+    root.appendChild(people);
+    controls.push(visitSelect, visit, mendSelect, mend);
+
+    const reply = el('blockquote', { class: 'reply', 'data-testid': 'talk-reply' });
+    const status = el('p', { class: 'quiet', 'data-testid': 'favour-status' });
+    root.append(reply, status);
+    return { root, reply, status, controls, clear, aboutSelect, visitSelect, mendSelect };
+  }
+
+  private fillSelect(sel: HTMLSelectElement, options: Array<[string, string]>): void {
+    const key = options.map(([v]) => v).join('|');
+    if (sel.dataset.key === key) return;
+    const keep = sel.value;
+    sel.replaceChildren(...options.map(([v, label]) => el('option', { value: v }, label)));
+    sel.dataset.key = key;
+    if (options.some(([v]) => v === keep)) sel.value = keep;
+  }
+
+  private refreshTalkPanel(id: string, p: TalkPanel): void {
+    const state = this.game.sim.state;
+    const r = this.game.sim.resident(id);
+    const others = state.order.filter((o) => o !== id && !state.residents[o]?.departed);
+    const places = state.buildings.filter((b) => !b.removed && b.type !== 'wild' && buildingDef(b.type).kind !== 'home');
+    this.fillSelect(p.aboutSelect, [
+      ...others.map((o) => [`r:${o}`, residentDef(o).name] as [string, string]),
+      ...places.map((b) => [`b:${b.id}`, this.game.narrator.subjectName(`b:${b.id}`)] as [string, string]),
+    ]);
+    this.fillSelect(p.visitSelect, others.map((o) => [o, residentDef(o).name]));
+    const cool = others.filter((o) => (r.rel[o]?.affinity ?? 0) < 0.1);
+    this.fillSelect(p.mendSelect, (cool.length ? cool : others).map((o) => [o, residentDef(o).name]));
+    const asleep = r.activity?.id === 'sleep' && r.at === r.homeId;
+    for (const c of p.controls) c.disabled = asleep || r.departed;
+    p.clear.disabled = p.clear.disabled || openPlots(state).length === 0;
+    p.clear.title = openPlots(state).length === 0 ? 'No wild land is open for clearing yet: the valley opens as the town thrives' : 'About 6 hours of work';
+    const last = this.game.narrator.lastReply;
+    p.reply.textContent = asleep ? `${residentDef(id).name} is asleep. Talk in the morning.` : last && last.who === id ? `“${last.text}”` : '';
+    p.reply.hidden = p.reply.textContent === '';
+    p.status.textContent = this.favourStatus(r);
+  }
+
+  private favourStatus(r: ResidentState): string {
+    const state = this.game.sim.state;
+    const asked = recentAsks(r, state.tick);
+    const f = r.favour;
+    const doing = f ? `Doing for you: ${FAVOUR_DOING[f.kind]}${f.minutesNeeded > 1 ? ` (${Math.floor(f.minutes / 60)}h of ${Math.round(f.minutesNeeded / 60)}h)` : ''}. ` : '';
+    return `${doing}Favours asked this week: ${asked}${asked >= 3 ? ' (that is a lot)' : ''}.`;
+  }
+
+  /** A journal section that stays folded unless the player opens it (remembered across redraws). */
+  private section(summary: string, key: string): HTMLDetailsElement {
+    const det = el('details', { class: 'section', 'data-testid': `section-${key}` });
+    det.appendChild(el('summary', {}, summary));
+    det.open = this.openWhy.has(`section:${key}`);
+    det.addEventListener('toggle', () => {
+      if (det.open) this.openWhy.add(`section:${key}`);
+      else this.openWhy.delete(`section:${key}`);
+    });
+    return det;
+  }
+
   private renderJournal(force = false): void {
     const now = performance.now();
     if (!force && now - this.lastJournalRender < 600) return;
+    // Mid-choice in the talk panel: refresh it in place rather than redraw (an open dropdown would close).
+    const busy = [...this.talkPanels.entries()].find(([, p]) => p.root.isConnected && p.root.contains(document.activeElement));
+    if (!force && busy) {
+      this.refreshTalkPanel(busy[0], busy[1]);
+      this.lastJournalRender = now;
+      return;
+    }
+    if (!force && document.activeElement instanceof HTMLSelectElement && this.journalEl.contains(document.activeElement)) return;
     this.lastJournalRender = now;
     const pane = this.journalEl;
     pane.replaceChildren();
     const roster = el('div', { class: 'roster' });
     for (const id of this.game.sim.state.order) {
       const b = el('button', { 'data-testid': `roster-${id}` }, residentDef(id).name);
-      b.style.borderColor = cssColor(RESIDENT_COLORS[id] ?? 0x888888);
+      b.style.borderColor = cssColor(residentColor(id));
       b.classList.toggle('on', this.selected?.kind === 'resident' && this.selected.id === id);
       b.addEventListener('click', () => this.select({ kind: 'resident', id }));
       roster.appendChild(b);
@@ -633,6 +901,11 @@ export class Ui {
     if (!b) return;
     const card = el('div', { class: 'journal', 'data-testid': 'building-card' });
     card.appendChild(el('h2', {}, cap(this.game.narrator.subjectName(`b:${id}`))));
+    if (b.type === 'wild') {
+      this.renderWild(card, b.id);
+      pane.appendChild(card);
+      return;
+    }
     card.appendChild(
       el('p', { class: 'quiet' }, b.removed ? 'Gone now.' : `${buildingDef(b.type).kind} · ${b.placedBy === 'founding' ? 'here before you' : `built on day ${dayOf(b.placedTick)}`} · gives off ${this.givesOff(b.type)}`),
     );
@@ -646,6 +919,55 @@ export class Ui {
     if (!list.childElementCount) list.appendChild(el('li', { class: 'quiet' }, 'Nobody has strong feelings yet.'));
     card.appendChild(list);
     pane.appendChild(card);
+  }
+
+  /** Wild land: is it open, how far has clearing got, and who could help. */
+  private renderWild(card: HTMLElement, id: number): void {
+    const state = this.game.sim.state;
+    const open = openPlots(state).includes(id);
+    const done = state.clearing?.[String(id)] ?? 0;
+    card.appendChild(el('p', { class: 'quiet' }, buildingDef('wild').blurb ?? ''));
+    card.appendChild(this.meter('Cleared', done / CLEAR_MINUTES));
+    if (!open) {
+      card.appendChild(el('p', {}, 'Not open for clearing yet. The valley opens next to settled land, once the town is doing well.'));
+      return;
+    }
+    card.appendChild(el('p', {}, `Open for clearing: about ${Math.ceil((CLEAR_MINUTES - done) / 360)} more days of someone's work. Clearing brings in timber, and the land is yours to build on.`));
+    const row = el('div', { class: 'talk-row' });
+    const who = el('select', { 'data-testid': 'clear-who' });
+    for (const rid of state.order) if (!state.residents[rid]?.departed) who.appendChild(el('option', { value: rid }, residentDef(rid).name));
+    const ask = el('button', { 'data-testid': 'clear-ask' }, 'Ask to help clear it');
+    ask.addEventListener('click', () => {
+      this.game.command({ kind: 'favour', who: who.value, favour: 'clear', plot: id });
+      const last = this.game.narrator.lastReply;
+      this.status(last && last.who === who.value ? `${residentDef(who.value).name}: “${last.text}”` : '');
+    });
+    row.append(ask, who);
+    card.appendChild(row);
+  }
+
+  /** Who they are: traits as two-ended sliders, values as bars. */
+  private personality(rep: ResidentReport): HTMLElement {
+    const strongest = [...rep.traits].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 2).map(([k, v]) => (TRAIT_ENDS[k] ?? [k, k])[v >= 0 ? 1 : 0]);
+    const sec = this.section(`Personality · ${strongest.join(', ')}`, 'personality');
+    for (const [k, v] of rep.traits) {
+      const [lo, hi] = TRAIT_ENDS[k] ?? [k, k];
+      const row = el('div', { class: 'slider', 'data-testid': `trait-${k}` });
+      row.appendChild(el('span', { class: 'end' }, lo));
+      const track = el('span', { class: 'track' });
+      const knob = el('span', { class: 'knob' });
+      knob.style.left = pct((v + 1) / 2);
+      track.appendChild(knob);
+      row.append(track, el('span', { class: 'end' }, hi));
+      sec.appendChild(row);
+    }
+    sec.appendChild(el('p', { class: 'quiet' }, 'Cares about'));
+    for (const [k, v] of [...rep.values].sort((a, b) => b[1] - a[1])) {
+      const bar = this.meter(cap(k), v);
+      bar.className = 'valuebar';
+      sec.appendChild(bar);
+    }
+    return sec;
   }
 
   private meter(label: string, value: number, setpoint?: number): HTMLElement {
@@ -668,7 +990,7 @@ export class Ui {
   private renderResident(pane: HTMLElement, rep: ResidentReport): void {
     const j = el('div', { class: 'journal', 'data-testid': 'journal' });
     const head = el('h2', {}, `${rep.name}, ${rep.age}`);
-    head.style.borderBottomColor = cssColor(RESIDENT_COLORS[rep.id] ?? 0x888888);
+    head.style.borderBottomColor = cssColor(residentColor(rep.id));
     j.appendChild(head);
     j.appendChild(el('p', { class: 'quiet' }, rep.background));
     if (rep.hope) {
@@ -702,12 +1024,16 @@ export class Ui {
     }
     if (!mind.childElementCount) mind.appendChild(el('li', { class: 'quiet' }, 'Nothing much. Content.'));
     j.appendChild(mind);
+    j.appendChild(this.talkPanel(rep.id));
     j.appendChild(this.meter('Mood', rep.mood));
     j.appendChild(this.meter('Settled here', rep.disposition));
 
-    j.appendChild(el('h3', {}, 'Needs'));
-    for (const n of rep.needs) j.appendChild(this.meter(cap(n.need), n.level, n.setpoint));
+    const low = rep.needs.filter((n) => n.level < n.setpoint * 0.6).map((n) => n.need);
+    const needs = this.section(`Needs${low.length ? ` · low: ${low.join(', ')}` : ' · all met'}`, 'needs');
+    for (const n of rep.needs) needs.appendChild(this.meter(cap(n.need), n.level, n.setpoint));
+    j.appendChild(needs);
 
+    j.appendChild(this.personality(rep));
     j.appendChild(el('h3', {}, 'Feeling'));
     const feel = el('p', { 'data-testid': 'feelings' });
     feel.textContent = rep.feelings.length ? rep.feelings.map((f) => `${f.kind}${f.about ? ` about ${f.about}` : ''}`).join(', ') : 'Nothing in particular.';
@@ -736,20 +1062,24 @@ export class Ui {
       }
     }
 
-    j.appendChild(el('h3', {}, 'People'));
+    const friends = rep.relationships.filter((x) => x.id !== 'steward' && x.tags.includes('friend')).length;
+    const peopleSection = this.section(`People · ${friends} friend${friends === 1 ? '' : 's'}`, 'people');
     const people = el('ul', { class: 'people' });
     for (const x of rep.relationships) {
       const word = x.tags.includes('close_friend') ? 'close friend' : x.tags.includes('friend') ? 'friend' : x.tags.includes('rival') ? 'not getting on' : x.affinity > 0.25 ? 'fond of' : x.affinity < -0.15 ? 'wary of' : 'knows';
       people.appendChild(el('li', {}, `${x.id === 'steward' ? 'You' : x.name}: ${word}`));
     }
-    j.appendChild(people);
+    peopleSection.appendChild(people);
+    j.appendChild(peopleSection);
 
     const asks = this.game.sim.state.requests.filter((x) => x.by === rep.id);
     if (asks.length) {
-      j.appendChild(el('h3', {}, 'Asked of you'));
+      const open = asks.filter((q) => q.status === 'open').length;
+      const sec = this.section(`Asked of you · ${open} waiting`, 'asks');
       const ul = el('ul');
       for (const q of asks) ul.appendChild(el('li', {}, `${cap(ASK_TITLES[q.kind].replace('asks for ', ''))}: ${q.status}`));
-      j.appendChild(ul);
+      sec.appendChild(ul);
+      j.appendChild(sec);
     }
     pane.appendChild(j);
   }
@@ -774,14 +1104,19 @@ export class Ui {
       if (d) this.showDilemma(d);
     }
     const now = performance.now();
+    const covers = this.panels.filter((p) => !p.hidden).map((p) => p.getBoundingClientRect());
     for (const [id, b] of this.bubbles) {
       const pos = this.view.residentHead(id);
-      const show = pos !== null && pos.visible && now < b.until;
-      b.el.hidden = !show;
+      let show = pos !== null && pos.visible && now < b.until;
       if (show && pos) {
+        b.el.hidden = false;
         b.el.style.left = `${pos.x}px`;
         b.el.style.top = `${pos.y}px`;
+        // A bubble that would sit over the scroll, the dock or the top bar waits out of sight.
+        const r = b.el.getBoundingClientRect();
+        show = !covers.some((c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top);
       }
+      b.el.hidden = !show;
     }
   }
 }

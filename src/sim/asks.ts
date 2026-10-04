@@ -69,8 +69,10 @@ export function assess(state: SimState, r: ResidentState, kind: RequestKind, sin
       if (!job) return { want: false, met: true, subject: self };
       const current = r.jobId !== null ? state.buildings.find((b) => b.id === r.jobId) : undefined;
       const has = current?.type === job;
-      const exists = liveBuildings(state).some((b) => b.type === job);
-      return { want: !has && !exists, met: has, subject: self, wants: job };
+      // Nowhere of that kind with a free place: none built yet, or all taken (newcomers, M3c).
+      const capacity = buildingDef(job).capacity ?? 0;
+      const free = liveBuildings(state).some((b) => b.type === job && Object.values(state.residents).filter((x) => !x.departed && x.jobId === b.id).length < capacity);
+      return { want: !has && !free, met: has, subject: self, wants: job };
     }
     case 'more_food': {
       const want = state.lastShortageDay > 0 && dayOf(state.tick) - state.lastShortageDay <= 1;

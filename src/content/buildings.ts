@@ -20,7 +20,7 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   cottage: {
     type: 'cottage',
     cost: 10,
-    blurb: 'A home for two.',
+    blurb: 'An empty home: build one and someone new moves in.',
     name: 'Cottage',
     kind: 'home',
     size: [2, 2],
@@ -198,6 +198,17 @@ export const BUILDINGS: Record<string, BuildingDef> = {
 
 // Buildings residents dream of (M3a aspirations). They appear in the build menu once asked for.
 Object.assign(BUILDINGS, {
+  // Wild land around the settled valley (M3c): an 8x8 plot of woods, cleared by residents' work.
+  wild: {
+    type: 'wild',
+    name: 'Wild land',
+    kind: 'nature',
+    size: [8, 8],
+    emits: {},
+    radius: 0,
+    activities: ['work'],
+    blurb: 'Woods and brambles. Cleared by hand, it opens room to build.',
+  },
   orchard: {
     type: 'orchard',
     name: 'Orchard',

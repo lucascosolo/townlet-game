@@ -85,11 +85,13 @@ export class TownView {
     container.appendChild(this.renderer.domElement);
 
     this.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 200);
-    this.target.set(width / 2, 0, height / 2);
+    // Start over the settled valley; the wild land around it is there to be cleared.
+    const settled = game.sim.state.settled ?? { width, height };
+    this.target.set(settled.width / 2, 0, settled.height / 2);
     this.camera.zoom = 1.35;
 
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(1024, 1024);
+    this.sun.shadow.mapSize.set(2048, 2048);
     const s = Math.max(width, height) * 0.75;
     Object.assign(this.sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 1, far: 120 });
     this.sun.target.position.copy(this.target);

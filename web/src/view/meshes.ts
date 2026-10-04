@@ -226,6 +226,27 @@ export function buildingMesh(type: string): THREE.Group {
       }
       break;
     }
+    case 'wild': {
+      // Woods and brambles over an 8x8 plot: a fixed, irregular scatter.
+      g = new THREE.Group();
+      const floor = box(w * 0.98, 0.03, d * 0.98, mat(0x55703f), 0, 0.015);
+      floor.receiveShadow = true;
+      g.add(floor);
+      let seed = 7;
+      const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < 18; i++) {
+        const x = -w / 2 + 0.6 + rnd() * (w - 1.2);
+        const z = -d / 2 + 0.6 + rnd() * (d - 1.2);
+        if (rnd() < 0.7) g.add(tree(x, z, 1 + rnd() * 0.9));
+        else {
+          const bush = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35 + rnd() * 0.2, 0), mat(PALETTE.hedge));
+          bush.position.set(x, 0.25, z);
+          bush.castShadow = true;
+          g.add(bush);
+        }
+      }
+      break;
+    }
     case 'orchard': {
       g = new THREE.Group();
       g.add(box(w * 0.9, 0.04, d * 0.9, mat(PALETTE.hedge), 0, 0.02));
@@ -275,6 +296,15 @@ export function buildingMesh(type: string): THREE.Group {
   return g;
 }
 
+/** A resident's colour: authored for the founding six, derived from the id for newcomers. */
+export function residentColor(id: string): number {
+  const known = RESIDENT_COLORS[id];
+  if (known !== undefined) return known;
+  let h = 2166136261;
+  for (const c of id) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+  return new THREE.Color().setHSL((h % 360) / 360, 0.5, 0.55).getHex();
+}
+
 export const RESIDENT_COLORS: Record<string, number> = {
   ada: 0x9b7fc9,
   bram: 0xe08a3c,
@@ -286,7 +316,7 @@ export const RESIDENT_COLORS: Record<string, number> = {
 
 export function residentMesh(id: string): THREE.Group {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.38, 6), mat(RESIDENT_COLORS[id] ?? 0xdddddd));
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.38, 6), mat(residentColor(id)));
   body.position.y = 0.19;
   body.castShadow = true;
   const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 0), mat(0xf1d2b6));

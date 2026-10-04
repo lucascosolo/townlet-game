@@ -783,6 +783,59 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Determinism holds.
    - The one-year soak with newcomers (10 seeds) shows no degenerate state.
 
+
+**M4 status (2026-10-04): eight of nine met; criterion 9 met with one earlier number reported as missed.** The tests are in `test/m4.test.ts`, `e2e/m4-phone.spec.ts` and `e2e/m4-desktop.spec.ts`. Measured with the favour-asking steward over 21 days unless stated.
+
+1. **Writing and minds: met.**
+   - There are no broken articles, plural names after "a", or "?," over 28 days on any seed.
+   - The steward appears in 6.4–7.3% of quoted lines [24%].
+   - The most repeated line appears 5–7 times [29].
+   - 66–74% of quoted lines are unique [53%].
+   - Person opinions never use the place lines.
+   - Juniper's glasshouse step advances within the hour it is built, on every seed.
+2. **Tension in the economy: met.**
+   - Bram bakes 0.5 food on a day he cuts timber for you, against 1.2 on a day he doesn't.
+   - Timber never sits at its cap with the favour-asking steward (0 of 28 days on every seed).
+   - With no granary, all 5 seeds go short in winter (4–5 days each). Where the stores are met, none do.
+   - The owner confirmed that a winter shortage under a careless steward is the sim working as intended.
+3. **Today's goals: met.**
+   - Every morning has 3 goals.
+   - All 7 kinds of goal were completed by commands alone.
+   - The goal-keeping steward completes 2.36–2.43 a day.
+4. **Renown and tiers: met.**
+   - The goal-keeper reaches Hamlet on day 2, Village on day 7–8 and Townlet on day 22–24.
+   - A do-nothing town is a Clearing on day 28 on every seed (12–24 renown, all from dreams that need nothing from you).
+   - Nothing that was buildable before M4 is locked.
+5. **The Folk album: met.**
+   - Two days of the four questions reveal 8 of 10 facts.
+   - Facts come only from talk commands, and replay identically.
+   - Facts are read from live state.
+6. **On a phone: met.**
+   - The tab bar has five tabs.
+   - No visible control is under 44px on any of the five screens.
+   - The page never scrolls sideways.
+   - At peek the town fills 75% of the screen.
+   - Tapping a resident opens the card, and Talk gets an answer.
+   - The touch build flow passes through the tab bar.
+7. **On a desktop: met.**
+   - Goals, Folk and the board/log/journal panel are docked.
+   - Each folds and hides, and comes back from the panels menu.
+   - The town keeps 52% of a 1440px window.
+8. **Save: met.**
+   - Reloading restores the same buildings, residents, revealed facts and renown, with the clock a minute or two on because the game runs on.
+   - "Start a new valley" gives a new seed.
+9. **No regressions: met, with one earlier number reported as missed.**
+   - All 69 unit tests and 22 browser tests pass, plus the two expected failures (below).
+   - The one-year soak with newcomers (bakery, 10 seeds × 112 days) finds no degenerate state: 2.9 rival pairs a run, an argument in every run, and the busiest place takes 45% of socialising. The year-long M3c tests (`npm run test:slow`) pass, 5 of 5.
+   - Several earlier measurements moved, and are reported here rather than tuned away:
+     - **Rivalries.** Arguments were being smoothed away so fast that no rival pairs formed in the considerate town. Grudges now linger for a week after an argument. The M1 soak has 1.1 rival pairs a run (band 0.5–4), and the M3a rival check passes again.
+     - **Missed: friends keep company under a careless steward.** The ratio is 1.94× (2.19× when M3a closed). Each lever tried to win it back worked against something else:
+       - a pull towards friends herded the town into one place and broke the M1 spread band;
+       - more calling-round pulled Fen off the bench he loves and broke an M1 twin test.
+       It is kept as a visible expected failure.
+     - **Winter stores.** The target is now 30 food per resident, so meeting it covers a winter (25 did not, once winters bit). The favour-asking steward meets it on 3 of 5 seeds and the considerate steward on 4 of 5. The considerate steward now retries a build it couldn't afford, and the stores e2e reads the target from state.
+     - **Harness.** The browser popup helpers now also put off the tier celebration. The phone build test uses the tab bar. The 12-resident speed test starts as a Hamlet, because a Clearing holds 8.
+
 ---
 
 ## 10. Risks

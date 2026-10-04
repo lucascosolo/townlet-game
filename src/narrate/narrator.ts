@@ -47,6 +47,7 @@ export function importanceOf(e: SimEvent): Importance {
     case 'aspiration':
     case 'plot_cleared':
     case 'arrived':
+    case 'stores':
       return 'major';
     case 'request_closed':
       return e.request.status === 'lapsed' ? 'major' : 'normal';
@@ -441,6 +442,19 @@ export class Narrator {
       case 'arrived': {
         const d = residentDef(e.who);
         this.live(e.t, `Someone new comes up the valley road: ${d.name}, ${d.age}. ${d.background} ${cap(d.pronouns.subj)} ${d.pronouns.subj === 'they' ? 'move' : 'moves'} into ${this.subjectName(`b:${e.home}`).replace(/^.*'s /, 'the ')}.`);
+        break;
+      }
+      case 'stores': {
+        const who = this.name(e.who);
+        const left = `${e.daysLeft} day${e.daysLeft === 1 ? '' : 's'}`;
+        const lines: Record<typeof e.phase, string> = {
+          asked: `${who} has a worry: "Winter will come, and I want ${e.target} food put by before it does. We need a granary." Winter stores: ${e.stored} of ${e.target}, ${left} to winter.`,
+          reminded: `${who} starts counting sacks again: "${e.target} in the granary by winter, and we have ${e.stored}." ${cap(left)} to go.`,
+          met: `The first morning of winter, and the granary holds ${e.stored} food. ${who} goes door to door to tell everyone. Nobody will go hungry this winter.`,
+          short: `Winter comes with ${e.stored} of ${e.target} food put by. ${who}: "It will have to do. We eat carefully, and we start sooner next year."`,
+          feast: `Spring, and last year's stores won't keep: ${who} shares out the last ${e.stored} food from the granary, and the whole town eats well. The granary starts again from empty.`,
+        };
+        this.live(e.t, lines[e.phase]);
         break;
       }
       case 'plot_cleared':

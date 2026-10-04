@@ -457,6 +457,39 @@ export function buildingMesh(type: string, variant = 0): THREE.Group {
       }
       break;
     }
+    case 'granary': {
+      // A timber store raised on staddle stones (to keep mice out), with sacks by the door.
+      g = new THREE.Group();
+      const stone = mat(PALETTE.stone);
+      for (const x of [-1, 0, 1]) for (const z of [-1, 1]) {
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.28, 6), stone);
+        cap.position.set(x * w * 0.32, 0.14, z * d * 0.3);
+        cap.castShadow = true;
+        g.add(cap);
+        g.add(box(0.24, 0.04, 0.24, stone, x * w * 0.32, 0.3, z * d * 0.3));
+      }
+      g.add(box(w * 0.78, 0.06, d * 0.72, mat(PALETTE.darkWood), 0, 0.35));
+      const body = box(w * 0.74, 0.62, d * 0.66, mat(PALETTE.wood), 0, 0.69);
+      body.receiveShadow = true;
+      g.add(body);
+      // Weatherboarding: dark strips along the sides.
+      for (let i = 0; i < 3; i++) g.add(box(w * 0.75, 0.025, d * 0.67, mat(PALETTE.darkWood), 0, 0.48 + i * 0.2));
+      const roof = pyramidRoof(w * 0.92, d * 0.86, 0.55, mat(PALETTE.roof), 1.0);
+      roof.scale.x *= 1.15;
+      g.add(roof);
+      g.add(box(0.36, 0.48, 0.03, mat(PALETTE.trim), 0, 0.68, (d * 0.66) / 2 + 0.01));
+      // Steps up to the door, and sacks waiting to go in.
+      g.add(box(0.4, 0.08, 0.3, mat(PALETTE.darkWood), 0, 0.2, (d * 0.66) / 2 + 0.2));
+      const sackMat = mat(PALETTE.canvas);
+      for (const [x, z, s] of [[0.42, 0.95, 1], [0.6, 0.9, 0.85], [-0.48, 0.92, 0.9]] as const) {
+        const sack = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13 * s, 0), sackMat);
+        sack.scale.y = 1.3;
+        sack.position.set(x, 0.16 * s, z);
+        sack.castShadow = true;
+        g.add(sack);
+      }
+      break;
+    }
     case 'glasshouse': {
       g = new THREE.Group();
       const glass = new THREE.MeshLambertMaterial({ color: 0xcfe8e4, transparent: true, opacity: 0.45, emissive: new THREE.Color(0x2a3a30) });

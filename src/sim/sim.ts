@@ -40,6 +40,7 @@ import {
 import { aspirationMinute, aspirationMorning, type AspirationHost } from './story/aspirations.js';
 import { activeGatherings, newStoryState, storyStep } from './story/director.js';
 import { closeDilemma } from './story/dilemmas.js';
+import { LARDER_CAP, drawFromGranary, overflowToGranary, storesDawn, storesHourly } from './stores.js';
 import { DAWN_MINUTE, TICKS_PER_DAY, dayOf, minuteOf, seasonOf } from './time.js';
 import {
   NEEDS,
@@ -105,7 +106,7 @@ const SIGHT = 6;
 export const WORD_OF_MOUTH = 8 * 60;
 /** Food one meal takes from the town's stores. */
 export const MEAL = 0.5;
-export const STOCK_CAP: Record<Resource, number> = { food: 80, timber: 100 };
+export const STOCK_CAP: Record<Resource, number> = { food: LARDER_CAP, timber: 100 };
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
 /** Seasonal yield of buildings that grow food on their own. */
 const PASSIVE_SEASON: Record<string, Record<ReturnType<typeof seasonOf>, number>> = {
@@ -384,6 +385,7 @@ export class Simulation implements AspirationHost {
       if (state.produced && Object.keys(state.produced).length > 0) this.emit({ t: state.tick, type: 'production', by: state.produced });
       state.produced = {};
       this.emit({ t: state.tick, type: 'dawn', day: dayOf(state.tick) });
+      storesDawn(this);
     }
 
     for (const id of state.order) {
@@ -498,7 +500,7 @@ export class Simulation implements AspirationHost {
     const state = this.state;
     const got = favourYield(state, r, f.kind);
     for (const [res, v] of Object.entries(got) as Array<[Resource, number]>) {
-      state.stock[res] = Math.min(STOCK_CAP[res], state.stock[res] + v);
+      this.addStock(res, v);
       this.addProduced(r.id, res, v);
     }
     favourSatisfaction(r);
@@ -512,6 +514,14 @@ export class Simulation implements AspirationHost {
     }
     r.favour = null;
     this.emit({ t: state.tick, type: 'favour', who: r.id, phase: 'done', kind: f.kind, yield: got, placeId: f.placeId, ...(f.other ? { other: f.other } : {}) });
+  }
+
+  /** Into the town's stores: food over the larder's cap goes to the granary, if there is one. */
+  private addStock(res: Resource, v: number): void {
+    const stock = this.state.stock;
+    const over = stock[res] + v - STOCK_CAP[res];
+    if (res === 'food' && over > 0) overflowToGranary(this.state, over);
+    stock[res] = Math.min(STOCK_CAP[res], stock[res] + v);
   }
 
   private addProduced(by: string, res: Resource, v: number): void {
@@ -711,6 +721,11 @@ export class Simulation implements AspirationHost {
       state.stock.food -= MEAL;
       return;
     }
+    // A bare larder: the granary feeds the town, if anything is put by.
+    if ((state.granary ?? 0) >= MEAL) {
+      drawFromGranary(state, MEAL);
+      return;
+    }
     act.meagre = true;
     const day = dayOf(state.tick);
     if (state.lastShortageDay !== day) {
@@ -826,7 +841,7 @@ export class Simulation implements AspirationHost {
         for (const [res, rate] of Object.entries(made) as Array<[Resource, number]>) {
           const season = res === 'food' && getBuilding(state, r.at).type === 'garden' ? GARDEN_SEASON[seasonOf(tick)] : 1;
           const v = (rate / 60) * season * (0.5 + 0.5 * r.mood);
-          state.stock[res] = Math.min(STOCK_CAP[res], state.stock[res] + v);
+          this.addStock(res, v);
           this.addProduced(r.id, res, v);
         }
       }
@@ -1059,10 +1074,11 @@ export class Simulation implements AspirationHost {
       if (!passive) continue;
       const factor = PASSIVE_SEASON[b.type]?.[season] ?? 1;
       for (const [res, rate] of Object.entries(passive) as Array<[Resource, number]>) {
-        this.state.stock[res] = Math.min(STOCK_CAP[res], this.state.stock[res] + rate * factor);
+        this.addStock(res, rate * factor);
         if (rate * factor > 0) this.addProduced(b.type, res, rate * factor);
       }
     }
+    storesHourly(this.state);
     for (const r of this.activeResidents()) {
       const def = residentDef(r.id);
       decayEmotions(r);

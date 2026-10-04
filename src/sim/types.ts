@@ -464,6 +464,10 @@ export interface SimState {
   nextFavourId?: number;
   /** Today's production so far, by resident (or building type for what grows itself), shown each morning. */
   produced?: Record<string, Partial<Record<Resource, number>>>;
+  /** Food put by in the granary (winter stores, 2026-10-04). */
+  granary?: number;
+  /** This year's winter-stores quest. */
+  stores?: { year: number; target: number; asked: boolean; by?: string; outcome?: 'met' | 'short' };
   /** Work done towards clearing each wild plot, in minutes, by building id (M3c). */
   clearing?: Record<string, number>;
 }
@@ -472,6 +476,7 @@ export interface SimState {
 
 export type SimEvent =
   | { t: number; type: 'dawn'; day: number }
+  | { t: number; type: 'stores'; phase: 'asked' | 'reminded' | 'met' | 'short' | 'feast'; who: string; stored: number; target: number; daysLeft: number }
   | { t: number; type: 'built'; building: number; btype: string; by: 'steward' }
   | { t: number; type: 'removed'; building: number; btype: string; by: 'steward' }
   | { t: number; type: 'took_job'; who: string; building: number }

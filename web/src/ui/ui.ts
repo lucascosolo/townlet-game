@@ -13,6 +13,7 @@ import { ambientPrefs, prefScore } from '../../../src/sim/needs.js';
 import { wishProgress } from '../../../src/sim/story/director.js';
 import { dilemmaDef, stanceScore } from '../../../src/sim/story/dilemmas.js';
 import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
+import { daysToWinter, granaryRoom, hasGranary } from '../../../src/sim/stores.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
 import { residentColor } from '../view/meshes.js';
@@ -26,7 +27,7 @@ import type { TownView } from '../view/scene.js';
 export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
   { category: 'Green and decor', types: ['hedge', 'flowerbed', 'bench'] },
   { category: 'Gathering', types: ['teahouse', 'commons', 'well'] },
-  { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop'] },
+  { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop', 'granary'] },
   { category: 'Homes', types: ['cottage'] },
   { category: 'Dreams', types: ['orchard', 'glasshouse', 'banner'] },
 ];
@@ -231,6 +232,12 @@ export class Ui {
       item.append(n, el('span', { class: 'sr' }, ` ${label}`));
       this.stockEl.appendChild(item);
     }
+    // The granary's stores, once one stands (winter stores, 2026-10-04).
+    const sack = el('span', { class: 'res res-granary', 'data-testid': 'granary-stock' });
+    sack.innerHTML = ICONS.sack;
+    sack.append(el('b'), el('span', { class: 'sr' }, ' put by'));
+    sack.hidden = true;
+    this.stockEl.appendChild(sack);
     const speeds = el('div', { class: 'speeds' });
     const icons = [ICONS.pause, ICONS.play, ICONS.fast, ICONS.faster, ICONS.fastest];
     SPEEDS.forEach((s, i) => {
@@ -761,11 +768,14 @@ export class Ui {
     const requests = state.requests.filter((q) => q.status === 'open');
     const wishes = state.story.wishes.filter((w) => w.status === 'open');
     const progress = wishes.map((w) => wishProgress(state, w).met);
-    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick), state.buildings.length]);
+    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick), state.buildings.length, Math.floor(state.granary ?? 0), state.stores]);
     if (key === this.lastBoardKey) return;
     this.lastBoardKey = key;
     const pane = this.boardEl;
     pane.replaceChildren();
+
+    const quest = state.stores;
+    if (quest?.asked) pane.appendChild(this.storesCard());
 
     pane.appendChild(el('h3', {}, 'Town Wishes this season'));
     if (wishes.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'No wishes outstanding.'));
@@ -833,6 +843,41 @@ export class Ui {
   }
 
   /** How green it is around someone's home, against what satisfies them. */
+  /** Winter stores: the yearly quest, with its count, target and days to winter. */
+  private storesCard(): HTMLElement {
+    const state = this.game.sim.state;
+    const q = state.stores as NonNullable<typeof state.stores>;
+    const put = Math.floor(state.granary ?? 0);
+    const keeper = q.by ? residentDef(q.by).name : 'The town';
+    const card = el('div', { class: 'card quest', 'data-testid': 'stores-card' });
+    const head = el('div', { class: 'card-title' });
+    head.innerHTML = ICONS.sack;
+    head.append(el('span', {}, `Winter stores · ${keeper}'s worry`));
+    card.appendChild(head);
+    const days = daysToWinter(state.tick);
+    const status = q.outcome === 'met'
+      ? `${put} food put by. The town is ready for winter.`
+      : q.outcome === 'short'
+        ? `Winter came with the granary short of ${q.target}. ${keeper} will start sooner next year.`
+        : `${put} of ${q.target} food put by in the granary · ${days} day${days === 1 ? '' : 's'} to winter.`;
+    card.appendChild(el('p', { 'data-testid': 'stores-progress' }, status));
+    if (!q.outcome) {
+      const room = granaryRoom(state);
+      const hint = room === 0
+        ? 'Build a granary (Work and food, 12 timber). Food the larder can\'t hold goes there, and surplus is carried across by day.'
+        : room < q.target
+          ? `The granaries hold ${room} between them. Another would make room for ${q.target}.`
+          : 'Food over what the larder needs is carried across each day. Favours that bring in food help most.';
+      card.appendChild(el('p', { class: 'quiet' }, hint));
+      const track = el('div', { class: 'track' });
+      const fill = el('div', { class: 'fill' });
+      fill.style.width = pct(Math.min(1, put / q.target));
+      track.appendChild(fill);
+      card.appendChild(track);
+    }
+    return card;
+  }
+
   private greenLine(id: string): string {
     const state = this.game.sim.state;
     const home = state.buildings.find((b) => b.id === this.game.sim.resident(id).homeId);
@@ -1379,6 +1424,15 @@ export class Ui {
       this.lastStock[res] = v;
     }
     this.stockEl.classList.toggle('short', state.stock.food < 3);
+    const sack = this.stockEl.querySelector('[data-testid="granary-stock"]') as HTMLElement;
+    sack.hidden = !hasGranary(state);
+    if (!sack.hidden) {
+      const put = Math.floor(state.granary ?? 0);
+      const text = state.stores?.asked && !state.stores.outcome ? `${put}/${state.stores.target}` : String(put);
+      const b = sack.querySelector('b') as HTMLElement;
+      if (b.textContent !== text) b.textContent = text;
+      sack.title = `Granary: ${put} food put by (room for ${granaryRoom(state)})`;
+    }
     this.renderBoard();
     if (!this.menu.hidden) this.refreshMenu();
     if (!this.tabs.get('journal')!.pane.hidden) this.renderJournal();

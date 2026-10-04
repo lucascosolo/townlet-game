@@ -233,6 +233,17 @@ Object.assign(BUILDINGS, {
     blurb: 'Grows food even in winter.',
     passive: { food: 0.35 },
   },
+  granary: {
+    type: 'granary',
+    name: 'Granary',
+    kind: 'work',
+    size: [2, 2],
+    emits: { scent: 0.1 },
+    radius: 1,
+    activities: [],
+    cost: 12,
+    blurb: 'Puts food by for winter. What the larder can\'t hold goes here.',
+  },
   banner: {
     type: 'banner',
     name: 'Town banner',

@@ -16,6 +16,10 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **The outcome is felt.** If the target is met on the first day of winter, the town is grateful to Juniper, and Juniper to the steward. If it falls short, Juniper says so, and the town eats what there is. The quest comes round again the next year.
 - **Shown on the board.** A quest card shows "N of 150 put by", a progress bar and the days left until winter. The HUD shows the granary's count next to the larder once a granary stands.
 
+**Changed mid-chunk, after the first measurements (before the criteria were checked):**
+- **Each spring, what's left is shared out at a feast, and the granary starts again from empty.** Without this, nothing drained the granary: the town's winter production still outran what it ate, and year two began with more than 200 already put by, so the quest was met before it was posted. The granary would just have been a second climbing number, which is what the owner complained about. The feast lifts everyone's mood by an amount that grows with what is shared, so a good harvest still pays off.
+- **Capacity is 300 per granary, not 300 in all.** With newcomers, the target (25 per resident) reached 450, more than one granary can hold, so the quest became impossible. The keeper now asks for another granary when the target outgrows the room. That gives a growing town something to build.
+
 **Rejected:**
 - *Adding the stores as more stages of Juniper's authored dream.* That would lengthen her first dream past winter, and it would move the M3a and M3b dream criteria without anyone deciding to. A quest beside the dream keeps those criteria as they were declared.
 - *An automatic granary with no deadline.* Without "before winter" there is no goal, only a second number climbing.

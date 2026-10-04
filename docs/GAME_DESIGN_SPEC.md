@@ -720,6 +720,26 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Determinism holds.
    - The one-year soak with newcomers (10 seeds) shows no degenerate state.
 
+
+**Winter stores status (2026-10-04): all seven met.** The tests are in `test/stores.test.ts` and `e2e/stores.spec.ts`. Two design changes were made after the first measurements and before the criteria were checked; they are recorded in DECISIONS.md: a spring feast empties the granary each year, and capacity is 300 per granary.
+
+1. **Juniper raises the quest: met.** With the considerate steward, Juniper raises it on day 7–9 on every seed and asks for a granary. The steward builds it on day 13–16.
+2. **Nothing is lost while there is room: met.** Over the larder's cap goes into the granary, exactly, up to its capacity. The larder sits at its cap on 0–2 days in 28 (it was 4–8).
+3. **The target can be met, and needs the player: met.**
+   - The favour-asking steward meets it on 3 of 5 seeds (257/200, 300/250, 300/200 met; 168/325 and 257/300 short). Its town grows quickly with newcomers, so its target is higher.
+   - The considerate steward, reported without a bound, meets 150 on all 5 seeds (154–209). In a six-person town, building the granary promptly is enough. The quest gets harder as the town grows, and a player who leaves the granary unbuilt for long misses it.
+4. **Full stores feed the winter: met.** There are no shortages from day 22 to day 28 on any seed that met the target.
+5. **The outcome is felt and narrated: met.**
+   - Every resident present feels kindly towards Juniper.
+   - A missed target is narrated as missed.
+   - In year two, the spring feast shares out the leftovers and the quest is posted again.
+6. **In the browser: met.** The board's Winter stores card shows "N of 150 … 5 days to winter". The HUD shows the granary's count against the target. The granary is in the tray at 12 timber.
+7. **No regressions: met.**
+   - All earlier unit tests pass: 57, plus the one expected failure.
+   - All browser tests pass: 18.
+   - The one-year soak with newcomers (bakery, 10 seeds × 112 days) found no degenerate state.
+   - One harness change: the e2e popup helper now waits for rendered frames rather than a fixed 500 ms. A slow frame let a proposal popup arrive after the old window, and that popup covered the tabs.
+
 ---
 
 ## 10. Risks

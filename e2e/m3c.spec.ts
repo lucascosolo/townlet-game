@@ -24,15 +24,18 @@ async function runTo(page: Page, tick: number): Promise<void> {
   await putOff(page);
 }
 
-/** Put off any proposal popup (it appears on the next frame, so look twice). */
+/** Put off every proposal popup, however many frames they take to appear. */
 async function putOff(page: Page): Promise<void> {
-  for (let pass = 0; pass < 2; pass++) {
-    await page.waitForTimeout(250);
+  // Popups show one per rendered frame, and a slow frame can take longer than any fixed wait:
+  // wait for frames to be drawn, put off what is there, and stop after two quiet frames.
+  const frames = () => page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+  for (let quiet = 0; quiet < 2; ) {
+    await frames();
     const later = page.locator('[data-testid^="later-"]');
-    while ((await later.count()) > 0) {
+    if ((await later.count()) > 0) {
       await later.first().click();
-      await page.waitForTimeout(50);
-    }
+      quiet = 0;
+    } else quiet++;
   }
 }
 

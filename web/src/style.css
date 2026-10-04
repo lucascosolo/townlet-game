@@ -338,3 +338,10 @@ button.primary:hover { background: #a3572f; }
   .tray-info { min-height: 0; font-size: 12px; max-height: 3.2em; overflow: hidden; }
   .menu .build-card { width: 112px; }
 }
+
+/* Winter stores (2026-10-04): the quest card and the granary count in the HUD. */
+.card.quest { border-color: #c99a4a; background: linear-gradient(#fff8e6, #fbf1da); }
+.card.quest .card-title { display: flex; align-items: center; gap: 6px; }
+.card.quest .card-title svg { color: #9a6b2c; flex: none; }
+.card.quest .track .fill { background: #c99a4a; }
+.stock .res-granary svg { color: #9a6b2c; }

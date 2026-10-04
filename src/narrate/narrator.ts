@@ -348,7 +348,7 @@ export class Narrator {
       case 'belief_formed': {
         const from = e.hearsay ? e.belief.sources.find((s) => s.from)?.from : undefined;
         const n = e.belief.sources.filter((s) => s.kind === 'witnessed').length;
-        const why = from ? ` (heard it from ${this.name(from)})` : n >= 2 ? ` (after ${n} times)` : '';
+        const why = from ? ` (heard it from ${this.name(from)})` : n >= 5 ? ' (time and again)' : n >= 2 ? ' (more than once)' : '';
         this.pushBoard(() => `${this.name(e.who)} has decided ${this.statement(e.who, e.belief)}${why}.`);
         break;
       }

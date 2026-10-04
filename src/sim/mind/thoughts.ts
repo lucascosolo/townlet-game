@@ -47,7 +47,7 @@ export function mindTopics(state: SimState, r: ResidentState): MindTopic[] {
 
   for (const n of NEEDS) {
     const u = urgency(r.needs[n], r.setpoints[n]);
-    if (u > 0.35) topics.push({ key: `need:${n}`, weight: 1.2 * u, vars: {}, reason: `${n} is low (${r.needs[n].toFixed(2)} of the ${r.setpoints[n].toFixed(2)} they need)` });
+    if (u > 0.35) topics.push({ key: `need:${n}`, weight: 1.2 * u, vars: {}, reason: `${n} is running ${u > 0.7 ? 'very ' : ''}low` });
   }
   const crowd = companyOvershoot(r.needs.company, r.setpoints.company, def);
   if (crowd > 0.1) topics.push({ key: 'need:crowded', weight: 0.8 + crowd, vars: {}, reason: 'too much company for their liking' });
@@ -60,7 +60,7 @@ export function mindTopics(state: SimState, r: ResidentState): MindTopic[] {
       ...(about ? { about } : {}),
       weight: 1.4 * e.intensity,
       vars: { x: about ? subjectWord(state, about) : '' },
-      reason: `${e.kind}${about ? ` about ${subjectWord(state, about)}` : ''} (${e.intensity.toFixed(2)})`,
+      reason: `${e.intensity > 0.6 ? 'strong ' : ''}${e.kind}${about ? ` about ${subjectWord(state, about)}` : ''}`,
     });
   }
 
@@ -68,7 +68,7 @@ export function mindTopics(state: SimState, r: ResidentState): MindTopic[] {
   if (step) {
     const fresh = tick - r.aspiration.since < TICKS_PER_DAY;
     const waiting = state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open');
-    topics.push({ key: waiting ? 'dream:waiting' : 'dream', weight: 0.45 + (fresh ? 0.3 : 0) + (waiting ? 0.25 : 0), vars: { next: firstPerson(step.charAt(0).toLowerCase() + step.slice(1)) }, reason: `their hope: ${step.toLowerCase()}` });
+    topics.push({ key: waiting ? 'dream:waiting' : 'dream', weight: 0.45 + (fresh ? 0.3 : 0) + (waiting ? 0.25 : 0), vars: { next: firstPerson(step.charAt(0).toLowerCase() + step.slice(1)) }, reason: waiting ? 'waiting on you' : 'what they are working towards' });
   }
 
   const festival = state.story.gatherings.find((g) => g.kind === 'festival' && g.from > tick && g.from - tick < TICKS_PER_DAY);
@@ -92,7 +92,7 @@ export function mindTopics(state: SimState, r: ResidentState): MindTopic[] {
 
   const standing = r.rel.steward?.affinity ?? 0;
   if (Math.abs(standing) > 0.35) {
-    topics.push({ key: standing > 0 ? 'steward:+' : 'steward:-', about: STEWARD, weight: 0.2 + 0.4 * Math.abs(standing), vars: {}, reason: `their view of the steward (${standing.toFixed(2)})` });
+    topics.push({ key: standing > 0 ? 'steward:+' : 'steward:-', about: STEWARD, weight: 0.2 + 0.4 * Math.abs(standing), vars: {}, reason: standing > 0 ? 'how the steward has treated them' : 'how the steward has let them down' });
   }
 
   // A belief formed in the last two days is still news to them.

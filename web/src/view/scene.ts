@@ -256,6 +256,10 @@ export class TownView {
     return this.azimuth;
   }
 
+  get zoomLevel(): number {
+    return this.camera.zoom;
+  }
+
   zoom(factor: number): void {
     this.camera.zoom = THREE.MathUtils.clamp(this.camera.zoom * factor, 0.6, 4);
     this.camera.updateProjectionMatrix();

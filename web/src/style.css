@@ -1,13 +1,15 @@
 :root {
   --paper: #f6efdf;
   --paper-edge: #e3d6b8;
-  --ink: #3b3226;
-  --ink-soft: #7a6c58;
+  --ink: #3d3328;
+  --ink-soft: #6e604f;
+  --display: 'Fraunces', Georgia, serif;
   --accent: #b5653e;
   --good: #5f9e4f;
   --warn: #c0503c;
   --shadow: 0 6px 18px rgba(40, 30, 15, 0.25);
-  font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  font-family: 'Nunito', 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
   color: var(--ink);
 }
 * { box-sizing: border-box; }
@@ -35,7 +37,7 @@ button:hover { background: #fff3da; }
 button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
 .hud { position: absolute; top: 12px; left: 12px; padding: 8px 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.hud .title { font-weight: bold; letter-spacing: 0.04em; }
+.hud .title { font-family: var(--display); font-weight: 600; font-size: 19px; letter-spacing: 0.02em; }
 .hud .clock { min-width: 190px; font-variant-numeric: tabular-nums; }
 .speeds { display: flex; gap: 3px; }
 
@@ -73,7 +75,7 @@ a.who { color: inherit; text-decoration: none; border-bottom: 2px solid; }
 
 .roster { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
 .roster button { border-width: 2px; }
-.journal h2 { margin: 4px 0; font-size: 20px; border-bottom: 3px solid; display: inline-block; }
+.journal h2 { margin: 4px 0; font-family: var(--display); font-weight: 600; font-size: 22px; border-bottom: 3px solid; display: inline-block; }
 .journal .doing { font-style: italic; }
 .warning { color: var(--warn); font-weight: bold; }
 .meter, .valuebar { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
@@ -176,3 +178,70 @@ html, body { -webkit-user-select: none; user-select: none; -webkit-touch-callout
 input, textarea, select { -webkit-user-select: auto; user-select: auto; }
 
 button.link { background: none; border: none; padding: 0 2px; color: var(--accent); text-decoration: underline dotted; cursor: pointer; font-size: 12.5px; }
+
+/* ---- Release polish (adversarial review, wave 2) ---- */
+h2, h3, .card-title, .modal h2 { font-family: var(--display); }
+.pane h3, .menu h4, details.section > summary { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.1em; }
+.pane { font-size: 15px; }
+button { font-family: 'Nunito', sans-serif; font-weight: 600; }
+button.icon { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 32px; padding: 0 6px; }
+button svg { display: block; }
+.dock button { display: inline-flex; align-items: center; gap: 6px; height: 34px; }
+.hud { height: auto; min-height: 48px; padding: 6px 14px; gap: 14px; }
+.hud .clock { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.stock { display: inline-flex; gap: 12px; }
+.stock .res { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+.stock .res-food svg { color: #b8862b; }
+.stock .res-timber svg { color: #7a5534; }
+.stock b { font-size: 16px; min-width: 2ch; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.floater { position: absolute; left: 100%; top: -2px; margin-left: 2px; font-weight: 700; font-size: 13px; color: var(--good); pointer-events: none; animation: floatUp 900ms ease-out forwards; }
+.floater.timber { color: #8a5a3b; }
+@keyframes floatUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-20px); opacity: 0; } }
+
+/* Bubbles: solid border in the speaker's colour, a tail pointing at them, a gentle entrance. */
+.bubble { border-width: 1.5px; border-radius: 12px; padding: 6px 10px; font-size: 14px; max-width: 220px; transform: translate(-50%, calc(-100% - 10px)); animation: bubbleIn 180ms ease-out; }
+.bubble::after { content: ''; position: absolute; left: var(--tail, 50%); bottom: -7px; width: 12px; height: 12px; margin-left: -6px; background: inherit; border-right: inherit; border-bottom: inherit; transform: rotate(45deg); border-color: inherit; border-style: inherit; border-width: 0 1.5px 1.5px 0; }
+.bubble.thought { border-style: dashed; }
+@keyframes bubbleIn { from { opacity: 0; margin-top: 6px; } to { opacity: 1; margin-top: 0; } }
+
+/* Portraits and chips. */
+.portrait { display: inline-flex; border-radius: 50%; overflow: hidden; flex: none; box-shadow: 0 1px 3px rgba(40, 30, 15, 0.25); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 3px; border-radius: 999px; }
+.journal-head { display: flex; align-items: center; gap: 12px; margin: 4px 0 6px; }
+
+/* Popups: a warm veil and a small entrance; "Decide later" is a link. */
+.modal-back { background: rgba(30, 22, 14, 0.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: fadeIn 200ms ease-out; }
+.modal { animation: rise 220ms ease-out; border-radius: 12px; }
+.modal-head { display: flex; gap: 14px; align-items: center; margin-bottom: 6px; }
+.modal-head h2 { margin: 2px 0 0; font-size: 22px; line-height: 1.2; }
+.modal-buttons { align-items: center; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fffaf0; }
+button.primary:hover { background: #a3572f; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* The rolled scroll shows only its rod, with the active tab's name (review: tabs poked out). */
+.scroll.rolled .tabs button:not(.on) { display: none; }
+.scroll.rolled .tabs button.on { background: transparent; border-color: transparent; color: #f6efdf; }
+
+/* Phones: the scroll is a bottom sheet, touch targets are 44px, the top bar is compact. */
+@media (max-width: 600px) {
+  .hud { left: 8px; right: 8px; top: 8px; min-height: 0; padding: 6px 8px; gap: 8px; flex-wrap: nowrap; overflow-x: auto; }
+  .hud .title { display: none; }
+  .hud .clock { white-space: nowrap; font-size: 13px; gap: 4px; }
+  .hud .clock .season { display: none; }
+  .hud .speeds button[data-testid="speed-3"] { display: none; }
+  .stock { gap: 8px; }
+  .hud .speeds button[data-testid="speed-4"], .hud [data-testid="help"] { display: none; }
+  button.icon { min-width: 40px; height: 40px; }
+  .dock button, .tabs button, .talk-row button, .chip { min-height: 44px; }
+  .scroll { left: 0; right: 0; bottom: 0; top: auto; width: auto; border-radius: 14px 14px 0 0; }
+  .scroll .rod.top { border-radius: 14px 14px 0 0; }
+  .scroll .scroll-body { height: 46vh; margin: -4px 0 0; }
+  .scroll .rod.bottom { display: none; }
+  .dock { bottom: calc(46vh + 70px); left: 8px; right: auto; padding: 6px; }
+  .scroll.rolled ~ .dock { bottom: 70px; }
+  .dock .status { display: none; }
+  .bubble { max-width: 170px; font-size: 13px; }
+}

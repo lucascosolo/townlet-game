@@ -16,6 +16,8 @@ import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
 import { residentColor } from '../view/meshes.js';
+import { ICONS } from './icons.js';
+import { portrait } from './portrait.js';
 import { greenAroundHome } from '../../../src/sim/world.js';
 import { GREEN_ENOUGH } from '../../../src/sim/asks.js';
 import type { TownView } from '../view/scene.js';
@@ -170,7 +172,7 @@ export class Ui {
   private readonly youEl: HTMLElement;
   private readonly menu: HTMLElement;
   private readonly statusEl: HTMLElement;
-  private readonly bubbles = new Map<string, { el: HTMLElement; until: number }>();
+  private readonly bubbles = new Map<string, { el: HTMLElement; until: number; born: number; major: boolean }>();
   private readonly bubbleLayer: HTMLElement;
   private readonly openWhy = new Set<string>();
   private readonly standingNotes = new Map<string, string[]>();
@@ -181,6 +183,7 @@ export class Ui {
   private lastJournalRender = 0;
   private lastYouRender = 0;
   private morning: NarratorEntry[] = [];
+  private readonly lastStock: Partial<Record<'food' | 'timber', number>> = {};
   /** One talk panel per resident, kept across journal redraws so its choices stay put. */
   private readonly talkPanels = new Map<string, TalkPanel>();
   /** On-screen panels that speech bubbles must not cover. */
@@ -199,18 +202,32 @@ export class Ui {
     const hud = el('div', { class: 'hud paper' });
     this.clockEl = el('div', { class: 'clock', 'data-testid': 'clock' });
     this.stockEl = el('div', { class: 'stock', 'data-testid': 'stock' });
+    for (const [res, icon, label] of [
+      ['food', ICONS.wheat, 'Food'],
+      ['timber', ICONS.log, 'Timber'],
+    ] as const) {
+      const item = el('span', { class: `res res-${res}`, title: label });
+      item.innerHTML = icon;
+      const n = el('b', { 'data-res': res });
+      item.append(n, el('span', { class: 'sr' }, ` ${label}`));
+      this.stockEl.appendChild(item);
+    }
     const speeds = el('div', { class: 'speeds' });
-    const labels = ['❚❚', '▶', '▶▶', '▶▶▶', '⏩'];
+    const icons = [ICONS.pause, ICONS.play, ICONS.fast, ICONS.faster, ICONS.fastest];
     SPEEDS.forEach((s, i) => {
-      const b = el('button', { title: s === 0 ? 'Pause (space)' : `${s}× (${i})`, 'data-testid': `speed-${i}` }, labels[i]);
+      const b = el('button', { class: 'icon', title: s === 0 ? 'Pause (space)' : `Speed ${s}× (key ${i})`, 'aria-label': s === 0 ? 'Pause' : `Speed ${s}×`, 'data-testid': `speed-${i}` });
+      b.innerHTML = icons[i] as string;
       b.addEventListener('click', () => this.setSpeed(i));
       speeds.appendChild(b);
       this.speedButtons.push(b);
     });
     const rot = el('div', { class: 'speeds' });
-    const left = el('button', { title: 'Turn left (Q). Or right-drag to turn freely.' }, '⟲');
-    const right = el('button', { title: 'Turn right (E). Or right-drag to turn freely.' }, '⟳');
-    const help = el('button', { title: 'How to play', 'data-testid': 'help' }, '?');
+    const left = el('button', { class: 'icon', title: 'Turn left (Q). Or right-drag, or twist two fingers, to turn freely.', 'aria-label': 'Turn left' });
+    const right = el('button', { class: 'icon', title: 'Turn right (E). Or right-drag, or twist two fingers, to turn freely.', 'aria-label': 'Turn right' });
+    const help = el('button', { class: 'icon', title: 'How to play', 'aria-label': 'How to play', 'data-testid': 'help' });
+    left.innerHTML = ICONS.turnLeft;
+    right.innerHTML = ICONS.turnRight;
+    help.innerHTML = ICONS.help;
     left.addEventListener('click', () => view.rotate(-1));
     right.addEventListener('click', () => view.rotate(1));
     help.addEventListener('click', () => this.showIntro());
@@ -252,11 +269,14 @@ export class Ui {
 
     // The dock: look, build menu, remove, and a status line.
     const dock = el('div', { class: 'dock paper' });
-    const look = el('button', { 'data-testid': 'tool-select', title: 'Look and inspect (Esc)' }, 'Look');
+    const look = el('button', { 'data-testid': 'tool-select', title: 'Look and inspect (Esc)' });
+    look.innerHTML = `${ICONS.look}<span>Look</span>`;
     look.addEventListener('click', () => this.setTool({ kind: 'select' }));
-    const build = el('button', { 'data-testid': 'open-build' }, 'Build ▾');
+    const build = el('button', { 'data-testid': 'open-build' });
+    build.innerHTML = `${ICONS.build}<span>Build</span>`;
     build.addEventListener('click', () => this.toggleMenu());
-    const remove = el('button', { 'data-testid': 'tool-remove' }, 'Remove');
+    const remove = el('button', { 'data-testid': 'tool-remove' });
+    remove.innerHTML = `${ICONS.remove}<span>Remove</span>`;
     remove.addEventListener('click', () => this.setTool({ kind: 'remove' }));
     this.statusEl = el('div', { class: 'status', 'data-testid': 'palette-status' });
     dock.append(look, build, remove, this.statusEl);
@@ -461,8 +481,13 @@ export class Ui {
     const def = residentDef(d.proposer);
     const lines = PROPOSALS[d.type];
     const c = el('div', { 'data-testid': 'decision' });
-    c.appendChild(el('div', { class: 'eyebrow' }, 'A decision for you'));
-    c.appendChild(el('h2', {}, `${def.name} has a proposal: ${DILEMMA_NAMES[d.type]}`));
+    const top = el('div', { class: 'modal-head' });
+    top.appendChild(portrait(d.proposer, 64));
+    const titles = el('div');
+    titles.appendChild(el('div', { class: 'eyebrow' }, 'A decision for you'));
+    titles.appendChild(el('h2', {}, `${def.name} has a proposal: ${DILEMMA_NAMES[d.type]}`));
+    top.appendChild(titles);
+    c.appendChild(top);
     c.appendChild(el('p', { class: 'quote' }, `“${(lines[def.voice.register] ?? lines.plain)[0]}”`));
     const glad: string[] = [];
     const not: string[] = [];
@@ -477,7 +502,7 @@ export class Ui {
     const row = el('div', { class: 'modal-buttons' });
     const yes = el('button', { class: 'primary', 'data-testid': `approve-${d.id}` }, 'Approve');
     const no = el('button', { 'data-testid': `decline-${d.id}` }, 'Decline');
-    const later = el('button', { 'data-testid': `later-${d.id}` }, 'Decide later');
+    const later = el('button', { class: 'link', 'data-testid': `later-${d.id}` }, 'Decide later');
     yes.addEventListener('click', () => {
       this.game.command({ kind: 'decide', dilemma: d.type, option: 'approve' });
       this.closeModal();
@@ -620,14 +645,16 @@ export class Ui {
   private bubble(id: string, text: string, mood = ''): void {
     let b = this.bubbles.get(id);
     if (!b) {
-      b = { el: el('div', { class: 'bubble' }), until: 0 };
+      b = { el: el('div', { class: 'bubble' }), until: 0, born: 0, major: false };
       b.el.style.borderColor = cssColor(residentColor(id));
       this.bubbleLayer.appendChild(b.el);
       this.bubbles.set(id, b);
     }
     b.el.className = `bubble ${mood}`;
     b.el.textContent = text.length > 90 ? `${text.slice(0, 87)}…` : text;
-    b.until = performance.now() + 7000;
+    b.born = performance.now();
+    b.until = b.born + 4500;
+    b.major = mood === 'major' || mood === 'up' || mood === 'down';
   }
 
   // ---------------------------------------------------------------- the notice board
@@ -908,7 +935,8 @@ export class Ui {
     pane.replaceChildren();
     const roster = el('div', { class: 'roster' });
     for (const id of this.game.sim.state.order) {
-      const b = el('button', { 'data-testid': `roster-${id}` }, residentDef(id).name);
+      const b = el('button', { class: 'chip', 'data-testid': `roster-${id}` });
+      b.append(portrait(id, 22), el('span', {}, residentDef(id).name));
       b.style.borderColor = cssColor(residentColor(id));
       b.classList.toggle('on', this.selected?.kind === 'resident' && this.selected.id === id);
       b.addEventListener('click', () => this.select({ kind: 'resident', id }));
@@ -942,7 +970,8 @@ export class Ui {
       const row = el('div', { class: 'talk-row', 'data-testid': 'home-of' });
       row.appendChild(el('span', { class: 'quiet' }, living.length ? 'Home of:' : 'Nobody lives here yet. Someone new will move in soon.'));
       for (const rid of living) {
-        const go = el('button', { 'data-testid': `open-resident-${rid}` }, residentDef(rid).name);
+        const go = el('button', { class: 'chip', 'data-testid': `open-resident-${rid}` });
+        go.append(portrait(rid, 22), el('span', {}, residentDef(rid).name));
         go.style.borderColor = cssColor(residentColor(rid));
         go.addEventListener('click', () => this.select({ kind: 'resident', id: rid }));
         row.appendChild(go);
@@ -1040,9 +1069,12 @@ export class Ui {
 
   private renderResident(pane: HTMLElement, rep: ResidentReport): void {
     const j = el('div', { class: 'journal', 'data-testid': 'journal' });
+    const headRow = el('div', { class: 'journal-head' });
+    headRow.appendChild(portrait(rep.id, 64));
     const head = el('h2', {}, `${rep.name}, ${rep.age}`);
     head.style.borderBottomColor = cssColor(residentColor(rep.id));
-    j.appendChild(head);
+    headRow.appendChild(head);
+    j.appendChild(headRow);
     j.appendChild(el('p', { class: 'quiet' }, rep.background));
     if (rep.hope) {
       const hope = el('div', { class: 'hope', 'data-testid': 'hope' });
@@ -1154,8 +1186,26 @@ export class Ui {
     const t = state.tick;
     const weather = state.story.weather;
     const w = weather.kind !== 'clear' && t < weather.until ? ` · ${weather.kind}` : '';
-    this.clockEl.textContent = `Day ${dayOf(t)} · ${cap(seasonOf(t))} · ${clock(t)}${w}`;
-    this.stockEl.textContent = `Food ${Math.floor(state.stock.food)} · Timber ${Math.floor(state.stock.timber)}`;
+    const hour = Math.floor((t % 1440) / 60);
+    const clockText = `Day ${dayOf(t)} · ${cap(seasonOf(t))} · ${clock(t)}${w}`;
+    if (this.clockEl.dataset.text !== clockText) {
+      this.clockEl.dataset.text = clockText;
+      this.clockEl.innerHTML = `${hour >= 6 && hour < 20 ? ICONS.sun : ICONS.moon}<span><span class="day">Day ${dayOf(t)}</span><span class="season"> · ${cap(seasonOf(t))}</span> · ${clock(t)}<span class="season">${w}</span></span>`;
+      this.clockEl.title = clockText;
+    }
+    for (const res of ['food', 'timber'] as const) {
+      const v = Math.floor(state.stock[res]);
+      const n = this.stockEl.querySelector(`[data-res="${res}"]`) as HTMLElement;
+      const last = this.lastStock[res];
+      if (n.textContent !== String(v)) n.textContent = String(v);
+      // A little "+3" floats up when the stores rise (review: no feedback when things happen).
+      if (last !== undefined && v > last) {
+        const f = el('span', { class: `floater ${res}` }, `+${v - last}`);
+        n.parentElement?.appendChild(f);
+        setTimeout(() => f.remove(), 950);
+      }
+      this.lastStock[res] = v;
+    }
     this.stockEl.classList.toggle('short', state.stock.food < 3);
     this.renderBoard();
     if (!this.menu.hidden) this.refreshMenu();
@@ -1168,16 +1218,35 @@ export class Ui {
     }
     const now = performance.now();
     const covers = this.panels.filter((p) => !p.hidden).map((p) => p.getBoundingClientRect());
+    // At most two bubbles at once (review: six at a time was noise): whoever you're looking at
+    // first, then what matters, then the newest. Zoomed far out, only theirs.
+    const selectedId = this.selected?.kind === 'resident' ? this.selected.id : null;
+    const zoomedOut = this.view.zoomLevel < 0.8;
+    const live = [...this.bubbles.entries()]
+      .filter(([id, b]) => now < b.until && (!zoomedOut || id === selectedId))
+      .sort(([ia, a], [ib, b]) => Number(ib === selectedId) - Number(ia === selectedId) || Number(b.major) - Number(a.major) || b.born - a.born);
+    const allowed = new Set(live.slice(0, 2).map(([id]) => id));
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
     for (const [id, b] of this.bubbles) {
       const pos = this.view.residentHead(id);
-      let show = pos !== null && pos.visible && now < b.until;
+      let show = allowed.has(id) && pos !== null && pos.visible;
       if (show && pos) {
         b.el.hidden = false;
         b.el.style.left = `${pos.x}px`;
         b.el.style.top = `${pos.y}px`;
+        // Keep it on screen, 16px from the edges.
+        let r = b.el.getBoundingClientRect();
+        const dx = r.left < 16 ? 16 - r.left : r.right > vw - 16 ? vw - 16 - r.right : 0;
+        const dy = r.top < 16 ? 16 - r.top : 0;
+        if (dx || dy) {
+          b.el.style.left = `${pos.x + dx}px`;
+          b.el.style.top = `${pos.y + dy}px`;
+          r = b.el.getBoundingClientRect();
+        }
+        b.el.style.setProperty('--tail', `${Math.max(12, Math.min(r.width - 12, pos.x - r.left))}px`);
         // A bubble that would sit over the scroll, the dock or the top bar waits out of sight.
-        const r = b.el.getBoundingClientRect();
-        show = !covers.some((c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top);
+        show = r.bottom < vh && !covers.some((c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top);
       }
       b.el.hidden = !show;
     }

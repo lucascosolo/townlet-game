@@ -45,6 +45,7 @@ npm run radio -- --scenario quiet --steward neglectful --days 28   # the same to
 npm run inspect -- --scenario bakery --days 10 --resident ada   # one mind, with its "Why?" chains
 npm run soak -- --seeds 10 --days 28 [--newcomers]       # many towns, checked for degenerate states
 npm test                                                  # determinism, memory, twin and invariant tests
+npm run test:slow                                         # year-long criteria runs (nightly in CI)
 npm run typecheck
 ```
 

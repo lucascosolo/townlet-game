@@ -667,7 +667,7 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - The log's default view stays readable: in a 7-day browser run, the Story filter shows at most 40 lines a day on average.
 
 
-**M3c status (2026-10-04): all six met, pending the 10-year soak with newcomers (below).** The tests are in `test/m3c.test.ts`, `test/m3c-year.test.ts` and `e2e/m3c.spec.ts`.
+**M3c status (2026-10-04): all six met, pending the 10-year soak with newcomers (below).** The tests are in `test/m3c.test.ts`, `test/m3c-year.slow.test.ts` and `e2e/m3c.spec.ts`.
 
 1. **Favours: met.**
    - Every refusal reason is checked against a state that makes it true: tired, unwell, asked too often, a poor view of the steward, low, not on speaking terms, already busy.

@@ -1,4 +1,5 @@
 // M3c criteria 2 and 3 over a year (112 days) with the favour-asking steward, seeds 1-5.
+// Slow: excluded from npm test; runs in the nightly slow-checks workflow (npm run test:slow).
 import { describe, expect, it } from 'vitest';
 import { runScenario } from '../src/scenarios/index.js';
 import { cottageSpot } from '../src/scenarios/steward.js';

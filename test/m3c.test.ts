@@ -1,5 +1,5 @@
 // M3c criteria 1, 2, 3 and 6 that fit in weeks (spec 9.3, predeclared 2026-10-03; criterion 3
-// changed by the owner mid-chunk and recorded there). The year-long checks are in m3c-year.test.ts.
+// changed by the owner mid-chunk and recorded there). The year-long checks are in m3c-year.slow.test.ts (npm run test:slow).
 import { describe, expect, it } from 'vitest';
 import { generateNewcomer, type Welcome } from '../src/content/newcomers.js';
 import { Narrator } from '../src/narrate/narrator.js';

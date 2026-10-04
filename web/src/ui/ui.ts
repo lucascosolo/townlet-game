@@ -16,6 +16,8 @@ import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
 import { residentColor } from '../view/meshes.js';
+import { greenAroundHome } from '../../../src/sim/world.js';
+import { GREEN_ENOUGH } from '../../../src/sim/asks.js';
 import type { TownView } from '../view/scene.js';
 
 export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
@@ -117,7 +119,7 @@ const ASK_HINTS: Record<Request['kind'], string> = {
   workplace: 'Build what they need from the Build menu.',
   more_food: 'Gardens and the fishing jetty fill the larder; gardens grow little in winter.',
   somewhere_to_sit: 'A bench within a few steps of their home.',
-  more_green: 'Flowers or a hedge near their home.',
+  more_green: 'A flower bed or hedge right beside their home counts in full; two tiles away, half.',
   place_to_gather: 'Another place to sit together: a bench, or a teahouse.',
 };
 
@@ -621,7 +623,7 @@ export class Ui {
     const requests = state.requests.filter((q) => q.status === 'open');
     const wishes = state.story.wishes.filter((w) => w.status === 'open');
     const progress = wishes.map((w) => wishProgress(state, w).met);
-    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick)]);
+    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick), state.buildings.length]);
     if (key === this.lastBoardKey) return;
     this.lastBoardKey = key;
     const pane = this.boardEl;
@@ -634,6 +636,7 @@ export class Ui {
       const card = el('div', { class: 'card wish', 'data-testid': `wish-${w.id}` });
       card.appendChild(el('div', { class: 'card-title' }, w.label));
       card.appendChild(el('p', { class: 'quiet' }, `${p.met} of ${p.of} who wished for it have it: ${w.supporters.map((id) => residentDef(id).name).join(', ')}.`));
+      if (w.kind === 'more_green') card.appendChild(el('p', { class: 'quiet', 'data-testid': 'green-progress' }, w.supporters.map((id) => this.greenLine(id)).join(' · ')));
       const track = el('div', { class: 'track' });
       const fill = el('div', { class: 'fill' });
       fill.style.width = pct(p.of ? p.met / p.of : 0);
@@ -661,6 +664,7 @@ export class Ui {
       const who = residentDef(q.by);
       card.appendChild(el('div', { class: 'card-title' }, `${who.name} ${ASK_TITLES[q.kind]}${q.wants ? `: a ${buildingDef(q.wants).name.toLowerCase()}` : ''}`));
       if (q.kind === 'quieter_home') card.appendChild(el('p', {}, `${cap(this.game.narrator.statement(q.by, { subject: q.subject, aspect: 'noisy_at_night' }))}.`));
+      if (q.kind === 'more_green') card.appendChild(el('p', { 'data-testid': 'green-progress' }, this.greenLine(q.by)));
       card.appendChild(el('p', { class: 'quiet' }, ASK_HINTS[q.kind]));
       const show = el('button', {}, 'Show me');
       show.addEventListener('click', () => {
@@ -681,6 +685,15 @@ export class Ui {
       list.appendChild(li);
     }
     pane.appendChild(list);
+  }
+
+  /** How green it is around someone's home, against what satisfies them. */
+  private greenLine(id: string): string {
+    const state = this.game.sim.state;
+    const home = state.buildings.find((b) => b.id === this.game.sim.resident(id).homeId);
+    if (!home) return '';
+    const g = greenAroundHome(state, home);
+    return `${residentDef(id).name}: ${g >= GREEN_ENOUGH ? 'green enough ✓' : `${Math.round((g / GREEN_ENOUGH) * 100)}% green enough`}`;
   }
 
   // ---------------------------------------------------------------- how the town sees you
@@ -1014,6 +1027,18 @@ export class Ui {
       return;
     }
     j.appendChild(el('p', { class: 'doing' }, `Now: ${rep.doing}`));
+    const homeB = this.game.sim.state.buildings.find((b) => b.id === this.game.sim.resident(rep.id).homeId);
+    if (homeB) {
+      const homeRow = el('p', { class: 'quiet', 'data-testid': 'home' }, `Lives in: ${this.game.narrator.subjectName(`b:${homeB.id}`)} `);
+      const show = el('button', { class: 'link' }, 'Show me');
+      show.addEventListener('click', () => {
+        const [w, h] = buildingDef(homeB.type).size;
+        this.view.focusOn(homeB.x + w / 2, homeB.y + h / 2);
+        this.view.highlightBuilding(homeB.id);
+      });
+      homeRow.appendChild(show);
+      j.appendChild(homeRow);
+    }
     if (rep.leavingSince !== null) j.appendChild(el('p', { class: 'warning' }, `Thinking of leaving (since day ${rep.leavingSince}).`));
     j.appendChild(el('h3', {}, 'On their mind'));
     const mind = el('ul', { class: 'mind', 'data-testid': 'on-mind' });

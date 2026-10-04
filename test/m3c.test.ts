@@ -5,6 +5,7 @@ import { generateNewcomer, type Welcome } from '../src/content/newcomers.js';
 import { Narrator } from '../src/narrate/narrator.js';
 import { runScenario } from '../src/scenarios/index.js';
 import { considerFavour, openPlots, WILLING } from '../src/sim/favours.js';
+import { assess } from '../src/sim/asks.js';
 import { rel } from '../src/sim/mind/relationships.js';
 import { topOfMind } from '../src/sim/mind/thoughts.js';
 import { feelingAbout, feelingBand, moodBand } from '../src/sim/talk.js';
@@ -292,5 +293,24 @@ describe('criterion 4 (M3b criterion 4): talking to a resident', () => {
       return JSON.stringify(s.state);
     };
     expect(run()).toBe(run());
+  });
+});
+
+describe('playtest fix: green around a home', () => {
+  it('a flower bed right beside a home satisfies a wish for more green, wherever along the home it is', () => {
+    for (const [dx, dy] of [
+      [2, 0],
+      [-1, 1],
+      [1, 2],
+      [0, -1],
+    ] as Array<[number, number]>) {
+      const sim = runScenario('quiet', 1, 'none');
+      sim.state.stock.timber = 50;
+      const ada = sim.resident('ada');
+      const home = sim.state.buildings.find((b) => b.id === ada.homeId) as { x: number; y: number };
+      expect(assess(sim.state, ada, 'more_green').met).toBe(false);
+      sim.build('flowerbed', home.x + dx, home.y + dy);
+      expect(assess(sim.state, ada, 'more_green').met, `flower bed at ${dx},${dy} from the cottage`).toBe(true);
+    }
   });
 });

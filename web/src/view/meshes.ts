@@ -142,12 +142,18 @@ export function buildingMesh(type: string): THREE.Group {
       break;
     }
     case 'tent': {
+      // A proper camp, so it reads as someone's home: a tall canvas tent, a pole, a lantern.
       g = new THREE.Group();
-      const t = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.7, 4), mat(PALETTE.canvas));
+      const t = new THREE.Mesh(new THREE.ConeGeometry(0.46, 0.95, 4), mat(PALETTE.canvas));
       t.rotation.y = Math.PI / 4;
-      t.position.y = 0.35;
+      t.position.y = 0.475;
       t.castShadow = true;
       g.add(t);
+      const flap = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.34), mat(PALETTE.darkWood));
+      flap.position.set(0, 0.17, 0.33);
+      g.add(flap);
+      g.add(box(0.03, 1.15, 0.03, mat(PALETTE.darkWood), 0, 0.575, 0));
+      g.add(lanternPost(0.38, 0.32));
       break;
     }
     case 'well': {

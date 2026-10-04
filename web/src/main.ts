@@ -31,33 +31,82 @@ if (window.innerWidth > 760) view.pan(-180, 0);
 // ------------------------------------------------------------------ input
 
 const canvas = view.renderer.domElement;
-// Left-drag moves the view; right- or middle-drag turns it around the town.
+// Left-drag moves the view; right- or middle-drag turns it around the town. On a phone, one
+// finger moves the view, two fingers pinch to zoom and twist to turn.
 let down: { x: number; y: number; moved: boolean; turn: boolean } | null = null;
 let lastHover: [number, number] | null = null;
+const pointers = new Map<number, { x: number; y: number }>();
+let pinch: { dist: number; angle: number } | null = null;
 
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
+function twoFingers(): { dist: number; angle: number } {
+  const [a, b] = [...pointers.values()] as [{ x: number; y: number }, { x: number; y: number }];
+  return { dist: Math.hypot(b.x - a.x, b.y - a.y), angle: Math.atan2(b.y - a.y, b.x - a.x) };
+}
+
 canvas.addEventListener('pointerdown', (e) => {
-  down = { x: e.clientX, y: e.clientY, moved: false, turn: e.button === 1 || e.button === 2 };
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   canvas.setPointerCapture(e.pointerId);
+  if (pointers.size === 2) {
+    // A second finger: this is a pinch or a twist, not a tap or a drag.
+    pinch = twoFingers();
+    if (down) down.moved = true;
+    return;
+  }
+  down = { x: e.clientX, y: e.clientY, moved: false, turn: e.button === 1 || e.button === 2 };
 });
 
 canvas.addEventListener('pointermove', (e) => {
-  if (down && (down.moved || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6)) {
-    if (!down.moved) down.moved = true;
-    if (down.turn) view.orbit(e.movementX);
-    else view.pan(e.movementX, e.movementY);
+  const prev = pointers.get(e.pointerId);
+  if (prev) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && pointers.size >= 2) {
+    const now = twoFingers();
+    if (pinch.dist > 0 && now.dist > 0) view.zoom(now.dist / pinch.dist);
+    let turn = now.angle - pinch.angle;
+    if (turn > Math.PI) turn -= 2 * Math.PI;
+    if (turn < -Math.PI) turn += 2 * Math.PI;
+    // orbit() turns 0.008 radians per pixel of drag; turn the town with the fingers, one for one.
+    view.orbit(turn / 0.008);
+    pinch = now;
     return;
   }
-  lastHover = [e.clientX, e.clientY];
-  hover(e.clientX, e.clientY);
+  if (down && prev && (down.moved || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6)) {
+    if (!down.moved) down.moved = true;
+    const dx = e.clientX - prev.x;
+    const dy = e.clientY - prev.y;
+    if (down.turn) view.orbit(dx);
+    else view.pan(dx, dy);
+    return;
+  }
+  if (e.pointerType === 'mouse') {
+    lastHover = [e.clientX, e.clientY];
+    hover(e.clientX, e.clientY);
+  }
 });
 
+function release(e: PointerEvent): void {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinch = null;
+}
+
 canvas.addEventListener('pointerup', (e) => {
-  const wasClick = down && !down.moved && !down.turn;
-  down = null;
-  if (wasClick) click(e.clientX, e.clientY);
+  const wasClick = down && !down.moved && !down.turn && pointers.size === 1;
+  release(e);
+  if (pointers.size === 0) down = null;
+  if (wasClick) {
+    if (e.pointerType !== 'mouse') hover(e.clientX, e.clientY);
+    click(e.clientX, e.clientY);
+  }
 });
+canvas.addEventListener('pointercancel', (e) => {
+  release(e);
+  if (pointers.size === 0) down = null;
+});
+
+// No browser zoom or text-selection callouts on phones: the game handles its own gestures.
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('dblclick', (e) => e.preventDefault());
 
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();

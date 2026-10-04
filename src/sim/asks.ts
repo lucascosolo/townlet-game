@@ -7,7 +7,7 @@ import { residentDef } from '../content/residents.js';
 import { sleepNoiseThreshold, urgency } from './needs.js';
 import { dayOf } from './time.js';
 import type { RequestKind, ResidentState, SimState, SubjectId } from './types.js';
-import { ambientAt, distanceTo, getBuilding, liveBuildings, placeTile } from './world.js';
+import { ambientAt, distanceTo, getBuilding, greenAroundHome, liveBuildings, placeTile } from './world.js';
 
 export const ASK_KINDS = ['quieter_home', 'workplace', 'more_food', 'somewhere_to_sit', 'more_green', 'place_to_gather'] as const;
 export type AskKind = (typeof ASK_KINDS)[number];
@@ -24,6 +24,8 @@ export const ASK_LAPSE_DAYS: Record<RequestKind, number> = {
 };
 
 const NEAR_HOME = 6;
+/** Green around a home that satisfies someone who asked for more (one flower bed or hedge right beside it). */
+export const GREEN_ENOUGH = 0.3;
 const DREAM_BUILDINGS = new Set(['orchard', 'glasshouse', 'banner']);
 
 export interface AskAssessment {
@@ -85,9 +87,9 @@ export function assess(state: SimState, r: ResidentState, kind: RequestKind, sin
       return { want: !near && lonely, met: near, subject: self };
     }
     case 'more_green': {
-      const green = ambientAt(state, hx, hy, new Set(), { weather: false }).green;
+      const green = greenAroundHome(state, getBuilding(state, r.homeId));
       const cares = def.values.nature >= 0.6 || def.values.beauty >= 0.6;
-      return { want: cares && green < 0.2, met: green >= 0.3, subject: self };
+      return { want: cares && green < 0.2, met: green >= GREEN_ENOUGH - 1e-9, subject: self };
     }
     case 'place_to_gather': {
       const crowded = [...Object.values(r.beliefs), ...Object.values(r.traces)].some(

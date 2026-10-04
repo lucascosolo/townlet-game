@@ -35,6 +35,8 @@ export interface BuildingDef {
   name: string;
   /** For a name that is plural ("Garden plots"): one of them. */
   singular?: string;
+  /** The town tier it needs (M4); none means always available. */
+  tier?: number;
   kind: BuildingKind;
   size: [number, number];
   /** Ambient qualities emitted at all times. Negative values absorb (hedges absorb noise). */
@@ -468,6 +470,8 @@ export interface SimState {
   nextFavourId?: number;
   /** Today's production so far, by resident (or building type for what grows itself), shown each morning. */
   produced?: Record<string, Partial<Record<Resource, number>>>;
+  /** Goals, renown, tier and the Folk album (M4). */
+  progress?: import('./progress.js').Progress;
   /** Food put by in the granary (winter stores, 2026-10-04). */
   granary?: number;
   /** This year's winter-stores quest. */
@@ -480,6 +484,10 @@ export interface SimState {
 
 export type SimEvent =
   | { t: number; type: 'dawn'; day: number }
+  | { t: number; type: 'renown'; amount: number; total: number; why: string }
+  | { t: number; type: 'tier'; tier: number; name: string; unlocks: string[]; cap: number }
+  | { t: number; type: 'goal'; phase: 'new' | 'done' | 'all'; goal?: import('./progress.js').Goal; goals?: import('./progress.js').Goal[] }
+  | { t: number; type: 'fact'; who: string; key: string; first: boolean }
   | { t: number; type: 'stores'; phase: 'asked' | 'reminded' | 'progress' | 'met' | 'short' | 'feast'; who: string; stored: number; target: number; daysLeft: number }
   | { t: number; type: 'built'; building: number; btype: string; by: 'steward' }
   | { t: number; type: 'removed'; building: number; btype: string; by: 'steward' }

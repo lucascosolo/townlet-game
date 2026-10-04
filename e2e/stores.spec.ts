@@ -19,7 +19,7 @@ async function putOff(page: Page): Promise<void> {
   const frames = () => page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   for (let quiet = 0; quiet < 2; ) {
     await frames();
-    const later = page.locator('[data-testid^="later-"]');
+    const later = page.locator('[data-testid^="later-"], [data-testid="tier-ok"]');
     if ((await later.count()) > 0) {
       await later.first().click();
       quiet = 0;

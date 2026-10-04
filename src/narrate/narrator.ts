@@ -12,6 +12,7 @@ import { firstPerson } from '../sim/mind/thoughts.js';
 import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
 import { chance, deriveSeed, pick, type RngHolder } from '../sim/rng.js';
 import { subjectWords } from '../sim/story/aspirations.js';
+import { factValue, goalLabel, TIER_GIFT } from '../sim/progress.js';
 import type { Simulation } from '../sim/sim.js';
 import { DAWN_MINUTE, clock, dayOf, minuteOf, seasonOf } from '../sim/time.js';
 import type { Belief, FavourKind, MindMention, Resource, ResidentDef, SimEvent, SimState, SubjectId, TalkAnswer } from '../sim/types.js';
@@ -19,6 +20,7 @@ import { distanceTo, sizeOf } from '../sim/world.js';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const STEWARD_ID = 'steward';
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const INDENT = '       ';
 
 /** Capitalise the start of the text and of each sentence. */
@@ -49,7 +51,13 @@ export function importanceOf(e: SimEvent): Importance {
     case 'plot_cleared':
     case 'arrived':
     case 'stores':
+    case 'tier':
       return 'major';
+    case 'goal':
+      return e.phase === 'new' ? 'normal' : 'normal';
+    case 'fact':
+    case 'renown':
+      return 'minor';
     case 'request_closed':
       return e.request.status === 'lapsed' ? 'major' : 'normal';
     case 'wish':
@@ -501,6 +509,21 @@ export class Narrator {
         this.live(e.t, `Someone new comes up the valley road: ${d.name}, ${d.age}. ${d.background} ${cap(d.pronouns.subj)} ${d.pronouns.subj === 'they' ? 'move' : 'moves'} into ${this.subjectName(`b:${e.home}`).replace(/^.*'s /, 'the ')}.`);
         break;
       }
+      case 'tier': {
+        const unlocks = e.unlocks.map((t) => buildingDef(t).name.toLowerCase());
+        this.live(e.t, `The valley is a ${e.name} now! Word gets round, and the neighbouring towns send ${TIER_GIFT} timber.${unlocks.length ? ` New to build: ${unlocks.join(', ')}.` : ''} Up to ${e.cap} can make their home here.`);
+        break;
+      }
+      case 'goal':
+        if (e.phase === 'new' && e.goals?.length) this.pushBoard(() => `Today: ${e.goals!.map((g) => goalLabel(g).toLowerCase()).join('; ')}.`);
+        else if (e.phase === 'done' && e.goal) this.aside(e.t, `Goal done: ${goalLabel(e.goal).toLowerCase()}.`);
+        else if (e.phase === 'all') this.live(e.t, `All of today's goals done. The town notices.`);
+        break;
+      case 'fact':
+        this.aside(e.t, `${e.first ? `${this.you ? "You've" : 'The steward has'} met ${this.name(e.who)}. ` : ''}${this.you ? 'You learn' : 'The steward learns'} something about ${this.name(e.who)}: ${lowerFirst(factValue(this.state, this.state.residents[e.who]!, e.key))}.`);
+        break;
+      case 'renown':
+        break;
       case 'stores': {
         const who = this.name(e.who);
         const left = `${e.daysLeft} day${e.daysLeft === 1 ? '' : 's'}`;

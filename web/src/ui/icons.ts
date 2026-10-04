@@ -18,6 +18,15 @@ export const ICONS = {
   log: svg('<rect x="3" y="5" width="17" height="6" rx="3"/><circle cx="6" cy="8" r="1.3"/><rect x="5" y="13" width="17" height="6" rx="3"/><circle cx="8" cy="16" r="1.3"/>', 20),
   // A tied grain sack, for the granary's stores.
   sack: svg('<path d="M9 4h6l-1.5 3c3.5 1.5 5.5 5 5.5 8.5 0 3-2 4.5-7 4.5s-7-1.5-7-4.5C5 12 7 8.5 10.5 7z"/><path d="M10.5 7h3"/>', 20),
+  // M4: the phone tab bar, renown and the dashboard.
+  star: svg('<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>', 20),
+  people: svg('<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.6 2.7-6 6-6s6 2.4 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c3.1-.4 5.5 1.8 5.5 5"/>', 20),
+  map: svg('<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>', 20),
+  list: svg('<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/>', 20),
+  widgets: svg('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>', 18),
+  check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 16),
+  chevron: svg('<path d="M6 9l6 6 6-6"/>', 16),
+  close: svg('<path d="M6 6l12 12M18 6L6 18"/>', 16),
   sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>', 18),
   cloud: svg('<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.3 1.5A3.3 3.3 0 0 0 7 18z"/><path d="M9 21l1-2M13 21l1-2" />', 18),
   moon: svg('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>', 18),

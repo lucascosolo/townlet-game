@@ -5,6 +5,13 @@ import { runScenario } from '../src/scenarios/index.js';
 import { at } from '../src/sim/time.js';
 import { WINTER_DAY } from '../src/sim/stores.js';
 import { SEEDS } from './helpers.js';
+import { BUILDINGS, buildingDef } from '../src/content/buildings.js';
+import { residentDef } from '../src/content/residents.js';
+import { ALL_FACTS, factValue, knownFacts, progressOf, residentCap, TIERS, tierUnlocks, todaysGoals, unlocked, type GoalKind } from '../src/sim/progress.js';
+import { dreamTitle } from '../src/sim/story/aspirations.js';
+import { active } from '../src/sim/story/director.js';
+import type { TalkQuestion } from '../src/sim/types.js';
+import { canPlace } from '../src/sim/world.js';
 
 const quotes = (text: string) => [...text.matchAll(/"([^"]{4,})"/g)].map((m) => m[1] as string);
 
@@ -118,3 +125,164 @@ describe('criterion 2: tension in the economy', () => {
     expect(short).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe('criterion 3: today\'s goals', () => {
+  it('every morning has three goals, and each kind can be completed by something the player does', { timeout: 300_000 }, () => {
+    const sim = runScenario('quiet', 1, 'considerate');
+    const seen = new Set<string>();
+    for (let d = 2; d <= 10; d++) {
+      sim.runUntil(at(d, 8));
+      const goals = todaysGoals(sim.state);
+      expect(goals.length, `day ${d}`).toBe(3);
+      for (const g of goals) seen.add(g.kind);
+    }
+    // Each kind, completed by commands alone, on a twin of a morning that offered it.
+    const kinds: GoalKind[] = ['talk', 'favour', 'learn', 'meet', 'green', 'answer', 'stores'];
+    const done = new Set<GoalKind>();
+    for (let d = 2; d <= 24 && done.size < kinds.length; d++) {
+      const base = runScenario('quiet', 1, 'considerate');
+      base.runUntil(at(d, 8));
+      for (const g of todaysGoals(base.state)) {
+        if (done.has(g.kind)) continue;
+        const sim2 = base.clone();
+        completeGoal(sim2, g.kind);
+        if (todaysGoals(sim2.state).find((x) => x.kind === g.kind)?.done) done.add(g.kind);
+      }
+    }
+    console.log(`goal kinds offered in days 2–10: ${[...seen].join(', ')}; completed by commands: ${[...done].join(', ')}`);
+    expect([...done].sort()).toEqual([...kinds].sort());
+  });
+
+  it('the goal-keeping steward completes at least 2 goals a day on average', { timeout: 300_000 }, () => {
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'goals');
+      let done = 0;
+      sim.on((e) => {
+        if (e.type === 'goal' && e.phase === 'done') done++;
+      });
+      sim.runUntil(at(29, 0));
+      console.log(`seed ${seed}: ${(done / 28).toFixed(2)} goals a day`);
+      expect(done / 28, `seed ${seed}`).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
+
+describe('criterion 4: renown and tiers', () => {
+  it('the goal-keeper is a Hamlet by day 7 and a Village by day 28; a do-nothing town stays a Clearing', { timeout: 300_000 }, () => {
+    for (const seed of SEEDS) {
+      const keen = runScenario('quiet', seed, 'goals');
+      const reached: Record<string, number> = {};
+      keen.on((e) => {
+        if (e.type === 'tier') reached[e.name] = e.t;
+      });
+      keen.runUntil(at(29, 0));
+      console.log(`seed ${seed}: Hamlet day ${Math.floor((reached.Hamlet ?? NaN) / 1440) + 1}, Village day ${Math.floor((reached.Village ?? NaN) / 1440) + 1}, Townlet day ${reached.Townlet !== undefined ? Math.floor(reached.Townlet / 1440) + 1 : '–'}`);
+      expect(reached.Hamlet, `seed ${seed}`).toBeLessThan(at(8, 0));
+      expect(reached.Village, `seed ${seed}`).toBeLessThan(at(29, 0));
+      const idle = runScenario('quiet', seed, 'none');
+      idle.runUntil(at(29, 0));
+      expect(progressOf(idle.state).tier, `seed ${seed}`).toBe(0);
+    }
+  });
+
+  it('each tier raises the cap and opens its building; nothing from before M4 is locked', () => {
+    const sim = runScenario('quiet', 1, 'none');
+    for (const type of Object.keys(BUILDINGS)) if (!buildingDef(type).tier) expect(unlocked(sim.state, type), type).toBe(true);
+    expect(canPlace(sim.state, 'beehives', 10, 10)).toBe('not unlocked yet');
+    const caps: number[] = [];
+    for (let tier = 0; tier < TIERS.length; tier++) {
+      progressOf(sim.state).tier = tier;
+      caps.push(residentCap(sim.state));
+      for (const t of tierUnlocks(tier)) expect(unlocked(sim.state, t)).toBe(true);
+    }
+    expect(caps).toEqual([...caps].sort((a, b) => a - b));
+    expect(new Set(caps).size).toBe(TIERS.length);
+  });
+});
+
+describe('criterion 5: the Folk album', () => {
+  it('all four questions on two days reveal at least 80% of what there is to know, and facts are true', { timeout: 120_000 }, () => {
+    const sim = runScenario('quiet', 2, 'none');
+    for (const day of [2, 3]) {
+      sim.runUntil(at(day, 10));
+      for (const q of ['how', 'mind', 'hope', 'me'] as TalkQuestion[]) {
+        sim.schedule([{ at: sim.state.tick, kind: 'talk', who: 'wren', question: q }]);
+        sim.flushCommands();
+      }
+    }
+    const known = knownFacts(sim.state, 'wren');
+    expect(known.length / ALL_FACTS.length).toBeGreaterThanOrEqual(0.8);
+    const r = sim.resident('wren');
+    expect(factValue(sim.state, r, 'background')).toBe(residentDef('wren').background);
+    expect(factValue(sim.state, r, 'dream')).toBe(dreamTitle(sim.state, r));
+  });
+
+  it('facts come only from talk commands, and a replay reveals the same', { timeout: 120_000 }, () => {
+    const play = () => {
+      const sim = runScenario('quiet', 3, 'goals');
+      sim.runUntil(at(5, 0));
+      return JSON.stringify(progressOf(sim.state).known);
+    };
+    expect(play()).toBe(play());
+    const quiet = runScenario('quiet', 3, 'considerate');
+    quiet.runUntil(at(5, 0));
+    expect(Object.values(progressOf(quiet.state).known).flat()).toEqual([]);
+  });
+});
+
+/** Do what a player would to complete a goal of this kind, right now. */
+function completeGoal(sim: ReturnType<typeof runScenario>, kind: GoalKind): void {
+  const state = sim.state;
+  const people = active(state).filter((r) => !(r.activity?.id === 'sleep' && r.at === r.homeId));
+  const talk = (who: string, question: TalkQuestion) => {
+    sim.schedule([{ at: sim.state.tick, kind: 'talk', who, question }]);
+    sim.flushCommands();
+  };
+  switch (kind) {
+    case 'talk':
+    case 'meet':
+    case 'learn':
+      for (const r of people) for (const q of ['how', 'mind'] as TalkQuestion[]) talk(r.id, q);
+      break;
+    case 'favour':
+      for (const r of people) {
+        sim.schedule([{ at: sim.state.tick, kind: 'favour', who: r.id, favour: 'timber' }]);
+        sim.flushCommands();
+        if (r.favour) break;
+      }
+      break;
+    case 'green': {
+      state.stock.timber = Math.max(state.stock.timber, 5);
+      for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) if (canPlace(state, 'flowerbed', x, y) === null) {
+        sim.schedule([{ at: sim.state.tick, kind: 'build', type: 'flowerbed', x, y }]);
+        sim.step();
+        return;
+      }
+      break;
+    }
+    case 'answer':
+    case 'stores':
+      // Build what is asked for, or ask for catches, and let the day run.
+      state.stock.timber = 100;
+      for (const q of state.requests.filter((x) => x.status === 'open')) {
+        const type = q.wants ?? (q.kind === 'more_green' || q.kind === 'quieter_home' ? 'hedge' : q.kind === 'somewhere_to_sit' ? 'bench' : q.kind === 'place_to_gather' ? 'commons' : 'garden');
+        const home = state.buildings.find((b) => b.id === sim.resident(q.by).homeId);
+        for (let r = 1; r < 6 && home; r++) {
+          let placed = false;
+          for (let dy = -r; dy <= r && !placed; dy++) for (let dx = -r; dx <= r && !placed; dx++) {
+            if (canPlace(state, type, home.x + dx, home.y + dy) === null) {
+              sim.schedule([{ at: sim.state.tick, kind: 'build', type, x: home.x + dx, y: home.y + dy }]);
+              placed = true;
+            }
+          }
+          if (placed) break;
+        }
+      }
+      for (const r of people.slice(0, 3)) {
+        sim.schedule([{ at: sim.state.tick, kind: 'favour', who: r.id, favour: 'catch' }]);
+        sim.flushCommands();
+      }
+      sim.runUntil(at(Math.floor(sim.state.tick / 1440) + 1, 21));
+      break;
+  }
+}

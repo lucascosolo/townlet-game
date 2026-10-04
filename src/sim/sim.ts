@@ -40,6 +40,7 @@ import {
 import { aspirationMinute, aspirationMorning, aspirationsAfterBuild, waitingOnStage, type AspirationHost } from './story/aspirations.js';
 import { activeGatherings, newStoryState, storyStep } from './story/director.js';
 import { closeDilemma } from './story/dilemmas.js';
+import { progressDawn, progressEvent, progressHourly, residentCap } from './progress.js';
 import { LARDER_CAP, drawFromGranary, overflowToGranary, storesDawn, storesHourly } from './stores.js';
 import { DAWN_MINUTE, TICKS_PER_DAY, dayOf, minuteOf, seasonOf } from './time.js';
 import {
@@ -95,7 +96,8 @@ const DEFAULT_WILD = 24;
 /** Someone moves into an empty home this long after it is built. */
 const NEWCOMER_DELAY = 2 * 60;
 /** The valley's limit, for now: the sim and the screen stay comfortable. */
-export const MAX_RESIDENTS = 18;
+/** The most the valley ever holds; each tier allows fewer (progress.ts residentCap). */
+export const MAX_RESIDENTS = 20;
 
 const REQUEST_LAPSE_TICKS = 5 * TICKS_PER_DAY;
 /** How far a resident can see a change to the town, in tiles. */
@@ -114,6 +116,7 @@ export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
 const PASSIVE_SEASON: Record<string, Record<ReturnType<typeof seasonOf>, number>> = {
   orchard: { spring: 0.2, summer: 0.6, autumn: 2, winter: 0 },
   glasshouse: { spring: 0.5, summer: 0.5, autumn: 0.7, winter: 0.7 },
+  beehives: { spring: 1, summer: 1.3, autumn: 0.6, winter: 0 },
 };
 /**
  * Food work by season: gardens grow little in winter and plenty at harvest; flour runs short and
@@ -333,6 +336,7 @@ export class Simulation implements AspirationHost {
 
   private emit = (e: SimEvent): void => {
     for (const l of this.listeners) l(e);
+    progressEvent(this, e);
   };
 
   private ctx(): MindContext {
@@ -400,6 +404,7 @@ export class Simulation implements AspirationHost {
         if (log.length > 3) log.shift();
       }
       storesDawn(this);
+      progressDawn(this);
     }
 
     for (const id of state.order) {
@@ -561,7 +566,7 @@ export class Simulation implements AspirationHost {
    */
   private newcomers(): void {
     const state = this.state;
-    if (this.activeResidents().length >= MAX_RESIDENTS) return;
+    if (this.activeResidents().length >= Math.min(MAX_RESIDENTS, residentCap(this.state))) return;
     const home = this.emptyHomes().find((b) => state.tick - b.placedTick >= NEWCOMER_DELAY);
     if (!home) return;
     const defs = (state.newcomerDefs ??= []);
@@ -1100,6 +1105,7 @@ export class Simulation implements AspirationHost {
       }
     }
     storesHourly(this.state);
+    progressHourly(this);
     for (const r of this.activeResidents()) {
       const def = residentDef(r.id);
       decayEmotions(r);

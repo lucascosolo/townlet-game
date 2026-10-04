@@ -31,7 +31,7 @@ async function putOff(page: Page): Promise<void> {
   const frames = () => page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   for (let quiet = 0; quiet < 2; ) {
     await frames();
-    const later = page.locator('[data-testid^="later-"]');
+    const later = page.locator('[data-testid^="later-"], [data-testid="tier-ok"]');
     if ((await later.count()) > 0) {
       await later.first().click();
       quiet = 0;
@@ -120,6 +120,8 @@ test('criterion 5c: a cottage brings a newcomer, and the sim stays fast with 12 
   await page.evaluate(() => {
     const h = (window as unknown as { __townlet: Handle }).__townlet;
     h.game.sim.state.stock.timber = 100;
+    // A Clearing holds 8 (M4 tiers); this test measures speed with 12, so the town starts a Hamlet.
+    h.game.sim.state.progress = { ...h.game.sim.state.progress, tier: 1, renown: 40 };
     const spots = [
       [12, 20],
       [2, 2],

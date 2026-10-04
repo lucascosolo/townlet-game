@@ -14,20 +14,21 @@ import { wishProgress } from '../../../src/sim/story/director.js';
 import { dilemmaDef, stanceScore } from '../../../src/sim/story/dilemmas.js';
 import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
 import { daysToWinter, granaryRoom, hasGranary } from '../../../src/sim/stores.js';
+import { ALL_FACTS, FACTS, TIERS, factValue, goalLabel, knownFacts, nextTier, progressOf, todaysGoals, unlocked, RENOWN } from '../../../src/sim/progress.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
 import { residentColor } from '../view/meshes.js';
 import { ICONS } from './icons.js';
 import { thumbnail } from '../view/thumbs.js';
-import { portrait } from './portrait.js';
+import { portrait, portraitSvg } from './portrait.js';
 import { greenAroundHome } from '../../../src/sim/world.js';
 import { GREEN_ENOUGH } from '../../../src/sim/asks.js';
 import type { TownView } from '../view/scene.js';
 
 export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
   { category: 'Green and decor', types: ['hedge', 'flowerbed', 'bench'] },
-  { category: 'Gathering', types: ['teahouse', 'commons', 'well'] },
-  { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop', 'granary'] },
+  { category: 'Gathering', types: ['teahouse', 'commons', 'well', 'fountain'] },
+  { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop', 'granary', 'beehives', 'coop'] },
   { category: 'Homes', types: ['cottage'] },
   { category: 'Dreams', types: ['orchard', 'glasshouse', 'banner'] },
 ];
@@ -166,7 +167,7 @@ const INTRO = [
   },
   {
     title: 'How to look after the place',
-    body: "The notice board shows what people are asking for and the season's Town Wishes. Click anyone to read their journal and see why they feel as they do. Build from the Build menu: buildings cost timber, gardens and the jetty fill the larder. Drag to move, right-drag to turn the view, wheel to zoom.",
+    body: 'Each morning brings three small goals: see them through to earn renown and grow the valley from a Clearing to a Townlet, opening new things to build. Talk to people to fill in their pages in the Folk album, and ask them favours when the stores run low. Buildings cost timber; gardens, the jetty and the bakery fill the larder, and winter needs food put by.',
   },
 ];
 
@@ -212,6 +213,20 @@ export class Ui {
   private logList!: HTMLElement;
   private logFilter: LogFilter = 'story';
   private logGroup: { who: string; t: number; extra: HTMLElement; toggle: HTMLButtonElement; count: number } | null = null;
+  // M4: goals, the Folk album, the desktop dashboard and the phone shell.
+  private readonly goalsEl: HTMLElement;
+  private readonly folkEl: HTMLElement;
+  private readonly leftCol: HTMLElement;
+  private readonly widgets = new Map<string, HTMLElement>();
+  private readonly renownEl: HTMLElement;
+  private readonly tabbar: HTMLElement;
+  private readonly quick: HTMLElement;
+  private readonly toasts: HTMLElement;
+  private readonly widgetMenu: HTMLElement;
+  private phone = false;
+  private lastGoalsKey = '';
+  private lastFolkKey = '';
+  private lastRenown = -1;
 
   constructor(root: HTMLElement, game: Game, view: TownView, opts: { intro: boolean }) {
     this.game = game;
@@ -257,8 +272,14 @@ export class Ui {
     left.addEventListener('click', () => view.rotate(-1));
     right.addEventListener('click', () => view.rotate(1));
     help.addEventListener('click', () => this.showIntro());
-    rot.append(left, right, help);
-    hud.append(el('div', { class: 'title' }, 'Townlet'), this.clockEl, this.stockEl, speeds, rot);
+    const widgetsB = el('button', { class: 'icon desk-only', title: 'Show or hide panels', 'aria-label': 'Panels', 'data-testid': 'widgets' });
+    widgetsB.innerHTML = ICONS.widgets;
+    widgetsB.addEventListener('click', () => (this.widgetMenu.hidden = !this.widgetMenu.hidden));
+    rot.append(left, right, widgetsB, help);
+    // Renown and the town's tier, always in view (M4: goals and rewards).
+    this.renownEl = el('button', { class: 'renown', 'data-testid': 'renown', title: 'Renown: what the town has become. Open your goals.' });
+    this.renownEl.addEventListener('click', () => this.showTab('goals'));
+    hud.append(el('div', { class: 'title' }, 'Townlet'), this.clockEl, this.stockEl, this.renownEl, speeds, rot);
     root.appendChild(hud);
     this.panels.push(hud);
 
@@ -289,9 +310,57 @@ export class Ui {
     this.buildLogPane();
     this.journalEl = this.tabs.get('journal')!.pane;
     this.youEl = this.tabs.get('you')!.pane;
+    const hidePanel = el('button', { class: 'roll desk-only', title: 'Hide this panel (bring it back from the panels button)', 'data-testid': 'hide-panel' });
+    hidePanel.innerHTML = ICONS.close;
+    hidePanel.addEventListener('click', () => this.setWidget('panel', false));
+    rodTop.insertBefore(hidePanel, roll);
     root.appendChild(this.scroll);
     this.panels.push(this.scroll);
-    this.showTab('board');
+    this.widgets.set('panel', this.scroll);
+
+    // The dashboard's left column (desktop): today's goals and the Folk album, as docked widgets.
+    this.goalsEl = el('section', { class: 'pane', 'data-pane': 'goals', 'data-testid': 'goals' });
+    this.folkEl = el('section', { class: 'pane', 'data-pane': 'folk', 'data-testid': 'folk' });
+    this.leftCol = el('div', { class: 'dash-left' });
+    this.leftCol.append(this.widget('goals', 'Goals', ICONS.star, this.goalsEl), this.widget('folk', 'Folk', ICONS.people, this.folkEl));
+    root.appendChild(this.leftCol);
+    this.panels.push(this.leftCol);
+    this.widgetMenu = el('div', { class: 'widget-menu paper', 'data-testid': 'widget-menu' });
+    this.widgetMenu.hidden = true;
+    for (const [key, label] of [['goals', 'Goals'], ['folk', 'Folk'], ['panel', 'Board, log and journal']] as const) {
+      const b = el('button', { 'data-testid': `show-widget-${key}`, 'data-key': key });
+      b.innerHTML = `${ICONS.check}<span>${label}</span>`;
+      b.addEventListener('click', () => {
+        this.setWidget(key, this.widgets.get(key)?.hidden === true);
+        this.widgetMenu.hidden = true;
+      });
+      this.widgetMenu.appendChild(b);
+    }
+    root.appendChild(this.widgetMenu);
+
+    // The phone shell: a tab bar within thumb reach, and a card for whoever you tap.
+    this.tabbar = el('nav', { class: 'tabbar', 'data-testid': 'tabbar' });
+    for (const [key, label, icon] of [
+      ['town', 'Town', ICONS.map],
+      ['goals', 'Goals', ICONS.star],
+      ['folk', 'Folk', ICONS.people],
+      ['build', 'Build', ICONS.build],
+      ['log', 'Log', ICONS.list],
+    ] as const) {
+      const b = el('button', { 'data-testid': `nav-${key}`, 'data-nav': key });
+      b.innerHTML = `${icon}<span>${label}</span>`;
+      b.addEventListener('click', () => this.nav(key));
+      this.tabbar.appendChild(b);
+    }
+    root.appendChild(this.tabbar);
+    this.quick = el('div', { class: 'quick-card paper', 'data-testid': 'quick-card' });
+    this.quick.hidden = true;
+    root.appendChild(this.quick);
+    this.panels.push(this.quick);
+    this.toasts = el('div', { class: 'toasts', 'aria-live': 'polite' });
+    root.appendChild(this.toasts);
+
+
 
     // The dock: look, build menu, remove, and a status line.
     const dock = el('div', { class: 'dock paper' });
@@ -327,12 +396,18 @@ export class Ui {
     this.bubbleLayer = el('div', { class: 'bubbles' });
     root.appendChild(this.bubbleLayer);
 
+    const media = window.matchMedia('(max-width: 760px)');
+    this.applyLayout(media.matches);
+    media.addEventListener('change', (m) => this.applyLayout(m.matches));
+    this.showTab('board');
+
     game.narrator.onEntry((e) => this.onEntry(e));
     game.onEvent((e) => this.onEvent(e));
     this.setSpeed(game.speedIndex);
     this.setTool({ kind: 'select' });
-    // On a phone the scroll starts rolled up, so the town is what you see first.
-    if (window.innerWidth <= 600) this.toggleScroll();
+    // On a phone the sheet starts at its peek, so the town is what you see first.
+    if (this.phone && !this.scroll.classList.contains('rolled')) this.toggleScroll();
+    if (this.phone) this.markNav('town');
     if (opts.intro) this.showIntro();
   }
 
@@ -383,9 +458,33 @@ export class Ui {
   }
 
   showTab(key: string): void {
+    // On a desktop, goals and the Folk album are widgets of their own: bring the one asked for to the fore.
+    if (!this.phone && (key === 'goals' || key === 'folk')) {
+      this.setWidget(key, true);
+      const w = this.widgets.get(key) as HTMLElement;
+      w.classList.remove('collapsed', 'flash');
+      void w.offsetWidth;
+      w.classList.add('flash');
+      if (key === 'goals') this.renderGoals(true);
+      else this.renderFolk(true);
+      return;
+    }
+    if (!this.phone) this.setWidget('panel', true);
     for (const [k, t] of this.tabs) {
       t.button.classList.toggle('on', k === key);
-      t.pane.hidden = k !== key;
+      // On a phone, Goals shows the notice board beneath today's goals.
+      t.pane.hidden = k !== key && !(this.phone && key === 'goals' && k === 'board');
+    }
+    if (this.phone) {
+      this.goalsEl.hidden = key !== 'goals';
+      this.folkEl.hidden = key !== 'folk';
+      this.scroll.classList.toggle('stacked', key === 'goals');
+      (this.scroll.querySelector('.rod.top') as HTMLElement).dataset.title = ({ goals: 'Goals', folk: 'Folk', board: 'Notice board', log: 'Town log', journal: 'Journal', you: 'You' } as Record<string, string>)[key] ?? '';
+      this.markNav(key === 'folk' || key === 'journal' ? 'folk' : key === 'log' ? 'log' : 'goals');
+      this.quick.hidden = true;
+      this.menu.hidden = true;
+      if (key === 'goals') this.renderGoals(true);
+      if (key === 'folk') this.renderFolk(true);
     }
     if (this.scroll.classList.contains('rolled')) this.toggleScroll();
     if (key === 'journal') this.renderJournal(true);
@@ -395,15 +494,262 @@ export class Ui {
 
   toggleScroll(): void {
     const rolled = this.scroll.classList.toggle('rolled');
-    const roll = this.scroll.querySelector('.roll');
+    const roll = this.scroll.querySelector('.roll:not(.desk-only)');
     if (roll) roll.textContent = rolled ? '▾' : '▴';
+    if (this.phone && rolled) this.markNav('town');
   }
 
   select(target: Ui['selected']): void {
     this.selected = target;
     this.view.highlightBuilding(target?.kind === 'building' ? target.id : null);
     this.view.selectResident(target?.kind === 'resident' ? target.id : null);
+    // On a phone with the sheet down, tapping someone shows a small card, not the whole journal.
+    if (this.phone && target?.kind === 'resident' && this.scroll.classList.contains('rolled')) {
+      this.showQuick(target.id);
+      return;
+    }
     this.showTab('journal');
+  }
+
+  // ---------------------------------------------------------------- layout (M4)
+
+  /** A docked dashboard widget with a title, fold and hide. */
+  private widget(key: string, title: string, icon: string, body: HTMLElement): HTMLElement {
+    const w = el('section', { class: 'widget paper', 'data-widget': key, 'data-testid': `widget-${key}` });
+    const head = el('header', { class: 'widget-head' });
+    const t = el('h2', {});
+    t.innerHTML = `${icon}<span>${title}</span>`;
+    t.addEventListener('click', () => w.classList.toggle('collapsed'));
+    const fold = el('button', { class: 'icon fold', title: 'Fold', 'aria-label': `Fold ${title}`, 'data-testid': `collapse-${key}` });
+    fold.innerHTML = ICONS.chevron;
+    fold.addEventListener('click', () => w.classList.toggle('collapsed'));
+    const hide = el('button', { class: 'icon', title: 'Hide (bring it back from the panels button)', 'aria-label': `Hide ${title}`, 'data-testid': `hide-${key}` });
+    hide.innerHTML = ICONS.close;
+    hide.addEventListener('click', () => this.setWidget(key, false));
+    head.append(t, fold, hide);
+    const b = el('div', { class: 'widget-body' });
+    b.appendChild(body);
+    w.append(head, b);
+    this.widgets.set(key, w);
+    return w;
+  }
+
+  private setWidget(key: string, on: boolean): void {
+    const w = this.widgets.get(key);
+    if (!w) return;
+    w.hidden = !on;
+    for (const b of this.widgetMenu.querySelectorAll<HTMLElement>('button[data-key]')) b.classList.toggle('on', !this.widgets.get(b.dataset.key as string)?.hidden);
+  }
+
+  /** Phone (portrait) or desktop: the goals and Folk panes move between the sheet and the widgets. */
+  private applyLayout(phone: boolean): void {
+    this.phone = phone;
+    document.body.classList.toggle('phone', phone);
+    const body = this.scroll.querySelector('.scroll-body') as HTMLElement;
+    if (phone) {
+      body.prepend(this.folkEl);
+      body.prepend(this.goalsEl);
+      this.goalsEl.hidden = true;
+      this.folkEl.hidden = true;
+      this.widgetMenu.hidden = true;
+    } else {
+      (this.widgets.get('goals')?.querySelector('.widget-body') as HTMLElement).appendChild(this.goalsEl);
+      (this.widgets.get('folk')?.querySelector('.widget-body') as HTMLElement).appendChild(this.folkEl);
+      this.goalsEl.hidden = false;
+      this.folkEl.hidden = false;
+      this.scroll.classList.remove('stacked');
+      this.quick.hidden = true;
+      this.setWidget('panel', true);
+    }
+    this.renderGoals(true);
+    this.renderFolk(true);
+  }
+
+  /** The phone's tab bar. */
+  private nav(key: 'town' | 'goals' | 'folk' | 'build' | 'log'): void {
+    if (key === 'town' || key === 'build') {
+      this.quick.hidden = true;
+      if (!this.scroll.classList.contains('rolled')) this.toggleScroll();
+      this.menu.hidden = key !== 'build';
+      if (key === 'build') this.refreshMenu();
+      this.markNav(key);
+      return;
+    }
+    this.showTab(key);
+  }
+
+  private markNav(key: string): void {
+    for (const b of this.tabbar.querySelectorAll<HTMLElement>('button[data-nav]')) b.classList.toggle('on', b.dataset.nav === key);
+  }
+
+  /** The card for a resident tapped in the town (phone). */
+  private showQuick(id: string): void {
+    const rep = residentReport(this.game.sim, id, this.game.narrator);
+    const card = this.quick;
+    card.replaceChildren();
+    const head = el('div', { class: 'quick-head' });
+    head.appendChild(portrait(id, 48));
+    const words = el('div', {});
+    words.append(el('div', { class: 'quick-name' }, rep.name), el('div', { class: 'quiet' }, `Now: ${rep.doing}`));
+    head.appendChild(words);
+    const close = el('button', { class: 'icon', 'aria-label': 'Close', 'data-testid': 'quick-close' });
+    close.innerHTML = ICONS.close;
+    close.addEventListener('click', () => (card.hidden = true));
+    head.appendChild(close);
+    card.appendChild(head);
+    card.appendChild(this.meter('Mood', rep.mood));
+    const row = el('div', { class: 'quick-actions' });
+    for (const [key, label, view] of [
+      ['talk', 'Talk', 'talk'],
+      ['favour', 'Favour', 'talk'],
+      ['profile', 'Profile', 'about'],
+    ] as const) {
+      const b = el('button', { class: key === 'talk' ? 'primary' : '', 'data-testid': `quick-${key}` }, label);
+      b.addEventListener('click', () => {
+        this.residentView = view;
+        card.hidden = true;
+        this.showTab('journal');
+        if (key === 'favour') requestAnimationFrame(() => this.journalEl.querySelector('[data-testid="favour-timber"]')?.scrollIntoView({ block: 'center' }));
+      });
+      row.appendChild(b);
+    }
+    card.appendChild(row);
+    card.hidden = false;
+  }
+
+  /** A short note that floats in at the top and fades (goals done, things learned). */
+  private toast(html: string, kind = ''): void {
+    const t = el('div', { class: `toast ${kind}` });
+    t.innerHTML = html;
+    this.toasts.appendChild(t);
+    while (this.toasts.childElementCount > 3) this.toasts.firstElementChild?.remove();
+    setTimeout(() => t.classList.add('out'), 2800);
+    setTimeout(() => t.remove(), 3300);
+  }
+
+  // ---------------------------------------------------------------- goals and the Folk album (M4)
+
+  /** Today's goals, the town's tier and the winter stores. */
+  private renderGoals(force = false): void {
+    const state = this.game.sim.state;
+    const p = progressOf(state);
+    const goals = todaysGoals(state);
+    const key = JSON.stringify([goals, p.renown, p.tier, p.goals.bonus, state.stores, Math.floor(state.granary ?? 0), dayOf(state.tick)]);
+    if (!force && key === this.lastGoalsKey) return;
+    this.lastGoalsKey = key;
+    const pane = this.goalsEl;
+    pane.replaceChildren();
+    pane.appendChild(el('h3', {}, `Today · day ${dayOf(state.tick)}`));
+    if (goals.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'New goals arrive each morning.'));
+    for (const g of goals) {
+      const row = el('div', { class: `goal${g.done ? ' done' : ''}`, 'data-testid': `goal-${g.kind}` });
+      const box = el('span', { class: 'box' });
+      if (g.done) box.innerHTML = ICONS.check;
+      row.append(box, el('span', { class: 'what' }, goalLabel(g)));
+      if (g.target > 1) row.appendChild(el('span', { class: 'count' }, `${g.count}/${g.target}`));
+      row.appendChild(el('span', { class: 'reward' }, `+${RENOWN.goal} ✦`));
+      pane.appendChild(row);
+    }
+    if (goals.length) pane.appendChild(el('div', { class: `goal bonus${p.goals.bonus ? ' done' : ''}` }, p.goals.bonus ? `All done today: +${RENOWN.allGoals} ✦ bonus earned` : `All three: +${RENOWN.allGoals} ✦ bonus`));
+
+    const nt = nextTier(state);
+    const tier = el('div', { class: 'tier-card', 'data-testid': 'tier' });
+    tier.append(el('div', { class: 'tier-name' }, TIERS[p.tier] as string), el('div', { class: 'tier-renown' }, `${p.renown} ✦ renown`));
+    if (nt) {
+      const track = el('div', { class: 'track' });
+      const fill = el('div', { class: 'fill' });
+      fill.style.width = pct((p.renown - nt.from) / (nt.to - nt.from));
+      track.appendChild(fill);
+      tier.appendChild(track);
+      const opens = ({ Hamlet: 'beehives', Village: 'a chicken coop', Townlet: 'a fountain' } as Record<string, string>)[nt.name];
+      tier.appendChild(el('p', { class: 'quiet' }, `${nt.need} ✦ to ${nt.name}: it opens ${opens} and room for more neighbours.`));
+    } else tier.appendChild(el('p', { class: 'quiet' }, 'A Townlet: the valley is all it set out to be.'));
+    tier.appendChild(el('p', { class: 'quiet small' }, 'Renown comes from goals, granted asks and wishes, dreams come true, the winter stores, newcomers, and getting to know people.'));
+    pane.appendChild(tier);
+    if (state.stores?.asked) pane.appendChild(this.storesCard());
+    const you = el('button', { class: 'link', 'data-testid': 'open-you' }, 'How the town sees you →');
+    you.addEventListener('click', () => this.showTab('you'));
+    pane.appendChild(you);
+  }
+
+  /** The Folk album: everyone in the valley, filled in as you get to know them. */
+  private renderFolk(force = false): void {
+    const state = this.game.sim.state;
+    const people = state.order.filter((id) => !state.residents[id]?.departed);
+    const key = JSON.stringify([people.map((id) => [id, knownFacts(state, id).length]), this.selected]);
+    if (!force && key === this.lastFolkKey) return;
+    this.lastFolkKey = key;
+    const pane = this.folkEl;
+    pane.replaceChildren();
+    const met = people.filter((id) => knownFacts(state, id).length > 0).length;
+    const facts = people.reduce((n, id) => n + knownFacts(state, id).length, 0);
+    pane.appendChild(el('p', { class: 'quiet album-summary', 'data-testid': 'album-summary' }, `${met} of ${people.length} met · ${facts} of ${people.length * ALL_FACTS.length} things known. Talk to people to fill in their pages.`));
+    const grid = el('div', { class: 'album' });
+    for (const id of people) {
+      const known = knownFacts(state, id);
+      const r = this.game.sim.resident(id);
+      const card = el('button', { class: `folk-card${known.length ? '' : ' unmet'}${this.selected?.kind === 'resident' && this.selected.id === id ? ' on' : ''}`, 'data-testid': `folk-${id}` });
+      card.style.setProperty('--who', cssColor(residentColor(id)));
+      card.appendChild(portrait(id, 52));
+      card.appendChild(el('div', { class: 'folk-name' }, residentDef(id).name));
+      card.appendChild(el('div', { class: 'folk-line' }, known.includes('job') ? factValue(state, r, 'job') : known.length ? 'Getting to know them' : 'Not met yet: say hello'));
+      const pips = el('div', { class: 'pips', title: `${known.length} of ${ALL_FACTS.length} things known` });
+      for (let i = 0; i < ALL_FACTS.length; i++) pips.appendChild(el('span', { class: i < known.length ? 'pip on' : 'pip' }));
+      card.appendChild(pips);
+      card.addEventListener('click', () => this.select({ kind: 'resident', id }));
+      grid.appendChild(card);
+    }
+    pane.appendChild(grid);
+  }
+
+  /** "What you know" on a resident's page: learned facts, and how to learn the rest. */
+  private factsSection(id: string): HTMLElement {
+    const state = this.game.sim.state;
+    const r = this.game.sim.resident(id);
+    const known = knownFacts(state, id);
+    const sec = el('div', { class: 'facts', 'data-testid': 'facts' });
+    sec.appendChild(el('h3', {}, `What you know · ${known.length} of ${ALL_FACTS.length}`));
+    const ask = Object.fromEntries((Object.entries(FACTS) as Array<[TalkQuestion, string[]]>).flatMap(([q, keys]) => keys.map((k) => [k, q]))) as Record<string, TalkQuestion>;
+    const label = (q: TalkQuestion) => (q === 'opinion' ? 'What do you think of…' : (QUESTIONS.find(([x]) => x === q)?.[1] ?? q));
+    const ul = el('ul');
+    for (const k of ALL_FACTS) {
+      if (known.includes(k)) ul.appendChild(el('li', { 'data-fact': k }, factValue(state, r, k)));
+      else {
+        const q = ask[k] as TalkQuestion;
+        const askedToday = progressOf(state).asked[`${id}|${q}`] === dayOf(state.tick);
+        ul.appendChild(el('li', { class: 'unknown' }, `??? Ask "${label(q)}"${askedToday ? ' again another day' : ''}`));
+      }
+    }
+    sec.appendChild(ul);
+    return sec;
+  }
+
+  /** Moving up a tier: a moment worth stopping for. */
+  private celebrateTier(e: Extract<SimEvent, { type: 'tier' }>): void {
+    const c = el('div', { class: 'celebrate', 'data-testid': 'tier-up' });
+    const confetti = el('div', { class: 'confetti', 'aria-hidden': 'true' });
+    for (let i = 0; i < 28; i++) {
+      const bit = el('i');
+      bit.style.left = `${(i * 37) % 100}%`;
+      bit.style.animationDelay = `${(i % 7) * 0.12}s`;
+      bit.style.background = ['#e0a33a', '#b5653e', '#5f9e4f', '#4f8a86', '#c0503c'][i % 5] as string;
+      confetti.appendChild(bit);
+    }
+    c.append(confetti, el('div', { class: 'eyebrow' }, 'The valley grows'), el('h2', {}, `A ${e.name} now!`));
+    c.appendChild(el('p', {}, `Word has got round. The neighbouring towns send 15 timber, and up to ${e.cap} can make their home here.`));
+    for (const t of e.unlocks) {
+      const row = el('div', { class: 'unlock' });
+      const img = el('img', { class: 'thumb', alt: '' });
+      img.src = thumbnail(t) || 'data:,';
+      row.append(img, el('div', {}, `New to build: ${buildingDef(t).name}. ${buildingDef(t).blurb?.replace(/ Opens at \w+\.$/, '') ?? ''}`));
+      c.appendChild(row);
+    }
+    const buttons = el('div', { class: 'modal-buttons' });
+    const ok = el('button', { class: 'primary', 'data-testid': 'tier-ok' }, 'Wonderful');
+    ok.addEventListener('click', () => this.closeModal());
+    buttons.appendChild(ok);
+    c.appendChild(buttons);
+    this.openModal(c);
   }
 
   // ---------------------------------------------------------------- build menu
@@ -447,12 +793,15 @@ export class Ui {
     const menu = el('div', { class: 'menu paper', 'data-testid': 'build-menu' });
     const head = el('div', { class: 'menu-head' });
     head.append(el('h3', {}, 'Build'), el('span', { class: 'quiet', 'data-menu-timber': '' }));
+    const removeB = el('button', { class: 'phone-only', 'data-testid': 'tray-remove' });
+    removeB.innerHTML = `${ICONS.remove}<span>Remove</span>`;
+    removeB.addEventListener('click', () => this.setTool({ kind: 'remove' }));
     const close = el('button', { 'aria-label': 'Close' }, '✕');
     close.addEventListener('click', () => (menu.hidden = true));
-    head.appendChild(close);
+    head.append(removeB, close);
     menu.appendChild(head);
     const info = el('div', { class: 'tray-info', 'data-testid': 'tray-info' });
-    const hint = 'Point at a card to see what it gives off and who would like it.';
+    const hint = window.matchMedia('(pointer: coarse)').matches ? 'Tap a card to place it; its details show here.' : 'Point at a card to see what it gives off and who would like it.';
     info.textContent = hint;
     menu.appendChild(info);
     const row = el('div', { class: 'cards' });
@@ -475,11 +824,18 @@ export class Ui {
         card.appendChild(details);
         const show = () => {
           info.replaceChildren(el('b', {}, def.name), ...[...details.children].map((c) => c.cloneNode(true)));
-          if (!this.game.sim.canAfford(type)) info.appendChild(el('div', { class: 'need' }, `Needs ${def.cost} timber; you have ${Math.floor(this.game.sim.state.stock.timber)}. Ask someone to cut timber.`));
+          if (!unlocked(this.game.sim.state, type)) info.appendChild(el('div', { class: 'need' }, `Opens when the valley is a ${TIERS[def.tier ?? 0]}. Earn renown with your daily goals.`));
+          else if (!this.game.sim.canAfford(type)) info.appendChild(el('div', { class: 'need' }, `Needs ${def.cost} timber; you have ${Math.floor(this.game.sim.state.stock.timber)}. Ask someone to cut timber.`));
         };
         card.addEventListener('pointerenter', show);
         card.addEventListener('focus', show);
         card.addEventListener('click', () => {
+          if (!unlocked(this.game.sim.state, type)) {
+            this.status(`${def.name}: opens when the valley is a ${TIERS[def.tier ?? 0]}.`);
+            show();
+            this.shake(card);
+            return;
+          }
           if (!this.game.sim.canAfford(type)) {
             this.status(`Not enough timber for a ${def.name.toLowerCase()} (${def.cost} needed).`);
             show();
@@ -515,7 +871,9 @@ export class Ui {
     if (t) t.textContent = `${timber} timber in store`;
     for (const card of this.menu.querySelectorAll<HTMLElement>('.build-card')) {
       const type = card.dataset.type as string;
-      card.classList.toggle('unaffordable', !this.game.sim.canAfford(type));
+      const open = unlocked(this.game.sim.state, type);
+      card.classList.toggle('locked', !open);
+      card.classList.toggle('unaffordable', open && !this.game.sim.canAfford(type));
       const likes = card.querySelector('[data-likes]');
       const who = this.likelyToPlease(type).map((id) => residentDef(id).name);
       if (likes) likes.textContent = who.length ? `Likely to please: ${who.join(', ')}` : '';
@@ -573,6 +931,17 @@ export class Ui {
       this.showIntro(page + 1);
     });
     row.appendChild(next);
+    // Starting over (M4: saves): two taps, so nobody loses a town by accident.
+    const fresh = el('button', { class: 'link', 'data-testid': 'new-valley' }, 'Start a new valley');
+    fresh.addEventListener('click', () => {
+      if (fresh.dataset.sure) {
+        location.href = `${location.pathname}?new=1`;
+        return;
+      }
+      fresh.dataset.sure = '1';
+      fresh.textContent = 'Tap again to leave this town and start a new one';
+    });
+    row.appendChild(fresh);
     c.appendChild(row);
     this.openModal(c);
   }
@@ -737,6 +1106,10 @@ export class Ui {
   }
 
   private onEvent(e: SimEvent): void {
+    if (e.type === 'goal' && e.phase === 'done' && e.goal) this.toast(`${ICONS.check}<span>${goalLabel(e.goal)}</span><b>+${RENOWN.goal} ✦</b>`, 'goal');
+    if (e.type === 'goal' && e.phase === 'all') this.toast(`${ICONS.star}<span>All of today's goals!</span><b>+${RENOWN.allGoals} ✦</b>`, 'goal big');
+    if (e.type === 'fact') this.toast(`${portraitSvg(e.who, 26)}<span>${e.first ? 'Met' : 'Getting to know'} ${residentDef(e.who).name}: ${factValue(this.game.sim.state, this.game.sim.resident(e.who), e.key)}</span>`, 'fact');
+    if (e.type === 'tier') this.celebrateTier(e);
     if (e.type === 'standing') {
       const notes = this.standingNotes.get(e.who) ?? [];
       notes.unshift(`${e.delta > 0 ? '▲' : '▼'} Day ${dayOf(e.t)}: ${e.reasons.join('; ')}`);
@@ -777,9 +1150,6 @@ export class Ui {
     this.lastBoardKey = key;
     const pane = this.boardEl;
     pane.replaceChildren();
-
-    const quest = state.stores;
-    if (quest?.asked) pane.appendChild(this.storesCard());
 
     pane.appendChild(el('h3', {}, 'Town Wishes this season'));
     if (wishes.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'No wishes outstanding.'));
@@ -1298,6 +1668,7 @@ export class Ui {
       return;
     }
     j.appendChild(el('p', { class: 'quiet' }, rep.background));
+    if (!rep.departed) j.appendChild(this.factsSection(rep.id));
     if (rep.hope) {
       const hope = el('div', { class: 'hope', 'data-testid': 'hope' });
       hope.appendChild(el('p', {}, `Hoping to: ${rep.hope.title.charAt(0).toLowerCase()}${rep.hope.title.slice(1)}`));
@@ -1428,6 +1799,21 @@ export class Ui {
       this.lastStock[res] = v;
     }
     this.stockEl.classList.toggle('short', state.stock.food < 3);
+    const prog = progressOf(state);
+    if (prog.renown !== this.lastRenown) {
+      const nt = nextTier(state);
+      const gained = this.lastRenown >= 0 ? prog.renown - this.lastRenown : 0;
+      this.lastRenown = prog.renown;
+      this.renownEl.innerHTML = `${ICONS.star}<span class="tier">${TIERS[prog.tier]}</span><b>${prog.renown}</b><span class="bar"><i style="width:${nt ? pct((prog.renown - nt.from) / (nt.to - nt.from)) : '100%'}"></i></span>`;
+      this.renownEl.title = nt ? `${prog.renown} renown · ${nt.need} more to ${nt.name}` : `${prog.renown} renown · a Townlet`;
+      if (gained > 0) {
+        const f = el('span', { class: 'floater renown-up' }, `+${gained}`);
+        this.renownEl.appendChild(f);
+        setTimeout(() => f.remove(), 950);
+      }
+    }
+    this.renderGoals();
+    this.renderFolk();
     const sack = this.stockEl.querySelector('[data-testid="granary-stock"]') as HTMLElement;
     sack.hidden = !hasGranary(state);
     if (!sack.hidden) {

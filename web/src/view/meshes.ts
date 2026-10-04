@@ -457,6 +457,82 @@ export function buildingMesh(type: string, variant = 0): THREE.Group {
       }
       break;
     }
+    case 'beehives': {
+      // Three skeps on a low bench, with flowers round about.
+      g = new THREE.Group();
+      g.add(box(0.85, 0.12, 0.3, mat(PALETTE.darkWood), 0, 0.18));
+      for (const sx of [-1, 0, 1]) g.add(box(0.06, 0.18, 0.06, mat(PALETTE.darkWood), sx * 0.36, 0.09, 0));
+      const straw = mat(0xd8b15a);
+      for (const x of [-0.27, 0, 0.27]) {
+        const skep = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6, 0, Math.PI * 2, 0, Math.PI / 1.8), straw);
+        skep.scale.y = 1.35;
+        skep.position.set(x, 0.24, 0);
+        skep.castShadow = true;
+        g.add(skep);
+        g.add(box(0.05, 0.03, 0.02, mat(0x2b211a), x, 0.27, 0.12));
+      }
+      for (let i = 0; i < 5; i++) {
+        const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), mat([0xe07a9a, 0xf2d15c, 0xb48ad6][i % 3] as number));
+        f.position.set(-0.36 + i * 0.18, 0.05, 0.33);
+        g.add(f);
+      }
+      break;
+    }
+    case 'coop': {
+      // A little hen house on legs with a run in front, and a hen or two about.
+      g = new THREE.Group();
+      g.add(box(w * 0.9, 0.03, d * 0.8, mat(0x9b8a5c), 0, 0.015));
+      const house = new THREE.Group();
+      for (const [x, z] of [[-0.3, -0.15], [0.3, -0.15], [-0.3, 0.15], [0.3, 0.15]] as const) house.add(box(0.05, 0.22, 0.05, mat(PALETTE.darkWood), x, 0.11, z));
+      house.add(box(0.75, 0.38, 0.42, mat(0xc4583f), 0, 0.41));
+      const roof = pyramidRoof(0.86, 0.52, 0.22, mat(PALETTE.darkWood), 0.6);
+      roof.scale.x *= 1.25;
+      house.add(roof);
+      house.add(box(0.14, 0.18, 0.02, mat(0x2b211a), 0.15, 0.34, 0.22));
+      house.add(box(0.06, 0.03, 0.4, mat(PALETTE.wood), 0.15, 0.15, 0.4));
+      house.position.x = -w * 0.22;
+      g.add(house);
+      // The run: a low wire fence.
+      const wire = mat(0xd9d4c4);
+      for (let i = 0; i <= 4; i++) g.add(box(0.03, 0.22, 0.03, wire, 0.05 + i * 0.2, 0.11, 0.38));
+      g.add(box(0.85, 0.02, 0.02, wire, 0.45, 0.2, 0.38));
+      for (const [x, z, c] of [[0.35, 0.05, 0xf4efe4], [0.65, -0.12, 0x9a5b34]] as const) {
+        const hen = new THREE.Group();
+        hen.add(box(0.12, 0.09, 0.08, mat(c), 0, 0.07, 0));
+        hen.add(box(0.05, 0.06, 0.05, mat(c), 0.06, 0.12, 0));
+        hen.add(box(0.02, 0.03, 0.02, mat(0xd8473a), 0.07, 0.165, 0));
+        hen.position.set(x, 0, z);
+        hen.rotation.y = x * 4;
+        g.add(hen);
+      }
+      break;
+    }
+    case 'fountain': {
+      // A round stone basin with a tiered column and water that catches the light.
+      g = new THREE.Group();
+      const stone = mat(PALETTE.stone);
+      const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.92, 0.28, 12), stone);
+      basin.position.y = 0.14;
+      basin.castShadow = true;
+      basin.receiveShadow = true;
+      g.add(basin);
+      const water = new THREE.Mesh(new THREE.CylinderGeometry(0.76, 0.76, 0.04, 12), new THREE.MeshLambertMaterial({ color: PALETTE.water, emissive: new THREE.Color(0x1d4a5c), transparent: true, opacity: 0.9 }));
+      water.position.y = 0.27;
+      g.add(water);
+      const column = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 0.6, 8), stone);
+      column.position.y = 0.55;
+      g.add(column);
+      const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.18, 0.1, 10), stone);
+      bowl.position.y = 0.86;
+      bowl.castShadow = true;
+      g.add(bowl);
+      const spout = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 6), new THREE.MeshLambertMaterial({ color: 0xcfeaf3, emissive: new THREE.Color(0x3a6f80) }));
+      spout.position.y = 1.02;
+      g.add(spout);
+      // Paving round about.
+      g.add(box(w, 0.02, d, mat(0xcbc2ad), 0, 0.01));
+      break;
+    }
     case 'granary': {
       // A timber store raised on staddle stones (to keep mice out), with sacks by the door.
       g = new THREE.Group();

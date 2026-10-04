@@ -5,17 +5,31 @@ import { buildingDef } from '../../src/content/buildings.js';
 import { STEWARD_POLICIES, type StewardPolicy } from '../../src/scenarios/steward.js';
 import { canPlace, footprint } from '../../src/sim/world.js';
 import { Game } from './game.js';
+import { clearSave, loadSave, restore, saveGame } from './save.js';
 import { Ui } from './ui/ui.js';
 import { TownView, seatingOrder } from './view/scene.js';
 
 const params = new URLSearchParams(location.search);
 const stewardParam = params.get('steward') as StewardPolicy | null;
-const game = new Game({
-  scenario: params.get('scenario') ?? 'quiet',
-  seed: Number(params.get('seed') ?? 1) || 1,
-  // In the browser, the player is the steward.
-  steward: stewardParam && STEWARD_POLICIES.includes(stewardParam) ? stewardParam : 'none',
-});
+// A save is picked up when the page is opened plainly (M4); a URL naming a town, or ?new=1, starts fresh.
+const fresh = params.has('new');
+if (fresh) {
+  clearSave();
+  params.delete('new');
+  history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params}` : ''}`);
+}
+const saved = !fresh && !params.has('scenario') && !params.has('seed') ? loadSave() : null;
+const game = new Game(
+  saved
+    ? { scenario: saved.scenario, seed: saved.seed, steward: saved.steward }
+    : {
+        scenario: params.get('scenario') ?? 'quiet',
+        seed: fresh ? 1 + Math.floor(Math.random() * 1_000_000) : Number(params.get('seed') ?? 1) || 1,
+        // In the browser, the player is the steward.
+        steward: stewardParam && STEWARD_POLICIES.includes(stewardParam) ? stewardParam : 'none',
+      },
+);
+if (saved) restore(game, saved);
 if (params.has('speed')) game.speedIndex = Number(params.get('speed'));
 
 const app = document.getElementById('app') as HTMLElement;
@@ -24,7 +38,7 @@ const view = new TownView(stage, game);
 // ?fx=low forces the cheap renderer (no bloom, no lamp lights), as slow hardware gets anyway.
 if (params.get('fx') === 'low') view.setLowQuality();
 // A new game opens on a morning, not at midnight (review: the first frame was the dark).
-const intro = params.get('intro') !== '0';
+const intro = params.get('intro') !== '0' && !saved;
 if (intro && game.sim.tick === 0) game.runTicks(7 * 60 + 30);
 const ui = new Ui(app, game, view, { intro });
 game.onEvent((e) => {
@@ -305,6 +319,7 @@ window.__townlet = {
   ui,
   stats: () => ({ fps, stepMs: game.stepMs, tick: game.sim.tick, eventHash: game.eventHash, eventCount: game.eventCount, commands: game.commandLog }),
   runTicks: (n: number) => game.runTicks(n),
+  save: () => saveGame(game),
   residentScreen: (id: string) => view.residentScreen(id),
   buildingScreen: (id: number) => view.buildingScreen(id),
   tileScreen: (x: number, y: number) => view.tileScreen(x, y),
@@ -315,3 +330,10 @@ window.__townlet = {
     return seatingOrder(game.sim.state, ids);
   },
 };
+
+// Keep the town: every little while, and whenever the page is put away.
+setInterval(() => saveGame(game), 15_000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveGame(game);
+});
+window.addEventListener('pagehide', () => saveGame(game));

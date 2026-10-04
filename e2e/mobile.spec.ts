@@ -12,14 +12,18 @@ test('touch: tap moves the outline, Place builds, Rotate turns, Cancel stops', a
     const h = (window as unknown as { __townlet: { runTicks(n: number): void; game: { sim: { tick: number } } } }).__townlet;
     h.runTicks(t - h.game.sim.tick);
   }, at(1, 10));
-  for (let i = 0; i < 2; i++) {
-    await page.waitForTimeout(300);
-    const later = page.locator('[data-testid^="later-"]');
-    while (await later.count()) await later.first().tap();
+  // Popups show one per rendered frame: wait on frames, put off what is there, stop after two quiet ones.
+  for (let quiet = 0; quiet < 2; ) {
+    await page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+    const later = page.locator('[data-testid^="later-"], [data-testid="tier-ok"]');
+    if ((await later.count()) > 0) {
+      await later.first().tap();
+      quiet = 0;
+    } else quiet++;
   }
   const count = () => page.evaluate(() => (window as unknown as { __townlet: { game: { sim: { state: { buildings: unknown[] } } } } }).__townlet.game.sim.state.buildings.length);
   const before = await count();
-  await page.getByTestId('open-build').tap();
+  await page.getByTestId('nav-build').tap();
   await page.getByTestId('tool-build-flowerbed').tap();
   await expect(page.getByTestId('place-bar')).toBeVisible();
   // A tap on the map moves the outline; it doesn't build.

@@ -666,6 +666,41 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - The one-year and 10-year soaks, run with newcomers, show no degenerate state.
    - The log's default view stays readable: in a 7-day browser run, the Story filter shows at most 40 lines a day on average.
 
+
+**M3c status (2026-10-04): all six met, pending the 10-year soak with newcomers (below).** The tests are in `test/m3c.test.ts`, `test/m3c-year.test.ts` and `e2e/m3c.spec.ts`.
+
+1. **Favours: met.**
+   - Every refusal reason is checked against a state that makes it true: tired, unwell, asked too often, a poor view of the steward, low, not on speaking terms, already busy.
+   - An accepted favour is done: Fen walks to the woodlot, works, and the stores rise, on seeds 1–5.
+   - Over 28 days, the favour-asking steward brings in 48–71 timber a week, against 9–10 with no favours (5–8×; at least 2× was required).
+   - **Twin:** asked 5 favours in 5 days, Marlow ends with a lower view of the steward than when asked 1, on every seed.
+2. **A growing valley: met.**
+   - The map is 48×48: the settled 24×24 plus 1,728 tiles of wild woods in 27 plots (3×; at least 2× was required).
+   - The first map, 40×40, had only 1,024 wild tiles. The test caught it and the map was widened.
+   - Plots open next to settled land when mean disposition is at least 0.55. Cleared land takes buildings.
+   - Over a year with the favour-asking steward, at least 2 plots are cleared on every seed, and there is always room for a cottage.
+3. **More residents (as changed by the owner): met.**
+   - Nobody moves in without an empty home, and building one brings someone within hours.
+   - Generated newcomers are deterministic for the same seed and actions, differ when the town or placement differs, and keep traits and values in range. A town of workshops draws more makers.
+   - Over a year, at least 3 newcomers arrive on every seed (12 in the runs measured, reaching the cap of 18). Two-thirds or more make a friend within 28 days; in the runs measured, all did.
+   - Newcomers speak, think and form dreams.
+4. **Talking: met.** Mood bands, top-three topics, opinions (sign and band) and hopes match state for every resident on seeds 1–5. Only the first talk of a day counts, and talks and favours in the command log replay identically.
+5. **In the browser: met.**
+   - The talk panel gets an answer.
+   - A favour sends Fen to the woodlot, the stock rises, and asking too often meets a refusal.
+   - Clearing a plot through its card opens land that takes a cottage.
+   - A newcomer appears with personality sliders. Stepping costs 0.93 ms a frame at 10× with 12 residents.
+6. **No regressions: met so far.**
+   - All earlier unit and browser tests pass. Long tests got more time, because the bigger map and more residents are slower. One harness detail changed: popups are now put off on the next frame too.
+   - The log's Story view averages 20–27 lines a day in the first week, against at most 40.
+   - The one-year soak with newcomers (10 seeds) shows no degenerate state, after a fix: see below.
+   - The 10-year soak with newcomers (3 seeds) is still running at the time of writing; its result will be added here.
+
+**Found and fixed on the way:**
+- **Jobless newcomers.** Workplaces have limited places, so a newcomer whose trade was full had no job, and their purpose ran dry; 6 of 10 one-year soaks flagged it. They now help out at their trade's workplace, and their "place to work" ask fires when every place of that kind is full. That gives the player something to build.
+- **Newcomer ids clashed between simulations in one process,** which broke determinism when tests ran together. Ids now carry a hash of what generated them.
+- **The soak's random builder aimed across the whole bigger map,** so most of its builds failed and one town flagged an idle baker. It now builds within the settled valley, and never "removes" wild land.
+
 ---
 
 ## 10. Risks

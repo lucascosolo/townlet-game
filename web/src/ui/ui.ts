@@ -290,6 +290,17 @@ export class Ui {
     root.appendChild(this.menu);
     this.panels.push(this.menu);
 
+    this.placeBar = el('div', { class: 'place-bar paper', 'data-testid': 'place-bar' });
+    this.placeBar.hidden = true;
+    const ok = el('button', { class: 'primary', 'data-testid': 'place-ok' }, '✓ Place');
+    const rotateB = el('button', { 'data-testid': 'place-rotate' });
+    rotateB.innerHTML = `${ICONS.turnRight}<span>Rotate</span>`;
+    const cancel = el('button', { 'data-testid': 'place-cancel' }, '✕ Cancel');
+    this.placeBar.append(el('span', { class: 'quiet' }, 'Drag the outline to move it'), rotateB, cancel, ok);
+    this.placeButtons = { ok, rotate: rotateB, cancel };
+    root.appendChild(this.placeBar);
+    this.panels.push(this.placeBar);
+
     this.bubbleLayer = el('div', { class: 'bubbles' });
     root.appendChild(this.bubbleLayer);
 
@@ -307,8 +318,20 @@ export class Ui {
     this.speedButtons.forEach((b, j) => b.classList.toggle('on', j === this.game.speedIndex));
   }
 
+  /** Told whenever the tool changes (main.ts uses it for touch placement). */
+  onToolChange: ((tool: Tool) => void) | null = null;
+  /** Touch placement: a bar with Place, Rotate and Cancel (owner: no way to preview a build on mobile). */
+  readonly placeBar: HTMLElement;
+  readonly placeButtons: { ok: HTMLButtonElement; rotate: HTMLButtonElement; cancel: HTMLButtonElement };
+
+  showPlaceBar(on: boolean, canPlace = true): void {
+    this.placeBar.hidden = !on;
+    this.placeButtons.ok.disabled = !canPlace;
+  }
+
   setTool(tool: Tool): void {
     this.tool = tool;
+    this.onToolChange?.(tool);
     this.menu.hidden = true;
     this.view.showGrid(tool.kind === 'build');
     this.view.setGhost(tool.kind === 'build' ? tool.type : null, null, false, this.rotation);

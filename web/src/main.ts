@@ -50,7 +50,72 @@ function twoFingers(): { dist: number; angle: number } {
   return { dist: Math.hypot(b.x - a.x, b.y - a.y), angle: Math.atan2(b.y - a.y, b.x - a.x) };
 }
 
+// Touch building (owner: "drag the object around and then press a button to place or cancel").
+// On touch, choosing a building puts an outline mid-view; dragging the outline moves it, dragging
+// elsewhere moves the camera, a tap moves it there, and the bar places, rotates or cancels.
+let touchUI = window.matchMedia('(pointer: coarse)').matches;
+let ghostAt: [number, number] | null = null;
+let draggingGhost = false;
+
+function refreshTouchGhost(): void {
+  const tool = ui.tool;
+  if (tool.kind !== 'build' || !ghostAt) return;
+  const ok = canPlace(game.sim.state, tool.type, ghostAt[0], ghostAt[1], ui.rotation) === null && game.sim.canAfford(tool.type);
+  view.setGhost(tool.type, ghostAt, ok, ui.rotation);
+  ui.showPlaceBar(true, ok);
+}
+
+function startTouchPlacement(): void {
+  const tool = ui.tool;
+  if (tool.kind !== 'build') return;
+  const tile = view.tileAt(window.innerWidth / 2, window.innerHeight * 0.4) ?? [12, 12];
+  ghostAt = footprintAt(tool.type, tile[0], tile[1]);
+  refreshTouchGhost();
+}
+
+ui.onToolChange = (tool) => {
+  if (tool.kind === 'build' && touchUI) setTimeout(startTouchPlacement, 0);
+  else {
+    ghostAt = null;
+    ui.showPlaceBar(false);
+  }
+};
+
+function placeGhost(): void {
+  const tool = ui.tool;
+  if (tool.kind !== 'build' || !ghostAt) return;
+  const err = canPlace(game.sim.state, tool.type, ghostAt[0], ghostAt[1], ui.rotation);
+  if (err) return ui.status(`Can't build there: ${err.replace(/ #\d+/, '')}.`);
+  if (!game.sim.canAfford(tool.type)) return ui.status(`Not enough timber (${buildingDef(tool.type).cost} needed).`);
+  game.command({ kind: 'build', type: tool.type, x: ghostAt[0], y: ghostAt[1], ...(ui.rotation ? { rot: ui.rotation } : {}) });
+  ui.status(`${buildingDef(tool.type).name} placed. Move the outline for another, or Cancel.`);
+  game.runTicks(0);
+  refreshTouchGhost();
+}
+ui.placeButtons.ok.addEventListener('click', placeGhost);
+ui.placeButtons.rotate.addEventListener('click', () => {
+  ui.rotate();
+  if (ghostAt && ui.tool.kind === 'build') ghostAt = footprintAt(ui.tool.type, ghostAt[0], ghostAt[1]);
+  refreshTouchGhost();
+});
+ui.placeButtons.cancel.addEventListener('click', () => ui.setTool({ kind: 'select' }));
+
+/** Is this tile on (or right next to) the outline being placed? */
+function onGhost(tile: [number, number] | null): boolean {
+  const tool = ui.tool;
+  if (!tile || !ghostAt || tool.kind !== 'build') return false;
+  const [w, d] = footprint(tool.type, ui.rotation);
+  return tile[0] >= ghostAt[0] - 1 && tile[0] <= ghostAt[0] + w && tile[1] >= ghostAt[1] - 1 && tile[1] <= ghostAt[1] + d;
+}
+
 canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse') {
+    if (!touchUI) {
+      touchUI = true;
+      if (ui.tool.kind === 'build') startTouchPlacement();
+    }
+  } else touchUI = false;
+  if (touchUI && ui.tool.kind === 'build' && pointers.size === 0 && onGhost(view.tileAt(e.clientX, e.clientY))) draggingGhost = true;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   canvas.setPointerCapture(e.pointerId);
   if (pointers.size === 2) {
@@ -65,6 +130,15 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointermove', (e) => {
   const prev = pointers.get(e.pointerId);
   if (prev) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (draggingGhost && ui.tool.kind === 'build') {
+    const tile = view.tileAt(e.clientX, e.clientY);
+    if (tile) {
+      ghostAt = footprintAt(ui.tool.type, tile[0], tile[1]);
+      refreshTouchGhost();
+    }
+    if (down) down.moved = true;
+    return;
+  }
   if (pinch && pointers.size >= 2) {
     const now = twoFingers();
     if (pinch.dist > 0 && now.dist > 0) view.zoom(now.dist / pinch.dist);
@@ -99,6 +173,16 @@ canvas.addEventListener('pointerup', (e) => {
   const wasClick = down && !down.moved && !down.turn && pointers.size === 1;
   release(e);
   if (pointers.size === 0) down = null;
+  draggingGhost = false;
+  // On touch, a tap while building moves the outline there; it never builds by itself.
+  if (wasClick && touchUI && ui.tool.kind === 'build') {
+    const tile = view.tileAt(e.clientX, e.clientY);
+    if (tile) {
+      ghostAt = footprintAt(ui.tool.type, tile[0], tile[1]);
+      refreshTouchGhost();
+    }
+    return;
+  }
   if (wasClick) {
     if (e.pointerType !== 'mouse') hover(e.clientX, e.clientY);
     click(e.clientX, e.clientY);
@@ -176,7 +260,8 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (k === 'r' && ui.tool.kind === 'build') {
     ui.rotate();
-    if (lastHover) hover(lastHover[0], lastHover[1]);
+    if (touchUI) refreshTouchGhost();
+    else if (lastHover) hover(lastHover[0], lastHover[1]);
   } else if (k === 'q') view.rotate(-1);
   else if (k === 'e') view.rotate(1);
   else if (k === ' ') {

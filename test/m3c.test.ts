@@ -6,6 +6,8 @@ import { Narrator } from '../src/narrate/narrator.js';
 import { runScenario } from '../src/scenarios/index.js';
 import { considerFavour, openPlots, WILLING } from '../src/sim/favours.js';
 import { rel } from '../src/sim/mind/relationships.js';
+import { topOfMind } from '../src/sim/mind/thoughts.js';
+import { feelingAbout, feelingBand, moodBand } from '../src/sim/talk.js';
 import { at, TICKS_PER_DAY } from '../src/sim/time.js';
 import { TRAITS, VALUES, type SimEvent } from '../src/sim/types.js';
 import { SEEDS } from './helpers.js';
@@ -217,5 +219,61 @@ describe('criterion 6: a readable log', () => {
       const story = n.entries.filter((e) => e.kind !== 'day' && e.importance !== 'minor').length;
       expect(story / 7, `seed ${seed}`).toBeLessThanOrEqual(40);
     }
+  });
+});
+
+describe('criterion 4 (M3b criterion 4): talking to a resident', () => {
+  it('every answer is true to state; the first talk of the day counts, the rest change nothing', { timeout: 180_000 }, () => {
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'considerate');
+      sim.runUntil(at(6, 11));
+      for (const id of sim.state.order) {
+        const r = sim.resident(id);
+        if (r.activity?.id === 'sleep') continue;
+        const how = sim.talk(id, 'how');
+        expect(how?.band).toBe(moodBand(r.mood));
+        const mind = sim.talk(id, 'mind');
+        const top = topOfMind(sim.state, r, 3);
+        expect(mind?.topics?.map((t) => t.key)).toEqual(top.map((t) => t.key));
+        for (const other of sim.state.order.filter((o) => o !== id)) {
+          const a = sim.talk(id, 'opinion', `r:${other}`);
+          expect(Math.sign(a?.value ?? 0)).toBe(Math.sign(feelingAbout(r, `r:${other}`)));
+          expect(a?.band).toBe(feelingBand(feelingAbout(r, `r:${other}`)));
+        }
+        const me = sim.talk(id, 'me');
+        expect(me?.band).toBe(feelingBand(r.rel.steward?.affinity ?? 0));
+        const hope = sim.talk(id, 'hope');
+        expect(hope?.hope?.done).toBe(r.aspiration.done);
+      }
+    }
+  });
+
+  it("talking can't be farmed, and replays the same", () => {
+    const sim = runScenario('quiet', 1, 'none');
+    sim.runUntil(awake(3));
+    const r = sim.resident('ada');
+    const company0 = r.needs.company;
+    const counted: boolean[] = [];
+    sim.on((e) => {
+      if (e.type === 'talk') counted.push(e.counted);
+    });
+    sim.talk('ada', 'how');
+    const company1 = r.needs.company;
+    for (let i = 0; i < 5; i++) sim.talk('ada', 'how');
+    expect(company1).toBeGreaterThan(company0);
+    expect(r.needs.company).toBe(company1);
+    expect(counted).toEqual([true, false, false, false, false, false]);
+    // Talks and favours in the command log replay to the same town.
+    const run = () => {
+      const s = runScenario('quiet', 2, 'none');
+      s.schedule([
+        { at: awake(2), kind: 'talk', who: 'fen', question: 'how' },
+        { at: awake(2) + 5, kind: 'favour', who: 'marlow', favour: 'timber' },
+        { at: awake(3), kind: 'talk', who: 'ada', question: 'opinion', about: 'r:fen' },
+      ]);
+      s.runDays(5);
+      return JSON.stringify(s.state);
+    };
+    expect(run()).toBe(run());
   });
 });

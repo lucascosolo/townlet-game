@@ -205,8 +205,8 @@ export function newResidentState(seed: number, id: string, home: BuildingState, 
     coldUntil: -1,
     unseen: [],
     ...(tick > 0 ? { arrivedTick: tick } : {}),
-    // Newcomers have no authored first dream: one forms from life here (M3b templates).
-    aspiration: tick === 0 ? { stage: 0, since: 0, minutes: 0, done: false } : { stage: 0, since: tick, minutes: 0, done: true, doneTick: tick, completed: 0 },
+    // Newcomers arrive hoping to settle in; dreams of their own form from life here after that (M3b templates).
+    aspiration: tick === 0 ? { stage: 0, since: 0, minutes: 0, done: false } : { stage: 0, since: tick, minutes: 0, done: false, kind: 'settle', completed: 0 },
     rng: deriveSeed(seed, `r:${id}`),
   };
 }

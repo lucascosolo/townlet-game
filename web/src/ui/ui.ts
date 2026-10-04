@@ -287,6 +287,7 @@ export class Ui {
   setTool(tool: Tool): void {
     this.tool = tool;
     this.menu.hidden = true;
+    this.view.showGrid(tool.kind === 'build');
     this.view.setGhost(tool.kind === 'build' ? tool.type : null, null, false, this.rotation);
     this.view.highlightBuilding(null);
     this.status(

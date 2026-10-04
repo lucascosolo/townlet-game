@@ -21,7 +21,12 @@ if (params.has('speed')) game.speedIndex = Number(params.get('speed'));
 const app = document.getElementById('app') as HTMLElement;
 const stage = document.getElementById('stage') as HTMLElement;
 const view = new TownView(stage, game);
-const ui = new Ui(app, game, view, { intro: params.get('intro') !== '0' });
+// ?fx=low forces the cheap renderer (no bloom, no lamp lights), as slow hardware gets anyway.
+if (params.get('fx') === 'low') view.setLowQuality();
+// A new game opens on a morning, not at midnight (review: the first frame was the dark).
+const intro = params.get('intro') !== '0';
+if (intro && game.sim.tick === 0) game.runTicks(7 * 60 + 30);
+const ui = new Ui(app, game, view, { intro });
 game.onEvent((e) => {
   if (e.type === 'exchange') view.facePair(e.a, e.b);
 });

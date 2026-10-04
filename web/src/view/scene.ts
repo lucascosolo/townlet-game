@@ -8,6 +8,14 @@ import type { BuildingState, ResidentState } from '../../../src/sim/types.js';
 import { footprint, placeTile, sizeOf } from '../../../src/sim/world.js';
 import type { Game } from '../game.js';
 import { buildingMesh, glow, mat, residentMesh } from './meshes.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+
+/** Real point lights placed at the lamps nearest the view (the rest glow by their ground pools). */
+const LAMP_LIGHTS = 10;
+const LAMP_COLOR = 0xffb75e;
 
 export type Pick = { kind: 'resident'; id: string } | { kind: 'building'; id: number } | { kind: 'ground'; x: number; y: number };
 
@@ -65,6 +73,14 @@ export class TownView {
   private readonly raycaster = new THREE.Raycaster();
   private readonly festoon = new THREE.Group();
   private season: Season = 'spring';
+  private readonly grid: THREE.GridHelper;
+  private readonly composer: EffectComposer;
+  private readonly bloom: UnrealBloomPass;
+  private readonly lamps: THREE.PointLight[] = [];
+  private lampPoints: THREE.Vector3[] = [];
+  private lampsDirty = true;
+  private lastLampPick = 0;
+  private skyKey = '';
   /** Who is talking to whom, for a few seconds after an exchange. */
   private readonly talking = new Map<string, { with: string; until: number }>();
 
@@ -78,7 +94,9 @@ export class TownView {
   constructor(container: HTMLElement, game: Game) {
     this.game = game;
     const { width, height } = game.sim.state;
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: true });
+    // The sky is a CSS gradient behind a transparent canvas: free, where a sky texture cost a full-screen draw.
+    this.renderer.setClearColor(0x000000, 0);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -97,16 +115,56 @@ export class TownView {
     this.sun.target.position.copy(this.target);
     this.scene.add(this.sun, this.sun.target, this.hemi);
 
-    this.ground = new THREE.Mesh(new THREE.PlaneGeometry(width, height), this.groundMat);
+    // Grass with a little variation tile to tile, so the valley isn't one flat colour.
+    const groundGeo = new THREE.PlaneGeometry(width, height, width, height);
+    const colors: number[] = [];
+    let seed = 11;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < groundGeo.attributes.position!.count; i++) {
+      const v = 0.94 + rnd() * 0.12;
+      colors.push(v, v * (0.99 + rnd() * 0.03), v);
+    }
+    groundGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    this.groundMat.vertexColors = true;
+    this.ground = new THREE.Mesh(groundGeo, this.groundMat);
     this.ground.rotation.x = -Math.PI / 2;
     this.ground.position.set(width / 2, 0, height / 2);
     this.ground.receiveShadow = true;
     this.scene.add(this.ground);
-    const grid = new THREE.GridHelper(width, width, 0x000000, 0x000000);
-    (grid.material as THREE.Material).opacity = 0.06;
-    (grid.material as THREE.Material).transparent = true;
-    grid.position.set(width / 2, 0.005, height / 2);
-    this.scene.add(grid);
+    // The valley is a piece of land, not a tile: earth beneath it, with a darker band of rock.
+    // Only the four sides are drawn (a closed box would fill the screen underneath the grass).
+    const skirt = (y: number, h: number, color: number, grow: number) => {
+      const m = new THREE.MeshLambertMaterial({ color });
+      for (const [x, z, w, ry] of [
+        [width / 2, height + grow, width + 2 * grow, 0],
+        [width / 2, -grow, width + 2 * grow, Math.PI],
+        [width + grow, height / 2, height + 2 * grow, Math.PI / 2],
+        [-grow, height / 2, height + 2 * grow, -Math.PI / 2],
+      ] as const) {
+        const side = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m);
+        side.position.set(x, y, z);
+        side.rotation.y = ry;
+        this.scene.add(side);
+      }
+    };
+    skirt(-0.06, 0.12, SEASON_GROUND.spring, 0.02);
+    skirt(-0.7, 1.15, 0x6b4a32, 0);
+    skirt(-1.45, 0.4, 0x4e3626, 0.03);
+    // The tile grid shows only while building.
+    this.grid = new THREE.GridHelper(width, width, 0x000000, 0x000000);
+    (this.grid.material as THREE.Material).opacity = 0.08;
+    (this.grid.material as THREE.Material).transparent = true;
+    this.grid.position.set(width / 2, 0.005, height / 2);
+    this.grid.visible = false;
+    this.scene.add(this.grid);
+
+    // Warm lamplight at night: a handful of real lights placed at the nearest lamps.
+    for (let i = 0; i < LAMP_LIGHTS; i++) {
+      const l = new THREE.PointLight(LAMP_COLOR, 0, 6, 2);
+      this.lamps.push(l);
+      this.scene.add(l);
+    }
+
 
     // Rain: short falling streaks, shown only in wet weather.
     const n = 600;
@@ -123,8 +181,49 @@ export class TownView {
     this.rain.visible = false;
     this.scene.add(this.rain, this.festoon);
 
+    // A soft bloom, so lit windows and lanterns glow (review: the night must read as lantern-lit).
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.6, 0.4, 0.85);
+    this.composer.addPass(this.bloom);
+    this.composer.addPass(new OutputPass());
+
     this.resize();
     window.addEventListener('resize', () => this.resize());
+  }
+
+  /** Show the tile grid (while building). */
+  showGrid(on: boolean): void {
+    this.grid.visible = on;
+  }
+
+  private paintSky(top: THREE.Color, bottom: THREE.Color): void {
+    const key = top.getHexString() + bottom.getHexString();
+    if (key === this.skyKey) return;
+    this.skyKey = key;
+    const host = this.renderer.domElement.parentElement;
+    if (host) host.style.background = `linear-gradient(180deg, #${top.getHexString()} 0%, #${bottom.getHexString()} 100%)`;
+  }
+
+  /** Put the real lights at the lamps nearest the middle of the view. */
+  private placeLamps(night: number): void {
+    if (this.lampsDirty) {
+      this.lampsDirty = false;
+      this.lampPoints = [];
+      this.scene.updateMatrixWorld();
+      for (const g of this.buildings.values()) g.traverse((o) => o.name === 'light' && this.lampPoints.push(o.getWorldPosition(new THREE.Vector3())));
+    }
+    const now = performance.now();
+    if (now - this.lastLampPick > 400) {
+      this.lastLampPick = now;
+      const near = [...this.lampPoints].sort((a, b) => a.distanceToSquared(this.target) - b.distanceToSquared(this.target));
+      this.lamps.forEach((l, i) => {
+        const p = near[i];
+        l.visible = !!p;
+        if (p) l.position.copy(p);
+      });
+    }
+    for (const l of this.lamps) l.intensity = night * 2.2;
   }
 
   resize(): void {
@@ -132,6 +231,7 @@ export class TownView {
     const w = el.clientWidth || window.innerWidth;
     const h = el.clientHeight || window.innerHeight;
     this.renderer.setSize(w, h);
+    this.composer?.setSize(w, h);
     const view = 15;
     const aspect = w / h;
     Object.assign(this.camera, { left: -view * aspect, right: view * aspect, top: view, bottom: -view });
@@ -199,11 +299,13 @@ export class TownView {
         if (existing) {
           this.scene.remove(existing);
           this.buildings.delete(b.id);
+          this.lampsDirty = true;
         }
         continue;
       }
       if (existing) continue;
-      const g = buildingMesh(b.type);
+      const g = buildingMesh(b.type, b.id * 7 + b.x);
+      this.lampsDirty = true;
       const [w, d] = sizeOf(b);
       g.position.set(b.x + w / 2, 0, b.y + d / 2);
       g.rotation.y = -(b.rot ?? 0) * (Math.PI / 2);
@@ -295,17 +397,23 @@ export class TownView {
     const sunAz = this.azimuth + Math.PI * (0.25 + dayFrac * 0.5);
     this.sun.position.set(this.target.x + Math.cos(sunAz) * 30, 6 + elevation * 30, this.target.z + Math.sin(sunAz) * 30);
     this.sun.target.position.copy(this.target);
-    this.sun.intensity = (0.25 + 1.4 * elevation) * (1 - night * 0.85) * (1 - gloom * 0.6);
+    // Day: a warm key light. Night: the same light turns to cool moonlight, low but readable.
     const warm = 1 - elevation;
-    this.sun.color.setRGB(1, 0.92 - warm * 0.2, 0.85 - warm * 0.35);
-    this.hemi.intensity = (0.75 - night * 0.45) * (1 - gloom * 0.4);
-    this.hemi.color.setRGB(0.85 - night * 0.45, 0.92 - night * 0.4, 1 - night * 0.2);
-    const sky = new THREE.Color().setRGB(0.62 - night * 0.52, 0.78 - night * 0.62, 0.9 - night * 0.6);
-    sky.lerp(new THREE.Color(0x6f7880), gloom);
-    this.renderer.setClearColor(sky);
+    const dayKey = new THREE.Color(0xfff1d6).lerp(new THREE.Color(0xffc98f), warm * 0.6);
+    this.sun.color.copy(dayKey.lerp(new THREE.Color(0x8fa3d6), night));
+    this.sun.intensity = ((0.55 + 1.25 * elevation) * (1 - night) + 0.75 * night) * (1 - gloom * 0.6);
+    this.hemi.color.copy(new THREE.Color(0xcfe6ff).lerp(new THREE.Color(0x5a6a9c), night));
+    this.hemi.groundColor.copy(new THREE.Color(0x6d7a3a).lerp(new THREE.Color(0x2a3040), night));
+    this.hemi.intensity = (0.85 - night * 0.2) * (1 - gloom * 0.4);
+    const zenith = new THREE.Color(0x9cc3e0).lerp(new THREE.Color(0x1b2238), night).lerp(new THREE.Color(0x6f7880), gloom);
+    const horizon = new THREE.Color(0xf6e7c8).lerp(new THREE.Color(0x3b4a72), night).lerp(new THREE.Color(0x9aa2a8), gloom);
+    this.paintSky(zenith, horizon);
 
-    glow.window.emissiveIntensity = night * 1.2;
-    glow.lantern.emissiveIntensity = 0.2 + night * 1.6;
+    glow.window.emissiveIntensity = night * 2.2;
+    glow.lantern.emissiveIntensity = 0.2 + night * 2.4;
+    glow.pool.opacity = night * 0.55;
+    glow.pool.visible = night > 0.02;
+    this.placeLamps(night);
     glow.oven.emissiveIntensity = 0;
     for (const r of Object.values(state.residents)) {
       if (r.activity?.id === 'work' && r.at === r.activity.placeId) {
@@ -447,11 +555,37 @@ export class TownView {
     return g ? this.toScreen(g.position.clone().add(new THREE.Vector3(0, 0.3, 0))) : null;
   }
 
+  /** Frame times, for dropping bloom on hardware that can't keep up (weak phones, software GL). */
+  private slowFrames = 0;
+  private frames = 0;
+
   frame(dt: number): void {
     this.syncBuildings();
     this.syncResidents(dt);
     this.placeCamera(dt);
     this.syncAtmosphere();
-    this.renderer.render(this.scene, this.camera);
+    if (this.bloom.enabled) this.composer.render();
+    else this.renderer.render(this.scene, this.camera);
+    // Low quality on slow hardware: no bloom, no real lamp lights (the ground pools still glow).
+    // Judged by the time between frames, since the GPU's work doesn't show in the draw call.
+    if (!this.lowQuality && this.frames < 90) {
+      this.frames++;
+      if (this.frames > 3 && dt > 0.05) this.slowFrames++;
+      if (this.slowFrames >= 8) this.setLowQuality();
+    }
+  }
+
+  private lowQuality = false;
+
+  setLowQuality(): void {
+    this.lowQuality = true;
+    this.bloom.enabled = false;
+    for (const l of this.lamps) this.scene.remove(l);
+    this.lamps.length = 0;
+    this.renderer.setPixelRatio(1);
+    this.sun.shadow.mapSize.set(1024, 1024);
+    this.sun.shadow.map?.dispose();
+    this.sun.shadow.map = null;
+    this.resize();
   }
 }

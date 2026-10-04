@@ -18,8 +18,9 @@ export const PALETTE = {
   leaf: 0x5f9e4f,
   hedge: 0x4e8a46,
   water: 0x5aa7c7,
-  window: 0xffd27a,
+  window: 0xffcf7a,
   lantern: 0xffb85c,
+  trim: 0x5a3a24,
   green: 0x8cc06b,
 };
 
@@ -42,7 +43,42 @@ export const glow = {
   window: new THREE.MeshLambertMaterial({ color: PALETTE.window, emissive: new THREE.Color(PALETTE.window), emissiveIntensity: 0 }),
   lantern: new THREE.MeshLambertMaterial({ color: PALETTE.lantern, emissive: new THREE.Color(PALETTE.lantern), emissiveIntensity: 0 }),
   oven: new THREE.MeshLambertMaterial({ color: 0xff8a3d, emissive: new THREE.Color(0xff6a1d), emissiveIntensity: 0 }),
+  /** The warm pool a lamp throws on the ground: additive, faded in at dusk. */
+  pool: new THREE.MeshBasicMaterial({ map: radialTexture(), color: 0xffb75e, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
 };
+
+function radialTexture(): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const ctx = c.getContext('2d') as CanvasRenderingContext2D;
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.45, 'rgba(255,255,255,0.45)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** A lamp's light: a pool on the ground, and a marker the scene uses to place real lights. */
+function lightSpot(x: number, y: number, z: number, size = 3): THREE.Group {
+  const g = new THREE.Group();
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(size, size), glow.pool);
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.set(x, 0.03, z);
+  pool.renderOrder = 1;
+  g.add(pool);
+  const marker = new THREE.Object3D();
+  marker.name = 'light';
+  marker.position.set(x, y, z);
+  g.add(marker);
+  return g;
+}
+
+/** Roof colours for homes, so a street isn't one colour (review: flat materials). */
+const ROOFS = [0xb5532f, 0x7a4b8a, 0x3f7a72, 0xa8743a, 0x8f3f3a];
 
 function box(w: number, h: number, d: number, material: THREE.Material, x = 0, y = h / 2, z = 0): THREE.Mesh {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
@@ -80,6 +116,7 @@ function lanternPost(x: number, z: number): THREE.Group {
   const lamp = new THREE.Mesh(new THREE.OctahedronGeometry(0.08, 0), glow.lantern);
   lamp.position.y = 0.65;
   g.add(lamp);
+  g.add(lightSpot(0, 0.7, 0, 2.6));
   g.position.set(x, 0, z);
   return g;
 }
@@ -90,6 +127,23 @@ function house(w: number, d: number, roofColor: number, opts: { chimney?: boolea
   const bd = d * 0.82;
   const wallH = 0.7;
   g.add(box(bw, wallH, bd, mat(PALETTE.wall)));
+  // Timber frame: corner posts and a sill beam under the eaves.
+  for (const [x, z] of [
+    [-bw / 2, -bd / 2],
+    [bw / 2, -bd / 2],
+    [-bw / 2, bd / 2],
+    [bw / 2, bd / 2],
+  ] as const)
+    g.add(box(0.07, wallH, 0.07, mat(PALETTE.trim), x, wallH / 2, z));
+  g.add(box(bw + 0.06, 0.06, bd + 0.06, mat(PALETTE.trim), 0, wallH - 0.03));
+  // A door, and a lamp beside it that lights the step at night.
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.36), mat(PALETTE.trim));
+  door.position.set(-bw * 0.22, 0.18, bd / 2 + 0.012);
+  g.add(door);
+  const doorLamp = new THREE.Mesh(new THREE.OctahedronGeometry(0.05, 0), glow.lantern);
+  doorLamp.position.set(-bw * 0.22 + 0.17, 0.42, bd / 2 + 0.04);
+  g.add(doorLamp);
+  g.add(lightSpot(-bw * 0.22, 0.5, bd / 2 + 0.5, 2.4));
   g.add(pyramidRoof(bw + 0.15, bd + 0.15, 0.6, mat(roofColor), wallH));
   // Windows on two faces, glowing at night.
   for (const [x, z, ry] of [
@@ -116,12 +170,12 @@ function house(w: number, d: number, roofColor: number, opts: { chimney?: boolea
 }
 
 /** A mesh group for a building type, centred on its footprint, sitting on y = 0. */
-export function buildingMesh(type: string): THREE.Group {
+export function buildingMesh(type: string, variant = 0): THREE.Group {
   const [w, d] = buildingDef(type).size;
   let g: THREE.Group;
   switch (type) {
     case 'cottage':
-      g = house(w, d, PALETTE.roof, { chimney: true });
+      g = house(w, d, ROOFS[variant % ROOFS.length] as number, { chimney: true });
       break;
     case 'bakery':
       g = house(w, d, 0xc98b4b, { chimney: true, oven: true });
@@ -235,7 +289,7 @@ export function buildingMesh(type: string): THREE.Group {
     case 'wild': {
       // Woods and brambles over an 8x8 plot: a fixed, irregular scatter.
       g = new THREE.Group();
-      const floor = box(w * 0.98, 0.03, d * 0.98, mat(0x55703f), 0, 0.015);
+      const floor = box(w, 0.03, d, mat(0x55703f), 0, 0.015);
       floor.receiveShadow = true;
       g.add(floor);
       let seed = 7;
@@ -247,10 +301,13 @@ export function buildingMesh(type: string): THREE.Group {
         else {
           const bush = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35 + rnd() * 0.2, 0), mat(PALETTE.hedge));
           bush.position.set(x, 0.25, z);
-          bush.castShadow = true;
           g.add(bush);
         }
       }
+      // The woods don't cast shadows: hundreds of trees in the shadow pass cost more than they show.
+      g.traverse((o) => {
+        o.castShadow = false;
+      });
       break;
     }
     case 'orchard': {

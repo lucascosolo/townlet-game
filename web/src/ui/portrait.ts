@@ -2,18 +2,8 @@
 // resident, drawn as SVG from their id, so the six founders and every generated newcomer get one.
 // Skin, hair, hairstyle and accessories are picked deterministically; the coat is their colour.
 
-import { residentDef } from '../../../src/content/residents.js';
+import { looksOf, type HairStyle } from '../view/looks.js';
 import { residentColor } from '../view/meshes.js';
-
-const SKIN = ['#f3d2b3', '#e8b98f', '#d39c72', '#b27a52', '#8d5a3b', '#6a4129'];
-const HAIR = ['#2e221b', '#4a3122', '#6b4528', '#9a6a3a', '#c9a15e', '#d8d2c6', '#8a3b24', '#3b3f46'];
-const STYLES = ['short', 'bob', 'bun', 'long', 'cap', 'hat', 'curly', 'bald'] as const;
-
-function hash(s: string): number {
-  let h = 2166136261;
-  for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
-  return h;
-}
 
 const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
 
@@ -27,15 +17,13 @@ function tint(n: number, t: number): string {
 }
 
 export function portraitSvg(id: string, size = 48): string {
-  const def = residentDef(id);
-  const h = hash(id);
+  const look = looksOf(id);
   const coat = residentColor(id);
-  const skin = SKIN[h % SKIN.length] as string;
-  // Older residents go grey; the young keep their colour.
-  const hair = def.age >= 60 ? (h >> 4) % 2 ? '#d8d2c6' : '#b9b3a8' : (HAIR[(h >> 4) % HAIR.length] as string);
-  const style = STYLES[(h >> 8) % STYLES.length] as (typeof STYLES)[number];
-  const glasses = def.age >= 50 && (h >> 12) % 3 === 0;
-  const hairShape: Record<typeof style, string> = {
+  const skin = hex(look.skin);
+  const hair = hex(look.hair);
+  const style = look.style;
+  const glasses = look.glasses;
+  const hairShape: Record<HairStyle, string> = {
     short: `<path d="M15 24c0-9 5-13 9-13s9 4 9 13c-2-4-5-6-9-6s-7 2-9 6z" fill="${hair}"/>`,
     bob: `<path d="M13 28c-1-11 4-17 11-17s12 6 11 17c-1-2-2-5-3-7-3 2-13 2-16 0-1 2-2 5-3 7z" fill="${hair}"/>`,
     bun: `<circle cx="24" cy="9" r="4.5" fill="${hair}"/><path d="M15 23c0-8 4-12 9-12s9 4 9 12c-2-3-5-5-9-5s-7 2-9 5z" fill="${hair}"/>`,

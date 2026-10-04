@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { buildingDef } from '../../../src/content/buildings.js';
+import { looksOf } from './looks.js';
 
 export const PALETTE = {
   wall: 0xeadfc8,
@@ -378,19 +379,96 @@ export const RESIDENT_COLORS: Record<string, number> = {
 };
 
 export function residentMesh(id: string): THREE.Group {
+  // A chunky low-poly villager (review: "faceless pills"): legs, a coat in their colour, arms,
+  // a head with their hair or hat. Looks match their portrait.
+  const look = looksOf(id);
+  const coat = mat(residentColor(id));
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.38, 6), mat(residentColor(id)));
-  body.position.y = 0.19;
-  body.castShadow = true;
-  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 0), mat(0xf1d2b6));
-  head.position.y = 0.48;
+  const body = new THREE.Group();
+  body.name = 'body';
+  for (const [x, name] of [
+    [-0.055, 'legL'],
+    [0.055, 'legR'],
+  ] as const) {
+    const leg = new THREE.Group();
+    leg.name = name;
+    leg.position.set(x, 0.2, 0);
+    leg.add(box(0.07, 0.2, 0.08, mat(0x3a2e26), 0, -0.1, 0));
+    body.add(leg);
+  }
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.3, 7), coat);
+  torso.position.y = 0.34;
+  torso.castShadow = true;
+  body.add(torso);
+  body.add(box(0.21, 0.035, 0.18, mat(0x4a3a2c), 0, 0.25, 0));
+  for (const [x, name] of [
+    [-0.15, 'armL'],
+    [0.15, 'armR'],
+  ] as const) {
+    const arm = new THREE.Group();
+    arm.name = name;
+    arm.position.set(x, 0.46, 0);
+    arm.add(box(0.06, 0.22, 0.07, coat, 0, -0.1, 0));
+    const hand = new THREE.Mesh(new THREE.IcosahedronGeometry(0.035, 0), mat(look.skin));
+    hand.position.y = -0.22;
+    arm.add(hand);
+    body.add(arm);
+  }
+  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.115, 1), mat(look.skin));
+  head.position.y = 0.6;
   head.castShadow = true;
-  g.add(body, head);
+  body.add(head);
+  const hair = mat(look.hair);
+  const hairPiece = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, sx = 1, sy = 1, sz = 1) => {
+    const p = new THREE.Mesh(geo, m);
+    p.position.set(x, y, z);
+    p.scale.set(sx, sy, sz);
+    p.castShadow = true;
+    body.add(p);
+  };
+  const cap = new THREE.SphereGeometry(0.125, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2);
+  switch (look.style) {
+    case 'short':
+      hairPiece(cap, hair, 0, 0.62, -0.01);
+      break;
+    case 'bob':
+      hairPiece(cap, hair, 0, 0.6, -0.01, 1.08, 1.25, 1.08);
+      break;
+    case 'bun':
+      hairPiece(cap, hair, 0, 0.62, -0.01);
+      hairPiece(new THREE.IcosahedronGeometry(0.06, 0), hair, 0, 0.75, -0.07);
+      break;
+    case 'long':
+      hairPiece(cap, hair, 0, 0.62, -0.01);
+      hairPiece(new THREE.BoxGeometry(0.2, 0.22, 0.06), hair, 0, 0.52, -0.08);
+      break;
+    case 'cap':
+      hairPiece(cap, mat(residentColor(id), 0), 0, 0.63, 0, 1.02, 0.8, 1.02);
+      hairPiece(new THREE.BoxGeometry(0.12, 0.02, 0.1), coat, 0, 0.64, 0.12);
+      break;
+    case 'hat':
+      hairPiece(new THREE.CylinderGeometry(0.19, 0.19, 0.025, 10), mat(0x5a3a24), 0, 0.68, 0);
+      hairPiece(new THREE.CylinderGeometry(0.09, 0.11, 0.12, 8), mat(0x6b4a32), 0, 0.75, 0);
+      break;
+    case 'curly':
+      for (const [x, z] of [
+        [-0.07, 0],
+        [0.07, 0],
+        [0, -0.06],
+        [0, 0.05],
+      ] as const)
+        hairPiece(new THREE.IcosahedronGeometry(0.065, 0), hair, x, 0.69, z);
+      break;
+    case 'bald':
+      break;
+  }
+  if (look.glasses) hairPiece(new THREE.BoxGeometry(0.16, 0.03, 0.02), mat(0x3b3226), 0, 0.61, 0.11);
+  g.add(body);
   // A generous invisible hit box, so small figures are easy to click.
-  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.75, 0.5), new THREE.MeshBasicMaterial({ visible: false }));
-  hit.position.y = 0.35;
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.85, 0.5), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.y = 0.4;
   hit.name = 'hit';
   g.add(hit);
-  g.scale.setScalar(1.35);
+  g.scale.setScalar(1.25 * look.height);
   return g;
 }

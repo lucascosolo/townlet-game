@@ -17,6 +17,7 @@ import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent,
 import { SPEEDS, type Game } from '../game.js';
 import { residentColor } from '../view/meshes.js';
 import { ICONS } from './icons.js';
+import { thumbnail } from '../view/thumbs.js';
 import { portrait } from './portrait.js';
 import { greenAroundHome } from '../../../src/sim/world.js';
 import { GREEN_ENOUGH } from '../../../src/sim/asks.js';
@@ -183,6 +184,8 @@ export class Ui {
   private lastJournalRender = 0;
   private lastYouRender = 0;
   private morning: NarratorEntry[] = [];
+  private rosterEl: HTMLElement | null = null;
+  private journalBody: HTMLElement | null = null;
   private readonly lastStock: Partial<Record<'food' | 'timber', number>> = {};
   /** One talk panel per resident, kept across journal redraws so its choices stay put. */
   private readonly talkPanels = new Map<string, TalkPanel>();
@@ -351,6 +354,7 @@ export class Ui {
   select(target: Ui['selected']): void {
     this.selected = target;
     this.view.highlightBuilding(target?.kind === 'building' ? target.id : null);
+    this.view.selectResident(target?.kind === 'resident' ? target.id : null);
     this.showTab('journal');
   }
 
@@ -404,8 +408,11 @@ export class Ui {
       for (const type of group.types) {
         const def = buildingDef(type);
         const card = el('button', { class: 'build-card', 'data-testid': `tool-build-${type}`, 'data-type': type });
+        card.appendChild(el('img', { class: 'thumb', alt: '', 'data-thumb': type }));
         card.appendChild(el('div', { class: 'card-title' }, def.name));
-        card.appendChild(el('div', { class: 'cost' }, `${def.cost ?? 0} timber`));
+        const cost = el('div', { class: 'cost' });
+        cost.innerHTML = `${ICONS.log}<span>${def.cost ?? 0} timber</span>`;
+        card.appendChild(cost);
         if (def.blurb) card.appendChild(el('div', { class: 'blurb' }, def.blurb));
         card.appendChild(el('div', { class: 'gives', 'data-testid': 'gives-off' }, `Gives off: ${this.givesOff(type)}`));
         card.appendChild(el('div', { class: 'likes', 'data-likes': '' }));
@@ -424,6 +431,10 @@ export class Ui {
   }
 
   private refreshMenu(): void {
+    // Thumbnails are drawn the first time the menu is open.
+    for (const img of this.menu.querySelectorAll<HTMLImageElement>('img[data-thumb]')) {
+      if (!img.src) img.src = thumbnail(img.dataset.thumb as string) || 'data:,';
+    }
     const timber = Math.floor(this.game.sim.state.stock.timber);
     const t = this.menu.querySelector('[data-menu-timber]');
     if (t) t.textContent = `${timber} timber in store`;
@@ -931,18 +942,29 @@ export class Ui {
     }
     if (!force && document.activeElement instanceof HTMLSelectElement && this.journalEl.contains(document.activeElement)) return;
     this.lastJournalRender = now;
-    const pane = this.journalEl;
-    pane.replaceChildren();
-    const roster = el('div', { class: 'roster' });
-    for (const id of this.game.sim.state.order) {
-      const b = el('button', { class: 'chip', 'data-testid': `roster-${id}` });
-      b.append(portrait(id, 22), el('span', {}, residentDef(id).name));
-      b.style.borderColor = cssColor(residentColor(id));
-      b.classList.toggle('on', this.selected?.kind === 'resident' && this.selected.id === id);
-      b.addEventListener('click', () => this.select({ kind: 'resident', id }));
-      roster.appendChild(b);
+    // The roster is built once and only updated, so a name isn't swapped out under a finger.
+    if (!this.rosterEl) {
+      this.rosterEl = el('div', { class: 'roster' });
+      this.journalBody = el('div');
+      this.journalEl.replaceChildren(this.rosterEl, this.journalBody);
     }
-    pane.appendChild(roster);
+    const order = this.game.sim.state.order;
+    if (this.rosterEl.childElementCount !== order.length) {
+      for (const id of order.slice(this.rosterEl.childElementCount)) {
+        const b = el('button', { class: 'chip', 'data-testid': `roster-${id}`, 'data-id': id });
+        b.append(portrait(id, 22), el('span', {}, residentDef(id).name));
+        b.style.borderColor = cssColor(residentColor(id));
+        b.addEventListener('click', () => this.select({ kind: 'resident', id }));
+        this.rosterEl.appendChild(b);
+      }
+    }
+    for (const b of this.rosterEl.children) {
+      const id = (b as HTMLElement).dataset.id as string;
+      b.classList.toggle('on', this.selected?.kind === 'resident' && this.selected.id === id);
+      (b as HTMLElement).hidden = !!this.game.sim.state.residents[id]?.departed;
+    }
+    const pane = this.journalBody as HTMLElement;
+    pane.replaceChildren();
     if (!this.selected) {
       pane.appendChild(el('p', { class: 'quiet' }, 'Click someone in the town, or a name above, to read their journal.'));
       return;

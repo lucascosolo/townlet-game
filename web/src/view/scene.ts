@@ -73,6 +73,14 @@ export class TownView {
   private readonly raycaster = new THREE.Raycaster();
   private readonly festoon = new THREE.Group();
   private season: Season = 'spring';
+  /** Buildings popping into place, and dust puffs (review: no feedback when things happen). */
+  private readonly popping = new Map<THREE.Group, number>();
+  private readonly dust: Array<{ mesh: THREE.Mesh; v: THREE.Vector3; born: number }> = [];
+  private readonly dustMat = new THREE.MeshLambertMaterial({ color: 0xcdb48c, transparent: true, opacity: 0.8 });
+  private firstSync = true;
+  /** A soft ring under the selected resident. */
+  private readonly ring: THREE.Mesh;
+  private ringFor: string | null = null;
   private readonly grid: THREE.GridHelper;
   private readonly composer: EffectComposer;
   private readonly bloom: UnrealBloomPass;
@@ -158,6 +166,11 @@ export class TownView {
     this.grid.visible = false;
     this.scene.add(this.grid);
 
+    this.ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.52, 32), new THREE.MeshBasicMaterial({ color: 0xfff1c9, transparent: true, opacity: 0.85, depthWrite: false }));
+    this.ring.rotation.x = -Math.PI / 2;
+    this.ring.visible = false;
+    this.ring.renderOrder = 2;
+    this.scene.add(this.ring);
     // Warm lamplight at night: a handful of real lights placed at the nearest lamps.
     for (let i = 0; i < LAMP_LIGHTS; i++) {
       const l = new THREE.PointLight(LAMP_COLOR, 0, 6, 2);
@@ -297,6 +310,61 @@ export class TownView {
 
   private syncBuildings(): void {
     const state = this.game.sim.state;
+    this.syncBuildingList(state);
+    this.firstSync = false;
+  }
+
+  private puff(x: number, z: number, size: number): void {
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08 + 0.04 * (i % 3), 0), this.dustMat);
+      m.position.set(x + Math.cos(a) * size * 0.35, 0.1, z + Math.sin(a) * size * 0.35);
+      this.scene.add(m);
+      this.dust.push({ mesh: m, v: new THREE.Vector3(Math.cos(a) * 0.9, 0.6 + (i % 2) * 0.3, Math.sin(a) * 0.9), born: performance.now() });
+    }
+  }
+
+  private animateJuice(dt: number): void {
+    const now = performance.now();
+    for (const [g, start] of this.popping) {
+      const t = Math.min(1, (now - start) / 450);
+      // Ease out with a little overshoot: 0 -> 1.08 -> 1.
+      const s = t < 0.7 ? (t / 0.7) * 1.08 : 1.08 - ((t - 0.7) / 0.3) * 0.08;
+      g.scale.setScalar(Math.max(0.01, s));
+      if (t >= 1) {
+        g.scale.setScalar(1);
+        this.popping.delete(g);
+      }
+    }
+    for (let i = this.dust.length - 1; i >= 0; i--) {
+      const d = this.dust[i] as (typeof this.dust)[number];
+      const age = (now - d.born) / 700;
+      d.mesh.position.addScaledVector(d.v, dt);
+      d.v.y -= dt * 0.8;
+      d.mesh.scale.setScalar(1 + age);
+      if (age >= 1) {
+        this.scene.remove(d.mesh);
+        d.mesh.geometry.dispose();
+        this.dust.splice(i, 1);
+      }
+    }
+    this.dustMat.opacity = this.dust.length ? 0.7 : 0.8;
+    // The selection ring follows its resident and breathes.
+    const g = this.ringFor ? this.residents.get(this.ringFor) : undefined;
+    this.ring.visible = !!g && g.visible;
+    if (g && g.visible) {
+      this.ring.position.set(g.position.x, 0.04, g.position.z);
+      const pulse = 1 + 0.08 * Math.sin(now / 190);
+      this.ring.scale.setScalar(pulse);
+    }
+  }
+
+  /** Mark a resident with a ring on the ground (null to clear). */
+  selectResident(id: string | null): void {
+    this.ringFor = id;
+  }
+
+  private syncBuildingList(state: typeof this.game.sim.state): void {
     for (const b of state.buildings) {
       const existing = this.buildings.get(b.id);
       if (b.removed) {
@@ -310,6 +378,13 @@ export class TownView {
       if (existing) continue;
       const g = buildingMesh(b.type, b.id * 7 + b.x);
       this.lampsDirty = true;
+      // Built during play (not the founding town): it pops up with a puff of dust.
+      if (!this.firstSync && b.type !== 'wild') {
+        this.popping.set(g, performance.now());
+        g.scale.setScalar(0.01);
+        const [bw, bd] = sizeOf(b);
+        this.puff(b.x + bw / 2, b.y + bd / 2, Math.max(bw, bd));
+      }
       const [w, d] = sizeOf(b);
       g.position.set(b.x + w / 2, 0, b.y + d / 2);
       g.rotation.y = -(b.rot ?? 0) * (Math.PI / 2);
@@ -371,7 +446,17 @@ export class TownView {
         if (g.position.distanceTo(t) > 6) g.position.copy(t);
         else g.position.lerp(t, k);
         const moving = g.position.distanceTo(t) > 0.02;
-        g.position.y = moving ? Math.abs(Math.sin(performance.now() / 90)) * 0.05 : 0;
+        // A little walk: a bob, legs and arms swinging opposite.
+        const phase = performance.now() / 110 + (g.id % 7);
+        g.position.y = moving ? Math.abs(Math.sin(phase)) * 0.04 : 0;
+        const swing = moving ? Math.sin(phase) * 0.6 : 0;
+        const body = g.getObjectByName('body');
+        if (body) {
+          (body.getObjectByName('legL') as THREE.Object3D).rotation.x = swing;
+          (body.getObjectByName('legR') as THREE.Object3D).rotation.x = -swing;
+          (body.getObjectByName('armL') as THREE.Object3D).rotation.x = -swing * 0.7;
+          (body.getObjectByName('armR') as THREE.Object3D).rotation.x = swing * 0.7;
+        }
         if (moving) g.rotation.y = Math.atan2(t.x - g.position.x, t.z - g.position.z);
         else {
           // Face whoever they are talking to.
@@ -547,7 +632,7 @@ export class TownView {
   residentHead(id: string): { x: number; y: number; visible: boolean } | null {
     const g = this.residents.get(id);
     if (!g || !g.visible) return null;
-    return this.toScreen(g.position.clone().add(new THREE.Vector3(0, 0.75, 0)));
+    return this.toScreen(g.position.clone().add(new THREE.Vector3(0, 1.0, 0)));
   }
 
   tileScreen(x: number, y: number): { x: number; y: number; visible: boolean } {
@@ -568,6 +653,7 @@ export class TownView {
     this.syncResidents(dt);
     this.placeCamera(dt);
     this.syncAtmosphere();
+    this.animateJuice(Math.min(dt, 0.1));
     if (this.bloom.enabled) this.composer.render();
     else this.renderer.render(this.scene, this.camera);
     // Low quality on slow hardware: no bloom, no real lamp lights (the ground pools still glow).

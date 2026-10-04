@@ -5,9 +5,11 @@ import { generateNewcomer, type Welcome } from '../src/content/newcomers.js';
 import { Narrator } from '../src/narrate/narrator.js';
 import { runScenario } from '../src/scenarios/index.js';
 import { considerFavour, openPlots, WILLING } from '../src/sim/favours.js';
+import { assess } from '../src/sim/asks.js';
 import { rel } from '../src/sim/mind/relationships.js';
 import { topOfMind } from '../src/sim/mind/thoughts.js';
 import { feelingAbout, feelingBand, moodBand } from '../src/sim/talk.js';
+import { dreamTitle, nextStep } from '../src/sim/story/aspirations.js';
 import { at, TICKS_PER_DAY } from '../src/sim/time.js';
 import { TRAITS, VALUES, type SimEvent } from '../src/sim/types.js';
 import { SEEDS } from './helpers.js';
@@ -196,6 +198,19 @@ describe('criterion 3: newcomers', () => {
     }
   });
 
+  it('a newcomer arrives hoping to settle in, not with a dream already done', () => {
+    const sim = runScenario('quiet', 1, 'none');
+    sim.runUntil(awake(2));
+    sim.state.stock.timber = 50;
+    sim.build('cottage', 12, 20);
+    sim.runUntil(sim.state.tick + 3 * 60);
+    const r = sim.resident(sim.state.order[6] as string);
+    expect(r.aspiration.done).toBe(false);
+    expect(r.aspiration.kind).toBe('settle');
+    expect(dreamTitle(sim.state, r)).toBe('Settle into the valley');
+    expect(nextStep(sim.state, r)).toBe('Get to know the neighbours');
+  });
+
   it('a newcomer is a resident like any other: a voice, thoughts, and in time a dream', { timeout: 180_000 }, () => {
     const sim = runScenario('quiet', 1, 'none');
     const n = new Narrator(sim);
@@ -205,6 +220,9 @@ describe('criterion 3: newcomers', () => {
     sim.runDays(10);
     const id = sim.state.order[6] as string;
     expect(id).toBeTruthy();
+    // They arrive with a hope of their own (settling in), not one already done.
+    const first = sim.talk(id, 'hope');
+    if (first) expect(first.hope?.done).toBe(false);
     expect(n.entries.some((e) => e.who.includes(id) && /"/.test(e.text))).toBe(true);
     expect(sim.resident(id).aspiration.kind).toBeTruthy();
   });
@@ -275,5 +293,24 @@ describe('criterion 4 (M3b criterion 4): talking to a resident', () => {
       return JSON.stringify(s.state);
     };
     expect(run()).toBe(run());
+  });
+});
+
+describe('playtest fix: green around a home', () => {
+  it('a flower bed right beside a home satisfies a wish for more green, wherever along the home it is', () => {
+    for (const [dx, dy] of [
+      [2, 0],
+      [-1, 1],
+      [1, 2],
+      [0, -1],
+    ] as Array<[number, number]>) {
+      const sim = runScenario('quiet', 1, 'none');
+      sim.state.stock.timber = 50;
+      const ada = sim.resident('ada');
+      const home = sim.state.buildings.find((b) => b.id === ada.homeId) as { x: number; y: number };
+      expect(assess(sim.state, ada, 'more_green').met).toBe(false);
+      sim.build('flowerbed', home.x + dx, home.y + dy);
+      expect(assess(sim.state, ada, 'more_green').met, `flower bed at ${dx},${dy} from the cottage`).toBe(true);
+    }
   });
 });

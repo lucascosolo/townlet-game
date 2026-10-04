@@ -7,7 +7,7 @@ import { residentDef } from '../../../src/content/residents.js';
 import { DILEMMA_NAMES, PROPOSALS } from '../../../src/content/story.js';
 import { residentReport, type ResidentReport } from '../../../src/inspect/inspector.js';
 import type { NarratorEntry } from '../../../src/narrate/narrator.js';
-import { CLEAR_MINUTES, FAVOUR_MINUTES, openPlots, recentAsks } from '../../../src/sim/favours.js';
+import { CLEAR_MINUTES, FAVOUR_MINUTES, considerFavour, openPlots, recentAsks } from '../../../src/sim/favours.js';
 import { opinion } from '../../../src/sim/mind/memory.js';
 import { ambientPrefs, prefScore } from '../../../src/sim/needs.js';
 import { wishProgress } from '../../../src/sim/story/director.js';
@@ -16,6 +16,8 @@ import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
 import { residentColor } from '../view/meshes.js';
+import { greenAroundHome } from '../../../src/sim/world.js';
+import { GREEN_ENOUGH } from '../../../src/sim/asks.js';
 import type { TownView } from '../view/scene.js';
 
 export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
@@ -70,6 +72,20 @@ const TRAIT_ENDS: Record<string, [string, string]> = {
   tidy: ['messy', 'tidy'],
 };
 
+/** A refusal reason, briefly, for lists. */
+const REFUSAL_WORDS: Record<string, string> = {
+  asleep: 'asleep',
+  busy: 'busy with another favour',
+  unwell: 'unwell',
+  tired: 'tired',
+  low: 'feeling low',
+  asked_often: 'asked a lot lately',
+  distrust: "doesn't trust you enough",
+  not_speaking: 'not speaking to them',
+  nowhere: 'nowhere to do it',
+  gone: 'gone',
+};
+
 type LogFilter = 'highlights' | 'story' | 'everything';
 const LOG_FILTERS: Array<[LogFilter, string, string]> = [
   ['highlights', 'Highlights', 'Only what really matters: asks, decisions, comings and goings, quarrels, dreams'],
@@ -117,7 +133,7 @@ const ASK_HINTS: Record<Request['kind'], string> = {
   workplace: 'Build what they need from the Build menu.',
   more_food: 'Gardens and the fishing jetty fill the larder; gardens grow little in winter.',
   somewhere_to_sit: 'A bench within a few steps of their home.',
-  more_green: 'Flowers or a hedge near their home.',
+  more_green: 'A flower bed or hedge right beside their home counts in full; two tiles away, half.',
   place_to_gather: 'Another place to sit together: a bench, or a teahouse.',
 };
 
@@ -621,7 +637,7 @@ export class Ui {
     const requests = state.requests.filter((q) => q.status === 'open');
     const wishes = state.story.wishes.filter((w) => w.status === 'open');
     const progress = wishes.map((w) => wishProgress(state, w).met);
-    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick)]);
+    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick), state.buildings.length]);
     if (key === this.lastBoardKey) return;
     this.lastBoardKey = key;
     const pane = this.boardEl;
@@ -634,6 +650,7 @@ export class Ui {
       const card = el('div', { class: 'card wish', 'data-testid': `wish-${w.id}` });
       card.appendChild(el('div', { class: 'card-title' }, w.label));
       card.appendChild(el('p', { class: 'quiet' }, `${p.met} of ${p.of} who wished for it have it: ${w.supporters.map((id) => residentDef(id).name).join(', ')}.`));
+      if (w.kind === 'more_green') card.appendChild(el('p', { class: 'quiet', 'data-testid': 'green-progress' }, w.supporters.map((id) => this.greenLine(id)).join(' · ')));
       const track = el('div', { class: 'track' });
       const fill = el('div', { class: 'fill' });
       fill.style.width = pct(p.of ? p.met / p.of : 0);
@@ -661,6 +678,7 @@ export class Ui {
       const who = residentDef(q.by);
       card.appendChild(el('div', { class: 'card-title' }, `${who.name} ${ASK_TITLES[q.kind]}${q.wants ? `: a ${buildingDef(q.wants).name.toLowerCase()}` : ''}`));
       if (q.kind === 'quieter_home') card.appendChild(el('p', {}, `${cap(this.game.narrator.statement(q.by, { subject: q.subject, aspect: 'noisy_at_night' }))}.`));
+      if (q.kind === 'more_green') card.appendChild(el('p', { 'data-testid': 'green-progress' }, this.greenLine(q.by)));
       card.appendChild(el('p', { class: 'quiet' }, ASK_HINTS[q.kind]));
       const show = el('button', {}, 'Show me');
       show.addEventListener('click', () => {
@@ -681,6 +699,15 @@ export class Ui {
       list.appendChild(li);
     }
     pane.appendChild(list);
+  }
+
+  /** How green it is around someone's home, against what satisfies them. */
+  private greenLine(id: string): string {
+    const state = this.game.sim.state;
+    const home = state.buildings.find((b) => b.id === this.game.sim.resident(id).homeId);
+    if (!home) return '';
+    const g = greenAroundHome(state, home);
+    return `${residentDef(id).name}: ${g >= GREEN_ENOUGH ? 'green enough ✓' : `${Math.round((g / GREEN_ENOUGH) * 100)}% green enough`}`;
   }
 
   // ---------------------------------------------------------------- how the town sees you
@@ -909,6 +936,18 @@ export class Ui {
     card.appendChild(
       el('p', { class: 'quiet' }, b.removed ? 'Gone now.' : `${buildingDef(b.type).kind} · ${b.placedBy === 'founding' ? 'here before you' : `built on day ${dayOf(b.placedTick)}`} · gives off ${this.givesOff(b.type)}`),
     );
+    if (buildingDef(b.type).kind === 'home') {
+      const living = state.order.filter((rid) => !state.residents[rid]?.departed && state.residents[rid]?.homeId === b.id);
+      const row = el('div', { class: 'talk-row', 'data-testid': 'home-of' });
+      row.appendChild(el('span', { class: 'quiet' }, living.length ? 'Home of:' : 'Nobody lives here yet. Someone new will move in soon.'));
+      for (const rid of living) {
+        const go = el('button', { 'data-testid': `open-resident-${rid}` }, residentDef(rid).name);
+        go.style.borderColor = cssColor(residentColor(rid));
+        go.addEventListener('click', () => this.select({ kind: 'resident', id: rid }));
+        row.appendChild(go);
+      }
+      card.appendChild(row);
+    }
     card.appendChild(el('h3', {}, 'How people feel about it'));
     const list = el('ul');
     for (const rid of state.order) {
@@ -934,8 +973,19 @@ export class Ui {
     }
     card.appendChild(el('p', {}, `Open for clearing: about ${Math.ceil((CLEAR_MINUTES - done) / 360)} more days of someone's work. Clearing brings in timber, and the land is yours to build on.`));
     const row = el('div', { class: 'talk-row' });
+    // Likeliest to say yes first, then whoever you've asked least lately.
     const who = el('select', { 'data-testid': 'clear-who' });
-    for (const rid of state.order) if (!state.residents[rid]?.departed) who.appendChild(el('option', { value: rid }, residentDef(rid).name));
+    const people = state.order
+      .filter((rid) => !state.residents[rid]?.departed)
+      .map((rid) => {
+        const r = this.game.sim.resident(rid);
+        return { rid, v: considerFavour(state, r, 'clear', undefined, id), asked: recentAsks(r, state.tick) };
+      })
+      .sort((a, b) => Number(b.v.yes) - Number(a.v.yes) || a.asked - b.asked || b.v.score - a.v.score);
+    for (const p of people) {
+      const odds = p.v.yes ? 'likely yes' : `unlikely: ${REFUSAL_WORDS[p.v.reason ?? 'distrust']}`;
+      who.appendChild(el('option', { value: p.rid }, `${residentDef(p.rid).name} · ${odds} · asked ${p.asked}× this week`));
+    }
     const ask = el('button', { 'data-testid': 'clear-ask' }, 'Ask to help clear it');
     ask.addEventListener('click', () => {
       this.game.command({ kind: 'favour', who: who.value, favour: 'clear', plot: id });
@@ -1014,6 +1064,18 @@ export class Ui {
       return;
     }
     j.appendChild(el('p', { class: 'doing' }, `Now: ${rep.doing}`));
+    const homeB = this.game.sim.state.buildings.find((b) => b.id === this.game.sim.resident(rep.id).homeId);
+    if (homeB) {
+      const homeRow = el('p', { class: 'quiet', 'data-testid': 'home' }, `Lives in: ${this.game.narrator.subjectName(`b:${homeB.id}`)} `);
+      const show = el('button', { class: 'link', 'data-testid': 'open-home' }, 'Go to home');
+      show.addEventListener('click', () => {
+        const [w, h] = buildingDef(homeB.type).size;
+        this.view.focusOn(homeB.x + w / 2, homeB.y + h / 2);
+        this.select({ kind: 'building', id: homeB.id });
+      });
+      homeRow.appendChild(show);
+      j.appendChild(homeRow);
+    }
     if (rep.leavingSince !== null) j.appendChild(el('p', { class: 'warning' }, `Thinking of leaving (since day ${rep.leavingSince}).`));
     j.appendChild(el('h3', {}, 'On their mind'));
     const mind = el('ul', { class: 'mind', 'data-testid': 'on-mind' });

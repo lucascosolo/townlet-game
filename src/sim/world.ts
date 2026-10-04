@@ -144,3 +144,29 @@ export function canPlace(state: SimState, type: string, x: number, y: number, ro
 export function buildingName(b: BuildingState): string {
   return buildingDef(b.type).name;
 }
+
+/** Tiles between two buildings' footprints (Chebyshev): 1 means side by side. */
+export function gapBetween(a: BuildingState, b: BuildingState): number {
+  const [aw, ah] = sizeOf(a);
+  const [bw, bh] = sizeOf(b);
+  const dx = Math.max(a.x - (b.x + bw - 1), b.x - (a.x + aw - 1), 0);
+  const dy = Math.max(a.y - (b.y + bh - 1), b.y - (a.y + ah - 1), 0);
+  return Math.max(dx, dy);
+}
+
+/**
+ * How green it is around a home, as residents judge it (M3c playtest fix): anything green right
+ * beside the home counts in full, two tiles off counts half. Measured around the whole home, not
+ * at one corner of it.
+ */
+export function greenAroundHome(state: SimState, home: BuildingState): number {
+  let g = 0;
+  for (const b of liveBuildings(state)) {
+    if (b.id === home.id) continue;
+    const green = buildingDef(b.type).emits.green ?? 0;
+    if (green <= 0) continue;
+    const d = gapBetween(home, b);
+    g += d <= 1 ? green : d === 2 ? green / 2 : 0;
+  }
+  return Math.min(1, g);
+}

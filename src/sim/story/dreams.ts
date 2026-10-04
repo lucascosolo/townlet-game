@@ -84,6 +84,33 @@ export interface DreamTemplate {
   build(state: SimState, r: ResidentState, subject: SubjectId): AspirationDef;
 }
 
+/** A newcomer's first dream (M3c): find their feet. Given on arrival, never chosen later. */
+const SETTLE: DreamTemplate = {
+  id: 'settle',
+  fits: () => false,
+  build: (_state, r) => ({
+    who: r.id,
+    title: 'Settle into the valley',
+    stages: [
+      {
+        id: 'meet',
+        next: 'Get to know the neighbours',
+        check: (_h, rr) => Object.entries(rr.rel).filter(([id, x]) => id !== STEWARD && x.familiarity >= 0.35).length >= 3,
+      },
+      {
+        id: 'friend',
+        next: 'Make a friend',
+        check: (_h, rr) => Object.entries(rr.rel).some(([id, x]) => id !== STEWARD && x.tags.includes('friend')),
+      },
+      {
+        id: 'place',
+        next: 'Find a favourite spot in the valley',
+        check: (h, rr) => Object.values(rr.beliefs).some((b) => b.subject.startsWith('b:') && b.valence > 0) || days(h, rr) >= 10,
+      },
+    ],
+  }),
+};
+
 export const DREAM_TEMPLATES: DreamTemplate[] = [
   {
     // A friend gone: keep their memory.
@@ -291,7 +318,7 @@ export const DREAM_TEMPLATES: DreamTemplate[] = [
   },
 ];
 
-const TEMPLATE_BY_ID = new Map(DREAM_TEMPLATES.map((t) => [t.id, t]));
+const TEMPLATE_BY_ID = new Map([...DREAM_TEMPLATES, SETTLE].map((t) => [t.id, t]));
 
 export function templateDream(state: SimState, r: ResidentState): AspirationDef | undefined {
   const kind = r.aspiration.kind;

@@ -87,4 +87,5 @@ export const DREAM_DONE_LINES: Record<string, string> = {
   place: '{name} and {partner} spend a long evening at {x}.',
   relive: 'There is a new bench, and {name} tells everyone about {x} again.',
   remember_gone: 'Friends gather with {name} to remember {x}.',
+  settle: '{name} feels at home in the valley now.',
 };

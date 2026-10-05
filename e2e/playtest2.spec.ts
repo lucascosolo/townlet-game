@@ -76,8 +76,10 @@ test('criterion 6: a home is dark once everyone in it is asleep, and lit while s
   await open(page, at(2, 2));
   await expect.poll(async () => (await lit()).every((h) => h.lit === h.awake)).toBe(true);
   expect((await lit()).some((h) => !h.lit)).toBe(true);
-  // Evening: someone is home and awake somewhere, and that home is lit.
-  await page.evaluate((t) => (window as unknown as { __townlet: Handle }).__townlet.runTicks(t - (window as unknown as { __townlet: Handle }).__townlet.game.sim.tick), at(2, 20));
+  // Evening: wait for someone to be home and awake, and that home is lit.
+  await page.evaluate((t) => (window as unknown as { __townlet: Handle }).__townlet.runTicks(t - (window as unknown as { __townlet: Handle }).__townlet.game.sim.tick), at(2, 17));
+  for (let i = 0; i < 40 && !(await lit()).some((h) => h.awake); i++) await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.runTicks(10));
+  expect((await lit()).some((h) => h.awake)).toBe(true);
   await expect.poll(async () => (await lit()).every((h) => h.lit === h.awake)).toBe(true);
   expect((await lit()).some((h) => h.lit)).toBe(true);
 });

@@ -355,9 +355,12 @@ export class Narrator {
         this.dawn(e.day, e.t);
         break;
       case 'built':
+        // Laying a path is many little builds; the town log doesn't list each tile.
+        if (e.btype === 'path') break;
         this.live(e.t, `${this.you ? 'You build' : 'The steward builds'} ${aOrAn(singularName(e.btype))}${this.where(e.building)}.`);
         break;
       case 'removed':
+        if (e.btype === 'path') break;
         this.live(e.t, `${this.you ? 'You have' : 'The steward has'} ${this.subjectName(`b:${e.building}`)} taken down.`);
         break;
       case 'took_job':

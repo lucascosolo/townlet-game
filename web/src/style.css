@@ -531,3 +531,7 @@ body.phone .hud .renown b, body.phone .hud .renown .bar { display: none; }
 body.phone .hud .renown .tier { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.phone .hud button.icon { min-width: 40px; width: 40px; padding: 0; }
 .stock .of { font-size: 0.75em; font-weight: 600; color: var(--ink-soft); }
+/* Laying paths: the bar keeps only Done and a hint, on desktop as well as phones. */
+.place-bar.laying [data-testid='place-ok'], .place-bar.laying [data-testid='place-rotate'] { display: none; }
+body:not(.phone) .place-bar.laying .quiet { display: inline; }
+body.phone .place-bar.laying .quiet { display: inline; font-size: 13px; }

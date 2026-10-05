@@ -88,7 +88,10 @@ function startTouchPlacement(): void {
 }
 
 ui.onToolChange = (tool) => {
-  if (tool.kind === 'build' && touchUI) setTimeout(startTouchPlacement, 0);
+  if (tool.kind === 'build' && tool.type === 'path') {
+    ghostAt = null;
+    ui.showPathBar(true);
+  } else if (tool.kind === 'build' && touchUI) setTimeout(startTouchPlacement, 0);
   else {
     ghostAt = null;
     ui.showPlaceBar(false);
@@ -122,6 +125,22 @@ function onGhost(tile: [number, number] | null): boolean {
   return tile[0] >= ghostAt[0] - 1 && tile[0] <= ghostAt[0] + w && tile[1] >= ghostAt[1] - 1 && tile[1] <= ghostAt[1] + d;
 }
 
+// Laying paths (2026-10-05): with the Path tool, a press and drag lays a tile on every square the
+// pointer crosses, on a mouse or a finger; the view doesn't move while you lay.
+let painting = false;
+let lastPainted = '';
+const isPathTool = () => ui.tool.kind === 'build' && ui.tool.type === 'path';
+function paintAt(cx: number, cy: number): void {
+  const tile = view.tileAt(cx, cy);
+  if (!tile) return;
+  const k = `${tile[0]},${tile[1]}`;
+  if (k === lastPainted) return;
+  lastPainted = k;
+  if (canPlace(game.sim.state, 'path', tile[0], tile[1]) !== null) return;
+  game.command({ kind: 'build', type: 'path', x: tile[0], y: tile[1] });
+  game.runTicks(0);
+}
+
 canvas.addEventListener('pointerdown', (e) => {
   if (e.pointerType !== 'mouse') {
     if (!touchUI) {
@@ -129,11 +148,16 @@ canvas.addEventListener('pointerdown', (e) => {
       if (ui.tool.kind === 'build') startTouchPlacement();
     }
   } else touchUI = false;
-  if (touchUI && ui.tool.kind === 'build' && pointers.size === 0 && onGhost(view.tileAt(e.clientX, e.clientY))) draggingGhost = true;
+  if (isPathTool() && pointers.size === 0 && e.button === 0) {
+    painting = true;
+    lastPainted = '';
+    paintAt(e.clientX, e.clientY);
+  } else if (touchUI && ui.tool.kind === 'build' && pointers.size === 0 && onGhost(view.tileAt(e.clientX, e.clientY))) draggingGhost = true;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   canvas.setPointerCapture(e.pointerId);
   if (pointers.size === 2) {
     // A second finger: this is a pinch or a twist, not a tap or a drag.
+    painting = false;
     pinch = twoFingers();
     if (down) down.moved = true;
     return;
@@ -144,6 +168,11 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointermove', (e) => {
   const prev = pointers.get(e.pointerId);
   if (prev) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (painting && pointers.size <= 1) {
+    paintAt(e.clientX, e.clientY);
+    if (down) down.moved = true;
+    return;
+  }
   if (draggingGhost && ui.tool.kind === 'build') {
     const tile = view.tileAt(e.clientX, e.clientY);
     if (tile) {
@@ -188,6 +217,10 @@ canvas.addEventListener('pointerup', (e) => {
   release(e);
   if (pointers.size === 0) down = null;
   draggingGhost = false;
+  if (painting) {
+    painting = false;
+    return;
+  }
   // On touch, a tap while building moves the outline there; it never builds by itself.
   if (wasClick && touchUI && ui.tool.kind === 'build') {
     const tile = view.tileAt(e.clientX, e.clientY);
@@ -203,6 +236,7 @@ canvas.addEventListener('pointerup', (e) => {
   }
 });
 canvas.addEventListener('pointercancel', (e) => {
+  painting = false;
   release(e);
   if (pointers.size === 0) down = null;
 });
@@ -228,7 +262,7 @@ function hover(cx: number, cy: number): void {
     const at = tile ? footprintAt(tool.type, tile[0], tile[1]) : null;
     view.setGhost(tool.type, at, at !== null && canPlace(game.sim.state, tool.type, at[0], at[1], ui.rotation) === null && game.sim.canAfford(tool.type), ui.rotation);
   } else if (tool.kind === 'remove') {
-    const p = view.pick(cx, cy);
+    const p = view.pick(cx, cy, { paths: true });
     view.highlightBuilding(p?.kind === 'building' ? p.id : null);
   }
 }
@@ -252,7 +286,7 @@ function click(cx: number, cy: number): void {
     ui.status(`${buildingDef(tool.type).name} placed. Click again for another · R rotates · Esc stops.`);
     return;
   }
-  const p = view.pick(cx, cy, { people: tool.kind !== 'remove' });
+  const p = view.pick(cx, cy, { people: tool.kind !== 'remove', paths: tool.kind === 'remove' });
   if (tool.kind === 'remove') {
     if (p?.kind !== 'building') return;
     const b = game.sim.state.buildings.find((x) => x.id === p.id);

@@ -862,6 +862,28 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Sim stepping at 10× with 12 residents stays under 2 ms a frame.
    - The one-year soak with newcomers shows no degenerate state.
 
+
+**Paths status (2026-10-05): four of five met; criterion 3 met in part.** The tests are in `test/paths.test.ts` and `e2e/paths.spec.ts`.
+
+1. **Laying paths: met.**
+   - Path is the first card in the build tray, and it is free.
+   - Dragging lays a line, with a mouse and with a finger. Remove takes a tile up.
+   - Paths are not narrated tile by tile, and they replay identically.
+   - A building can go over a path, taking it up.
+2. **Nobody walks through buildings: met.** Over 7 days on seeds 1–5 with the considerate steward, no resident crosses a building they are not leaving or going to. Calling round at a friend's door counts as going to it.
+   - One case was found and fixed on the way. A building that goes up across someone's planned walk now makes them re-plan from where they stand; before, they walked on through it.
+3. **Paths help: met in part.**
+   - **Met:** a path laid along each resident's commute cuts the walk by at least 25%, on every seed.
+   - **Missed:** as declared, 52% of steps near a path are on it, against 60%. Most of the rest are steps inside the buildings at either end of a walk, which can't be on a path; leaving those out, it is 68%.
+   - Open ground was set to cost 3 times a path tile, not 2 as declared, so residents keep to paths more. At 4 times it reached 56%, with longer detours that read worse.
+   - The test is kept as a visible expected failure.
+4. **What you see: met.** Laid paths are drawn as flagstones. Worn tracks show at about half strength and follow the ways people really walk: round buildings, and off the paths you laid.
+5. **No regressions: met.**
+   - Unit tests: 77 pass, plus 2 expected failures (the M3a do-nothing bound and criterion 3 above).
+   - Browser tests: 25 pass.
+   - Stepping at 10× costs 1.08 ms a frame (under 2 ms; route-finding roughly doubled it).
+   - The one-year soak with newcomers (bakery, 10 seeds × 112 days) finds no degenerate state: 1.5 rival pairs a run, an argument in every run, no departures, and the busiest place takes 49% of socialising.
+
 ---
 
 ## 10. Risks

@@ -65,7 +65,7 @@ import {
   type SimEvent,
   type SimState,
 } from './types.js';
-import { ambientAt, canPlace, distanceTo, emptyQualities, getBuilding, liveBuildings, mainSource, placeTile, route, sizeOf } from './world.js';
+import { ambientAt, canPlace, distanceTo, emptyQualities, footprint, getBuilding, liveBuildings, mainSource, placeTile, route, sizeOf } from './world.js';
 
 export type Command =
   | { at: number; kind: 'build'; type: string; x: number; y: number; rot?: number }
@@ -643,8 +643,25 @@ export class Simulation implements AspirationHost {
     if (!this.canAfford(type)) throw new Error(`cannot afford ${type}: needs ${buildingDef(type).cost} timber, have ${Math.floor(state.stock.timber)}`);
     state.stock.timber -= buildingDef(type).cost ?? 0;
     const b: BuildingState = { id: state.nextBuildingId++, type, x, y, placedTick: state.tick, placedBy: 'steward', removed: false, ...(rot ? { rot: rot % 4 } : {}) };
+    // Paths under a new building are taken up.
+    if (type !== 'path') {
+      const [w, h] = footprint(type, rot);
+      for (const p of liveBuildings(state)) if (p.type === 'path' && p.x >= x && p.x < x + w && p.y >= y && p.y < y + h) p.removed = true;
+    }
     state.buildings.push(b);
     this.emit({ t: state.tick, type: 'built', building: b.id, btype: type, by: 'steward' });
+    // Anyone mid-walk whose way now runs into it finds a way round from where they are.
+    if (type !== 'path') {
+      const [w, h] = footprint(type, rot);
+      for (const r of this.activeResidents()) {
+        if (r.path.length === 0 || !r.pending) continue;
+        const dest = r.path[r.path.length - 1] as [number, number];
+        const crosses = r.path.slice(0, -1).some(([px, py]) => px >= x && px < x + w && py >= y && py < y + h);
+        if (crosses) r.path = route([r.x, r.y], dest, state);
+      }
+    }
+    // A path tile is groundwork, not news: nobody stops to remark on each one.
+    if (type === 'path') return b;
     // Nobody reacts yet: each resident notices when they see it, wake near it, or hear of it.
     for (const r of this.activeResidents()) r.unseen.push({ building: b.id, kind: 'built', tick: state.tick });
     this.assignJobs();
@@ -661,6 +678,7 @@ export class Simulation implements AspirationHost {
     b.removed = true;
     this.state.stock.timber = Math.min(STOCK_CAP.timber, this.state.stock.timber + Math.floor((buildingDef(b.type).cost ?? 0) / 2));
     this.emit({ t: this.state.tick, type: 'removed', building: b.id, btype: b.type, by: 'steward' });
+    if (b.type === 'path') return b;
     for (const r of this.activeResidents()) {
       const there = r.at === b.id;
       if (there || r.pending?.placeId === b.id) {
@@ -947,7 +965,7 @@ export class Simulation implements AspirationHost {
     r.activity = null;
     r.visitAppraised = false;
     r.pending = next;
-    r.path = route([r.x, r.y], placeTile(getBuilding(state, next.placeId)));
+    r.path = route([r.x, r.y], placeTile(getBuilding(state, next.placeId)), state);
     if (next.id === 'socialize' || next.id === 'stroll') this.maybeInvite(r, next);
     if (r.path.length === 0) this.arrive(ctx, r);
   }
@@ -989,8 +1007,8 @@ export class Simulation implements AspirationHost {
     const lonely = Math.max(0, friend.setpoints.company - friend.needs.company);
     if (!chance(r, clamp(0.3 + 0.5 * fx.affinity + 0.6 * lonely))) return;
     const target = placeTile(getBuilding(state, next.placeId));
-    const toFriend = route([r.x, r.y], [friend.x, friend.y]);
-    const together = route([friend.x, friend.y], target);
+    const toFriend = route([r.x, r.y], [friend.x, friend.y], state);
+    const together = route([friend.x, friend.y], target, state);
     r.path = [...toFriend, ...together];
     friend.at = null;
     friend.activity = null;

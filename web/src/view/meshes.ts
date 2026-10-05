@@ -317,10 +317,47 @@ function woods(w: number, d: number, variant: number): THREE.Group {
   return g;
 }
 
+/** Flagstones for laid paths: one shared texture, so a long path is cheap to draw. */
+let pathMat: THREE.MeshLambertMaterial | null = null;
+function pathMaterial(): THREE.MeshLambertMaterial {
+  if (pathMat) return pathMat;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d') as CanvasRenderingContext2D;
+  g.fillStyle = '#8f8471';
+  g.fillRect(0, 0, 64, 64);
+  const stones: Array<[number, number, number, number]> = [
+    [2, 2, 28, 18],
+    [33, 2, 29, 26],
+    [2, 23, 20, 22],
+    [25, 31, 37, 14],
+    [2, 48, 32, 14],
+    [37, 48, 25, 14],
+  ];
+  stones.forEach(([x, y, w, h], i) => {
+    g.fillStyle = ['#cfc3a8', '#c4b89c', '#d6cbb2', '#c9bda1', '#d0c4aa', '#bfb397'][i] as string;
+    g.beginPath();
+    g.roundRect(x, y, w, h, 5);
+    g.fill();
+  });
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  pathMat = new THREE.MeshLambertMaterial({ map: tex });
+  return pathMat;
+}
+
 export function buildingMesh(type: string, variant = 0): THREE.Group {
   const [w, d] = buildingDef(type).size;
   let g: THREE.Group;
   switch (type) {
+    case 'path': {
+      g = new THREE.Group();
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, d), pathMaterial());
+      slab.position.y = 0.016;
+      slab.receiveShadow = true;
+      g.add(slab);
+      break;
+    }
     case 'cottage':
       g = house(w, d, ROOFS[variant % ROOFS.length] as number, { chimney: true });
       g.add(homeProps(w, d, variant));

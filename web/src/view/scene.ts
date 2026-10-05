@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { buildingDef } from '../../../src/content/buildings.js';
 import { minuteOf, seasonOf, type Season } from '../../../src/sim/time.js';
 import type { BuildingState, ResidentState } from '../../../src/sim/types.js';
-import { footprint, liveBuildings, placeTile, route, sizeOf } from '../../../src/sim/world.js';
+import { footprint, isPath, liveBuildings, placeTile, route, sizeOf } from '../../../src/sim/world.js';
 import type { Game } from '../game.js';
 import { buildingMesh, glow, mat, residentMesh, seasonalLeaf } from './meshes.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -348,7 +348,9 @@ export class TownView {
     this.pathsKey = key;
     const wear = new Map<string, number>();
     const walk = (a: [number, number], b: [number, number], w: number) => {
-      for (const [x, y] of route(a, b)) wear.set(`${x},${y}`, (wear.get(`${x},${y}`) ?? 0) + w);
+      // The ways people really walk now (round buildings, along laid paths); laid paths are drawn
+      // as stone, so only the off-path stretches wear in.
+      for (const [x, y] of route(a, b, state)) if (!isPath(state, x, y)) wear.set(`${x},${y}`, (wear.get(`${x},${y}`) ?? 0) + w);
     };
     const doorOf = (id: number | null) => {
       const b = id !== null ? live.find((x) => x.id === id) : undefined;
@@ -369,7 +371,8 @@ export class TownView {
     for (const [k, w] of wear) {
       const [x, y] = k.split(',').map(Number) as [number, number];
       // Under buildings no path shows (the building covers it anyway); worn more, darker.
-      const a = Math.min(0.85, 0.25 + w * 0.06);
+      // At about half strength since paths can be laid (owner's choice): a hint, not a road.
+      const a = Math.min(0.45, 0.12 + w * 0.03);
       const g = ctx.createRadialGradient(x * 4 + 2, y * 4 + 2, 0, x * 4 + 2, y * 4 + 2, 3.2);
       g.addColorStop(0, `rgba(255,255,255,${a})`);
       g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -444,7 +447,7 @@ export class TownView {
       const g = buildingMesh(b.type, b.id * 7 + b.x);
       this.lampsDirty = true;
       // Built during play (not the founding town): it pops up with a puff of dust.
-      if (!this.firstSync && b.type !== 'wild') {
+      if (!this.firstSync && b.type !== 'wild' && b.type !== 'path') {
         this.popping.set(g, performance.now());
         g.scale.setScalar(0.01);
         const [bw, bd] = sizeOf(b);
@@ -665,7 +668,7 @@ export class TownView {
   }
 
   /** What is under the pointer. With people: false, residents don't get in the way (removing). */
-  pick(clientX: number, clientY: number, opts: { people?: boolean } = {}): Pick | null {
+  pick(clientX: number, clientY: number, opts: { people?: boolean; paths?: boolean } = {}): Pick | null {
     this.raycaster.setFromCamera(this.ndc(clientX, clientY), this.camera);
     const people = opts.people === false ? [] : [...this.residents.values()].filter((g) => g.visible);
     const hitPerson = this.raycaster.intersectObjects(people, true)[0];
@@ -674,7 +677,10 @@ export class TownView {
       while (o && o.userData.residentId === undefined) o = o.parent;
       if (o) return { kind: 'resident', id: o.userData.residentId as string };
     }
-    const hitBuilding = this.raycaster.intersectObjects([...this.buildings.values()], true)[0];
+    // Path tiles are only picked when asked for (to take them up); clicking a path otherwise looks past it.
+    const state = this.game.sim.state;
+    const targets = [...this.buildings.values()].filter((g) => opts.paths || state.buildings.find((b) => b.id === g.userData.buildingId)?.type !== 'path');
+    const hitBuilding = this.raycaster.intersectObjects(targets, true)[0];
     if (hitBuilding) {
       let o: THREE.Object3D | null = hitBuilding.object;
       while (o && o.userData.buildingId === undefined) o = o.parent;

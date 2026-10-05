@@ -26,7 +26,7 @@ import { GREEN_ENOUGH } from '../../../src/sim/asks.js';
 import type { TownView } from '../view/scene.js';
 
 export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
-  { category: 'Green and decor', types: ['hedge', 'flowerbed', 'bench'] },
+  { category: 'Paths and green', types: ['path', 'hedge', 'flowerbed', 'bench'] },
   { category: 'Gathering', types: ['teahouse', 'commons', 'well', 'fountain'] },
   { category: 'Work and food', types: ['garden', 'jetty', 'woodlot', 'bakery', 'workshop', 'granary', 'beehives', 'coop'] },
   { category: 'Homes', types: ['cottage'] },
@@ -427,6 +427,16 @@ export class Ui {
   showPlaceBar(on: boolean, canPlace = true): void {
     this.placeBar.hidden = !on;
     this.placeButtons.ok.disabled = !canPlace;
+    this.placeBar.classList.remove('laying');
+    this.placeButtons.cancel.textContent = '✕ Cancel';
+  }
+
+  /** Laying paths: no outline to place, just a Done button and how it works. */
+  showPathBar(on: boolean): void {
+    this.placeBar.hidden = !on;
+    this.placeBar.classList.toggle('laying', on);
+    this.placeButtons.cancel.textContent = '✓ Done';
+    (this.placeBar.querySelector('.quiet') as HTMLElement).textContent = on ? 'Drag across the ground to lay a path' : 'Drag the outline to move it';
   }
 
   setTool(tool: Tool): void {
@@ -437,7 +447,9 @@ export class Ui {
     this.view.setGhost(tool.kind === 'build' ? tool.type : null, null, false, this.rotation);
     this.view.highlightBuilding(null);
     this.status(
-      tool.kind === 'build'
+      tool.kind === 'build' && tool.type === 'path'
+        ? 'Drag across the ground to lay a path (free). Remove takes tiles up · Esc stops.'
+        : tool.kind === 'build'
         ? `Placing a ${buildingDef(tool.type).name.toLowerCase()} (${buildingDef(tool.type).cost ?? 0} timber). R rotates · Esc stops.`
         : tool.kind === 'remove'
           ? 'Click a building to remove it (half its timber back). Homes stay. Esc stops.'
@@ -1424,7 +1436,7 @@ export class Ui {
       const cool = others.filter((o) => (r.rel[o]?.affinity ?? 0) < 0.1);
       return (cool.length ? cool : others).map((o) => person(o));
     }
-    const places = state.buildings.filter((b) => !b.removed && b.type !== 'wild' && buildingDef(b.type).kind !== 'home');
+    const places = state.buildings.filter((b) => !b.removed && b.type !== 'wild' && b.type !== 'path' && buildingDef(b.type).kind !== 'home');
     return [
       ...others.map((o) => person(o, `r:${o}`)),
       ...places.map((b) => ({ value: `b:${b.id}`, label: this.game.narrator.subjectName(`b:${b.id}`) })),
@@ -1818,9 +1830,13 @@ export class Ui {
     sack.hidden = !hasGranary(state);
     if (!sack.hidden) {
       const put = Math.floor(state.granary ?? 0);
-      const text = state.stores?.asked && !state.stores.outcome ? `${put}/${state.stores.target}` : String(put);
+      // The target is shown small, and hidden on phones where the top bar is tight (it is on the Goals tab).
+      const target = state.stores?.asked && !state.stores.outcome ? `/${state.stores.target}` : '';
       const b = sack.querySelector('b') as HTMLElement;
-      if (b.textContent !== text) b.textContent = text;
+      if (b.dataset.text !== `${put}${target}`) {
+        b.dataset.text = `${put}${target}`;
+        b.replaceChildren(document.createTextNode(String(put)), ...(target ? [el('span', { class: 'of' }, target)] : []));
+      }
       sack.title = `Granary: ${put} food put by (room for ${granaryRoom(state)})`;
     }
     this.renderBoard();

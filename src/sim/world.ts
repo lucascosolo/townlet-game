@@ -117,7 +117,17 @@ export function mainSource(
 }
 
 /** An L-shaped walking route, excluding the start tile and including the destination. */
-export function route(from: [number, number], to: [number, number]): Array<[number, number]> {
+/**
+ * The way from one tile to another. Without the town, the plain L-shape (used to sketch worn
+ * tracks). With it (paths, 2026-10-05), the cheapest way round: other buildings' footprints are
+ * not crossed, laid paths are cheap and walked two tiles a minute, the commons can be cut across
+ * and the brook forded. Falls back to the L-shape if no way round exists.
+ */
+export function route(from: [number, number], to: [number, number], state?: SimState): Array<[number, number]> {
+  if (state) {
+    const found = findRoute(state, from, to);
+    if (found) return found;
+  }
   const path: Array<[number, number]> = [];
   let [x, y] = from;
   while (x !== to[0]) {
@@ -131,6 +141,152 @@ export function route(from: [number, number], to: [number, number]): Array<[numb
   return path;
 }
 
+/** What each tile costs to walk; Infinity is a building in the way. */
+const TILE_COST = { path: 1, open: 3, commons: 3, brook: 9 } as const;
+
+interface Grid {
+  key: string;
+  /** Per tile: 0 open, 1 laid path, 2 commons, 3 brook, otherwise the id + 10 of the building on it. */
+  cells: Int32Array;
+  width: number;
+  height: number;
+  cache: Map<string, Array<[number, number]> | null>;
+}
+
+const grids = new WeakMap<SimState, Grid>();
+
+/** The walking grid, rebuilt only when buildings change. */
+function gridOf(state: SimState): Grid {
+  const live = liveBuildings(state);
+  const key = `${state.nextBuildingId}|${live.length}|${state.width}x${state.height}`;
+  const old = grids.get(state);
+  if (old && old.key === key) return old;
+  const cells = new Int32Array(state.width * state.height);
+  for (const b of live) {
+    const [w, h] = sizeOf(b);
+    const v = b.type === 'path' ? 1 : b.type === 'commons' ? 2 : b.type === 'brook' ? 3 : b.id + 10;
+    for (let y = b.y; y < b.y + h; y++) for (let x = b.x; x < b.x + w; x++) if (x >= 0 && y >= 0 && x < state.width && y < state.height) cells[y * state.width + x] = v;
+  }
+  const grid: Grid = { key, cells, width: state.width, height: state.height, cache: new Map() };
+  grids.set(state, grid);
+  return grid;
+}
+
+export function isPath(state: SimState, x: number, y: number): boolean {
+  const g = gridOf(state);
+  return x >= 0 && y >= 0 && x < g.width && y < g.height && g.cells[y * g.width + x] === 1;
+}
+
+/** A* over the walking grid. Steps along laid paths are taken two at a time. */
+function findRoute(state: SimState, from: [number, number], to: [number, number]): Array<[number, number]> | null {
+  const g = gridOf(state);
+  const { width: W, height: H, cells } = g;
+  const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H;
+  if (!inside(from[0], from[1]) || !inside(to[0], to[1])) return null;
+  if (from[0] === to[0] && from[1] === to[1]) return [];
+  const ck = `${from[0]},${from[1]}>${to[0]},${to[1]}`;
+  if (g.cache.has(ck)) {
+    const hit = g.cache.get(ck);
+    return hit ? hit.map((p) => [p[0], p[1]] as [number, number]) : null;
+  }
+  // The buildings you set out from and are going to can be walked through.
+  const startB = cells[from[1] * W + from[0]] as number;
+  const endB = cells[to[1] * W + to[0]] as number;
+  const cost = (i: number): number => {
+    const c = cells[i] as number;
+    if (c === 0) return TILE_COST.open;
+    if (c === 1) return TILE_COST.path;
+    if (c === 2) return TILE_COST.commons;
+    if (c === 3) return TILE_COST.brook;
+    return c === startB || c === endB ? TILE_COST.open : Infinity;
+  };
+  const n = W * H;
+  const best = new Float64Array(n).fill(Infinity);
+  const prev = new Int32Array(n).fill(-1);
+  const start = from[1] * W + from[0];
+  const goal = to[1] * W + to[0];
+  best[start] = 0;
+  // A binary heap of [f, index].
+  const heap: Array<[number, number]> = [[0, start]];
+  const push = (f: number, i: number) => {
+    heap.push([f, i]);
+    for (let k = heap.length - 1; k > 0; ) {
+      const p = (k - 1) >> 1;
+      if ((heap[p] as [number, number])[0] <= (heap[k] as [number, number])[0]) break;
+      [heap[p], heap[k]] = [heap[k] as [number, number], heap[p] as [number, number]];
+      k = p;
+    }
+  };
+  const pop = (): [number, number] => {
+    const top = heap[0] as [number, number];
+    const last = heap.pop() as [number, number];
+    if (heap.length) {
+      heap[0] = last;
+      for (let k = 0; ; ) {
+        const l = 2 * k + 1;
+        const r = l + 1;
+        let m = k;
+        if (l < heap.length && (heap[l] as [number, number])[0] < (heap[m] as [number, number])[0]) m = l;
+        if (r < heap.length && (heap[r] as [number, number])[0] < (heap[m] as [number, number])[0]) m = r;
+        if (m === k) break;
+        [heap[m], heap[k]] = [heap[k] as [number, number], heap[m] as [number, number]];
+        k = m;
+      }
+    }
+    return top;
+  };
+  const h = (i: number) => Math.abs((i % W) - to[0]) + Math.abs(Math.floor(i / W) - to[1]);
+  while (heap.length) {
+    const [, i] = pop();
+    if (i === goal) break;
+    const x = i % W;
+    const y = (i - x) / W;
+    // Neighbour order is fixed, so equal-cost ties resolve the same way every time.
+    for (const [dx, dy] of NEIGHBOURS) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!inside(nx, ny)) continue;
+      const j = ny * W + nx;
+      const c = cost(j);
+      if (c === Infinity) continue;
+      const d = (best[i] as number) + c;
+      if (d < (best[j] as number)) {
+        best[j] = d;
+        prev[j] = i;
+        push(d + h(j), j);
+      }
+    }
+  }
+  if (prev[goal] === -1) {
+    g.cache.set(ck, null);
+    return null;
+  }
+  const tiles: Array<[number, number]> = [];
+  for (let i = goal; i !== start; i = prev[i] as number) tiles.push([i % W, Math.floor(i / W)]);
+  tiles.reverse();
+  // Along a laid path they cover two tiles a minute: skip every other step while both are path.
+  const steps: Array<[number, number]> = [];
+  for (let k = 0; k < tiles.length; k++) {
+    const t = tiles[k] as [number, number];
+    const next = tiles[k + 1];
+    const here = cells[t[1] * W + t[0]] === 1;
+    if (here && next && cells[next[1] * W + next[0]] === 1 && k + 1 < tiles.length - 1) {
+      steps.push(next);
+      k++;
+    } else steps.push(t);
+  }
+  if (g.cache.size > 4000) g.cache.clear();
+  g.cache.set(ck, steps);
+  return steps.map((p) => [p[0], p[1]] as [number, number]);
+}
+
+const NEIGHBOURS: ReadonlyArray<[number, number]> = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
+
 export function canPlace(state: SimState, type: string, x: number, y: number, rot = 0): string | null {
   // Buildings that open up with the town's tier (M4).
   const tier = buildingDef(type).tier ?? 0;
@@ -138,6 +294,8 @@ export function canPlace(state: SimState, type: string, x: number, y: number, ro
   const [w, h] = footprint(type, rot);
   if (x < 0 || y < 0 || x + w > state.width || y + h > state.height) return 'out of bounds';
   for (const b of liveBuildings(state)) {
+    // A building can go over a path (the path under it is taken up); a path can't go over anything.
+    if (b.type === 'path' && type !== 'path') continue;
     const [bw, bh] = sizeOf(b);
     if (x < b.x + bw && x + w > b.x && y < b.y + bh && y + h > b.y) return `overlaps ${b.type} #${b.id}`;
   }

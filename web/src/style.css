@@ -516,3 +516,22 @@ body.phone .talk-grid button { min-height: 44px; }
 .modal-buttons .link { margin-left: auto; }
 body.phone .log-filter button { min-height: 44px; padding: 0 12px; }
 body.phone .log-filter { top: -10px; }
+
+/* Phone top bar (owner: it spilled off the side). Two rows that fit a 360px screen:
+   day and time with the stores; speeds, the tier and the turn buttons. */
+body.phone .hud { left: 8px; right: 8px; padding: 6px 8px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'clock stock stock' 'speeds renown rot'; gap: 6px; overflow: visible; }
+body.phone .hud .clock { grid-area: clock; min-width: 0; font-size: 13px; }
+body.phone .hud .stock { grid-area: stock; justify-self: end; gap: 10px; min-width: 0; }
+body.phone .hud .stock b { font-size: 15px; }
+body.phone .hud .stock .of { display: none; }
+body.phone .hud .speeds { grid-area: speeds; }
+body.phone .hud .speeds.rot { grid-area: rot; justify-self: end; }
+body.phone .hud .renown { grid-area: renown; justify-self: stretch; justify-content: center; min-width: 0; overflow: hidden; }
+body.phone .hud .renown b, body.phone .hud .renown .bar { display: none; }
+body.phone .hud .renown .tier { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.phone .hud button.icon { min-width: 40px; width: 40px; padding: 0; }
+.stock .of { font-size: 0.75em; font-weight: 600; color: var(--ink-soft); }
+/* Laying paths: the bar keeps only Done and a hint, on desktop as well as phones. */
+.place-bar.laying [data-testid='place-ok'], .place-bar.laying [data-testid='place-rotate'] { display: none; }
+body:not(.phone) .place-bar.laying .quiet { display: inline; }
+body.phone .place-bar.laying .quiet { display: inline; font-size: 13px; }

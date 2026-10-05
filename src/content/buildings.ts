@@ -245,6 +245,18 @@ Object.assign(BUILDINGS, {
     cost: 12,
     blurb: 'Puts food by for winter. What the larder can\'t hold goes here.',
   },
+  // Paths (2026-10-05): laid a tile at a time, free; residents prefer them and walk them twice as fast.
+  path: {
+    type: 'path',
+    name: 'Path',
+    kind: 'decor',
+    size: [1, 1],
+    emits: {},
+    radius: 0,
+    activities: [],
+    cost: 0,
+    blurb: 'Drag to lay a path. People prefer paths and walk them twice as fast.',
+  },
   // Tier buildings (M4): each opens up as the town moves up a tier.
   beehives: {
     type: 'beehives',

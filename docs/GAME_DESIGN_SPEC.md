@@ -843,6 +843,47 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 - **Arguments with a topic quote a line about that topic,** on the speaker's side of it. "Words about the steward" no longer quote "You never listen, Ada".
 - **One earlier miss is met again.** Friends now keep company under a careless steward at 2.02× (target 2×), up from 1.94×, so that M3a test is no longer an expected failure. The likely cause is that asks now close sooner.
 
+
+**Paths criteria (predeclared 2026-10-05, before any path code).** Quiet town, seeds 1–5, unless stated. A failure is reported as a failure, not redefined.
+
+1. **Laying paths.**
+   - A Path tile is in the build tray and costs nothing.
+   - Dragging lays a line on a desktop and on a phone.
+   - Remove takes a tile up.
+   - Each tile is one logged command, so a replay lays the same paths.
+2. **Nobody walks through buildings.** Over 7 days, no resident steps onto a tile of a building other than the one they set out from or are going to. Path tiles, the commons and the brook are the exceptions.
+3. **Paths help.**
+   - **Twin:** the same town, with and without a path laid along a resident's commute. With it, the walk takes at least 25% fewer minutes.
+   - When paths link homes to work, at least 60% of the steps residents take near them are on the path.
+4. **What you see.** Laid paths are drawn crisply. Worn tracks show at about half strength, including where people walk off the paths you laid.
+5. **No regressions.**
+   - Earlier unit and browser tests pass. Any earlier measurement that moves is re-measured and reported.
+   - Determinism holds.
+   - Sim stepping at 10× with 12 residents stays under 2 ms a frame.
+   - The one-year soak with newcomers shows no degenerate state.
+
+
+**Paths status (2026-10-05): four of five met; criterion 3 met in part.** The tests are in `test/paths.test.ts` and `e2e/paths.spec.ts`.
+
+1. **Laying paths: met.**
+   - Path is the first card in the build tray, and it is free.
+   - Dragging lays a line, with a mouse and with a finger. Remove takes a tile up.
+   - Paths are not narrated tile by tile, and they replay identically.
+   - A building can go over a path, taking it up.
+2. **Nobody walks through buildings: met.** Over 7 days on seeds 1–5 with the considerate steward, no resident crosses a building they are not leaving or going to. Calling round at a friend's door counts as going to it.
+   - One case was found and fixed on the way. A building that goes up across someone's planned walk now makes them re-plan from where they stand; before, they walked on through it.
+3. **Paths help: met in part.**
+   - **Met:** a path laid along each resident's commute cuts the walk by at least 25%, on every seed.
+   - **Missed:** as declared, 52% of steps near a path are on it, against 60%. Most of the rest are steps inside the buildings at either end of a walk, which can't be on a path; leaving those out, it is 68%.
+   - Open ground was set to cost 3 times a path tile, not 2 as declared, so residents keep to paths more. At 4 times it reached 56%, with longer detours that read worse.
+   - The test is kept as a visible expected failure.
+4. **What you see: met.** Laid paths are drawn as flagstones. Worn tracks show at about half strength and follow the ways people really walk: round buildings, and off the paths you laid.
+5. **No regressions: met.**
+   - Unit tests: 77 pass, plus 2 expected failures (the M3a do-nothing bound and criterion 3 above).
+   - Browser tests: 25 pass.
+   - Stepping at 10× costs 1.08 ms a frame (under 2 ms; route-finding roughly doubled it).
+   - The one-year soak with newcomers (bakery, 10 seeds × 112 days) finds no degenerate state: 1.5 rival pairs a run, an argument in every run, no departures, and the busiest place takes 49% of socialising.
+
 ---
 
 ## 10. Risks

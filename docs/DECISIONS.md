@@ -2,6 +2,27 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-05: Paths you lay down
+
+**The ask (owner):** "Maybe make a way to add new paths."
+
+**The owner's answers:**
+- **What laid paths do:** residents use them. They prefer them and walk faster on them.
+- **Worn tracks:** keep them, fainter. A worn track where people walk off your paths hints at where a new path is wanted.
+
+**Chosen:**
+- **A Path tile in the build tray, free.** Drag to lay a line of it, on a desktop or a phone. The Remove tool takes it up.
+- **Residents route around things.** Walks used to be a straight L-shape through anything, buildings included. Now residents find the cheapest way round, and never cross another building's footprint.
+  - **Cost per tile:** a path costs 1, open ground 2, the commons 2 (people cut across a green), and the brook 6. The brook is a shallow ford, so it is never a wall.
+  - **Speed:** on a path they cover two tiles a minute instead of one.
+  - **Fallback:** when no way round exists, they walk the old L-shape.
+- **Worn tracks are drawn at about half strength.** Laid paths are drawn as crisp stone.
+
+**Rejected:**
+- *Paths that only look nice.* The owner chose paths that matter.
+- *Speed bonuses without routing around buildings.* Residents would cut through houses to reach a path, which reads as a bug.
+- *Charging timber for paths.* Laying out the town should be free to try; the cost is the space a path takes.
+
 ## 2026-10-04: M4, a fun game on phones and desktops — directions chosen
 
 **The ask (owner):** "Make it a super fun mobile game with a good UI for mobile, but the desktop UI should be fun on desktop and use the extra space appropriately."

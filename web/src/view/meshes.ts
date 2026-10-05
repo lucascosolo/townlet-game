@@ -43,6 +43,10 @@ export function mat(color: number, emissive = 0): THREE.MeshLambertMaterial {
 /** Window and lantern glow: one material per kind, so night can brighten them all at once. */
 export const glow = {
   window: new THREE.MeshLambertMaterial({ color: PALETTE.window, emissive: new THREE.Color(PALETTE.window), emissiveIntensity: 0 }),
+  /** A window with nobody awake behind it (owner: houses go dark when everyone is asleep). */
+  windowDark: new THREE.MeshLambertMaterial({ color: 0x4a5068 }),
+  /** A porch lantern put out for the night. */
+  lanternOut: new THREE.MeshLambertMaterial({ color: 0x6b5a3e }),
   lantern: new THREE.MeshLambertMaterial({ color: PALETTE.lantern, emissive: new THREE.Color(PALETTE.lantern), emissiveIntensity: 0 }),
   oven: new THREE.MeshLambertMaterial({ color: 0xff8a3d, emissive: new THREE.Color(0xff6a1d), emissiveIntensity: 0 }),
   /** The warm pool a lamp throws on the ground: additive, faded in at dusk. */
@@ -144,8 +148,11 @@ function house(w: number, d: number, roofColor: number, opts: { chimney?: boolea
   g.add(door);
   const doorLamp = new THREE.Mesh(new THREE.OctahedronGeometry(0.05, 0), glow.lantern);
   doorLamp.position.set(-bw * 0.22 + 0.17, 0.42, bd / 2 + 0.04);
+  doorLamp.name = 'porch-lamp';
   g.add(doorLamp);
-  g.add(lightSpot(-bw * 0.22, 0.5, bd / 2 + 0.5, 2.4));
+  const porch = lightSpot(-bw * 0.22, 0.5, bd / 2 + 0.5, 2.4);
+  porch.name = 'porch';
+  g.add(porch);
   g.add(pyramidRoof(bw + 0.15, bd + 0.15, 0.6, mat(roofColor), wallH));
   // Windows on two faces, glowing at night.
   for (const [x, z, ry] of [
@@ -154,6 +161,7 @@ function house(w: number, d: number, roofColor: number, opts: { chimney?: boolea
     [0, -bd / 2 - 0.01, 0],
   ] as const) {
     const win = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.27), glow.window);
+    win.name = 'window';
     win.position.set(x, 0.42, z);
     win.rotation.y = ry;
     g.add(win);
@@ -447,8 +455,11 @@ export function buildingMesh(type: string, variant = 0): THREE.Group {
       break;
     }
     case 'jetty':
+      // Boards from the bank out over the water (+x), on posts; the scene turns it to face the brook.
       g = new THREE.Group();
-      g.add(box(0.9, 0.08, 0.5, mat(PALETTE.wood), 0, 0.12));
+      g.add(box(1.5, 0.06, 0.42, mat(PALETTE.wood), 0.35, 0.14));
+      for (let i = 0; i < 5; i++) g.add(box(0.02, 0.065, 0.44, mat(PALETTE.darkWood), -0.3 + i * 0.32, 0.145));
+      for (const [x, z] of [[0.4, -0.18], [0.4, 0.18], [1.05, -0.18], [1.05, 0.18]] as const) g.add(box(0.06, 0.24, 0.06, mat(PALETTE.darkWood), x, 0.08, z));
       break;
     case 'bench':
       g = new THREE.Group();

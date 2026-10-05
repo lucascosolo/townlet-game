@@ -293,11 +293,81 @@ export function canPlace(state: SimState, type: string, x: number, y: number, ro
   if (tier > (state.progress?.tier ?? 0)) return 'not unlocked yet';
   const [w, h] = footprint(type, rot);
   if (x < 0 || y < 0 || x + w > state.width || y + h > state.height) return 'out of bounds';
+  // A jetty is for fishing: it has to reach the water (owner playtest: one sat on dry land).
+  if (type === 'jetty' && brookSide(state, x, y) === null) return 'must be beside the brook';
   for (const b of liveBuildings(state)) {
     // A building can go over a path (the path under it is taken up); a path can't go over anything.
     if (b.type === 'path' && type !== 'path') continue;
     const [bw, bh] = sizeOf(b);
     if (x < b.x + bw && x + w > b.x && y < b.y + bh && y + h > b.y) return `overlaps ${b.type} #${b.id}`;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------- worn tracks
+
+/** Each dawn a track keeps this much of its wear: unwalked for 7 days, under half is left. */
+export const WEAR_KEEP = 0.9;
+
+/** A footstep off the laid paths wears the ground a little. */
+export function wearStep(state: SimState, x: number, y: number): void {
+  if (isPath(state, x, y)) return;
+  const wear = (state.wear ??= {});
+  const k = `${x},${y}`;
+  wear[k] = (wear[k] ?? 0) + 1;
+}
+
+/** At dawn, tracks nobody walks start to grow back. */
+export function wearDawn(state: SimState): void {
+  const wear = state.wear;
+  if (!wear) return;
+  for (const k of Object.keys(wear)) {
+    const w = (wear[k] as number) * WEAR_KEEP;
+    if (w < 0.5) delete wear[k];
+    else wear[k] = Math.round(w * 100) / 100;
+  }
+}
+
+/**
+ * The founding town has been lived in: its everyday walks (home to work twice a day, home to the
+ * places people gather) start worn about half as deep as daily walking keeps them.
+ */
+export function seedWear(state: SimState): void {
+  const live = liveBuildings(state);
+  const door = (id: number | null) => {
+    const b = id !== null ? live.find((x) => x.id === id) : undefined;
+    return b ? placeTile(b) : null;
+  };
+  const gathering = live.filter((b) => ['commons', 'teahouse', 'well', 'oak', 'bakery'].includes(b.type));
+  const steady = 1 / (1 - WEAR_KEEP);
+  const walk = (a: [number, number], b: [number, number], perDay: number) => {
+    for (const [x, y] of route(a, b, state)) for (let i = 0; i < perDay; i++) wearStep(state, x, y);
+  };
+  for (const id of state.order) {
+    const r = state.residents[id];
+    if (!r || r.departed) continue;
+    const home = door(r.homeId);
+    if (!home) continue;
+    const job = door(r.jobId);
+    if (job) walk(home, job, 2);
+    for (const g of gathering) walk(home, placeTile(g), 1);
+  }
+  const wear = state.wear ?? {};
+  for (const k of Object.keys(wear)) wear[k] = Math.round((wear[k] as number) * steady * 0.5);
+}
+
+/** Which way the brook lies from a tile, as a quarter turn (0 east, 1 south, 2 west, 3 north), or null if it isn't next to it. */
+export function brookSide(state: SimState, x: number, y: number): number | null {
+  const brooks = liveBuildings(state).filter((b) => b.type === 'brook');
+  const sides: Array<[number, number]> = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  for (let rot = 0; rot < 4; rot++) {
+    const [dx, dy] = sides[rot] as [number, number];
+    const tx = x + dx;
+    const ty = y + dy;
+    if (brooks.some((b) => {
+      const [bw, bh] = sizeOf(b);
+      return tx >= b.x && tx < b.x + bw && ty >= b.y && ty < b.y + bh;
+    })) return rot;
   }
   return null;
 }

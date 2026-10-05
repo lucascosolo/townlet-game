@@ -884,6 +884,56 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Stepping at 10× costs 1.08 ms a frame (under 2 ms; route-finding roughly doubled it).
    - The one-year soak with newcomers (bakery, 10 seeds × 112 days) finds no degenerate state: 1.5 rival pairs a run, an argument in every run, no departures, and the busiest place takes 49% of socialising.
 
+
+**Playtest round 2 criteria (predeclared 2026-10-05, before the footstep-wear code).** Quiet town, seeds 1–5, unless stated. A failure is reported as a failure, not redefined.
+
+1. **Worn tracks are worn by feet.**
+   - Placing or removing a building changes no worn track at that moment.
+   - A tile's wear rises only when a resident steps on it off a laid path.
+   - A track nobody walks fades: after 7 days unused, a tile keeps at most half its wear.
+   - The founding town starts with its everyday walks already worn in.
+   - Wear is part of the simulation, so a replayed save shows the same tracks.
+2. **Routes hold still.** Placing a building changes no route that does not cross its footprint.
+3. **Talk to your face reads right.** Feelings about the steward, said to the steward, are written for "you" ("You were kind when I needed it"). No line becomes "you wa", "you is" or "you vexes", and nobody says they "cannot let go of" you.
+4. **The jetty reaches the water.** A jetty can only be placed beside the brook, and its boards run out over the water. The founding jetty is beside the brook.
+5. **The placement preview is the building.** Nothing in the preview lies outside the building's footprint. The lamp's light pool, which showed as an offset green square, is left out.
+6. **Houses go dark when everyone is asleep.** At night a home's windows are lit while someone inside is awake, and dark once everyone inside is asleep. Its porch lantern goes out with it.
+7. **The desktop bottom bar is one row.** At widths from 1100 to 1920 the bar is no taller than 56 px, and its hint stays on one line.
+   - *Added later the same day, for two reports that came in mid-round, written alongside their fixes rather than before them:* the journal scroll, rolled or not, sits below the top bar on desktop.
+   - A fact learned in talk is in the resident's reply: for every fact a talk reveals, the reply contains the resident's own line for it.
+8. **No regressions.** Earlier unit and browser tests pass. Any measurement that moves is re-measured and reported. Determinism holds. Stepping at 10× stays under 2 ms a frame.
+
+
+**Playtest round 2 status (2026-10-05): seven of eight met; criterion 2 missed.** The tests are in `test/playtest2.test.ts` and `e2e/playtest2.spec.ts`.
+
+1. **Worn tracks are worn by feet: met.**
+   - The founding town starts with over 90% of a commute worn in.
+   - Building or removing changes no wear, on seeds 1–5. Wear rises only where someone steps off a laid path.
+   - An unwalked track keeps under half its wear after 7 days, and a replay wears the same tracks.
+2. **Routes hold still: missed.** Equal-length routes still tie, and a building elsewhere can switch a walk to another route of the same length. Two tie-breaks were tried. Both held routes still, but both moved earlier measures past their bands:
+   - toward the straight line: the M1.5 busiest place reached 0.607 (band: under 0.6), and the bench-memory twin failed;
+   - a fixed per-tile grain: no rivalry formed in the M3a relationships test.
+
+   Neither shipped. The test is kept as a visible expected failure. What the owner saw, tracks jumping, is met by criterion 1: a switched walk only wears in gradually.
+3. **Talk to your face reads right: met.**
+   - "The steward was kind" becomes "You were kind".
+   - Feelings about the steward use lines written for "you".
+   - No line asks to "let go of" anyone.
+   - Every fact a talk reveals is in the resident's reply, on seeds 1–5.
+4. **The jetty reaches the water: met.** A jetty away from the brook is refused ("must be beside the brook"). Its boards run out over the water, and the founding jetty is beside it.
+5. **The placement preview is the building: met.** No part of the cottage preview reaches more than 0.3 tiles past its footprint. The lamp's light pool is left out.
+6. **Houses go dark: met.** At 2 am every home with everyone asleep is dark, windows and porch lantern. In the evening a home with someone awake inside is lit.
+7. **The desktop bottom bar is one row: met.**
+   - At 1100, 1280 and 1920 px the bar is 52 px tall and its hint is on one line.
+   - The journal scroll hangs below the top bar.
+   - The browser tests caught one regression on the way: the new desktop scroll height stopped the scroll rolling up. It was fixed.
+8. **No regressions: met, with one browser test failing here on main as well.**
+   - Unit tests: 85 pass, plus 3 expected failures (the M3a do-nothing bound, paths criterion 3b, and criterion 2 above).
+   - Browser tests: all pass but the M2 test that opens every resident's journal. It times out on a summary that keeps re-rendering, and fails the same way on main in this container. It passed in CI on the last merge.
+   - Stepping at 10× costs 1.06 ms a frame.
+   - The one-year soak with newcomers (bakery, 10 seeds × 112 days) finds no degenerate state: an argument in every run, no departures, and the busiest place takes 48% of socialising.
+   - One measure moved: rival pairs fell from 1.5 to 1.0 a run. The soak's random builder can no longer place jetties away from the brook, so its towns grow differently.
+
 ---
 
 ## 10. Risks

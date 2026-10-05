@@ -4,8 +4,8 @@
 import * as THREE from 'three';
 import { buildingDef } from '../../../src/content/buildings.js';
 import { minuteOf, seasonOf, type Season } from '../../../src/sim/time.js';
-import type { BuildingState, ResidentState } from '../../../src/sim/types.js';
-import { footprint, isPath, liveBuildings, placeTile, route, sizeOf } from '../../../src/sim/world.js';
+import type { BuildingState, ResidentState, SimState } from '../../../src/sim/types.js';
+import { brookSide, footprint, placeTile, sizeOf } from '../../../src/sim/world.js';
 import type { Game } from '../game.js';
 import { buildingMesh, glow, mat, residentMesh, seasonalLeaf } from './meshes.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -242,13 +242,37 @@ export class TownView {
     if (host) host.style.background = `linear-gradient(180deg, #${top.getHexString()} 0%, #${bottom.getHexString()} 100%)`;
   }
 
+  /** A window is lit only while someone behind it is awake (owner: houses go dark when everyone sleeps). */
+  private lightWindows(state: SimState): void {
+    const awake = new Set<number>();
+    for (const r of Object.values(state.residents)) {
+      if (r.departed || r.at === null || r.activity?.id === 'sleep') continue;
+      awake.add(r.at);
+    }
+    for (const [id, g] of this.buildings) {
+      const windows = g.userData.windows as THREE.Mesh[] | undefined;
+      if (!windows) continue;
+      const lit = awake.has(id);
+      const m = lit ? glow.window : glow.windowDark;
+      if (windows[0]?.material === m) continue;
+      for (const w of windows) w.material = m;
+      // The porch lantern goes out with the house, light and all.
+      const porch = g.userData.porch as THREE.Object3D | undefined;
+      if (porch) porch.visible = lit;
+      const lamp = g.userData.porchLamp as THREE.Mesh | undefined;
+      if (lamp) lamp.material = lit ? glow.lantern : glow.lanternOut;
+      this.lampsDirty = true;
+    }
+  }
+
   /** Put the real lights at the lamps nearest the middle of the view. */
   private placeLamps(night: number): void {
     if (this.lampsDirty) {
       this.lampsDirty = false;
+      this.lastLampPick = 0;
       this.lampPoints = [];
       this.scene.updateMatrixWorld();
-      for (const g of this.buildings.values()) g.traverse((o) => o.name === 'light' && this.lampPoints.push(o.getWorldPosition(new THREE.Vector3())));
+      for (const g of this.buildings.values()) g.traverse((o) => o.name === 'light' && o.parent?.visible !== false && this.lampPoints.push(o.getWorldPosition(new THREE.Vector3())));
     }
     const now = performance.now();
     if (now - this.lastLampPick > 400) {
@@ -339,40 +363,25 @@ export class TownView {
     this.syncPaths();
   }
 
-  /** Redraw the worn paths when the town changes: from every home to work and to where people gather. */
+  /**
+   * Draw the worn tracks the simulation keeps: worn by footsteps, fading when unwalked (owner: they
+   * "should be worn down by character activity", not jump when something is built). Redrawn every
+   * half hour of town time, or at once on a jump such as loading a save.
+   */
   private syncPaths(): void {
     const state = this.game.sim.state;
-    const live = liveBuildings(state);
-    const key = `${live.length}:${state.order.length}:${live.reduce((s, b) => s + b.id, 0)}`;
+    const key = String(Math.floor(state.tick / 30));
     if (key === this.pathsKey) return;
     this.pathsKey = key;
-    const wear = new Map<string, number>();
-    const walk = (a: [number, number], b: [number, number], w: number) => {
-      // The ways people really walk now (round buildings, along laid paths); laid paths are drawn
-      // as stone, so only the off-path stretches wear in.
-      for (const [x, y] of route(a, b, state)) if (!isPath(state, x, y)) wear.set(`${x},${y}`, (wear.get(`${x},${y}`) ?? 0) + w);
-    };
-    const doorOf = (id: number | null) => {
-      const b = id !== null ? live.find((x) => x.id === id) : undefined;
-      return b ? placeTile(b) : null;
-    };
-    const gathering = live.filter((b) => ['commons', 'teahouse', 'well', 'oak', 'bakery'].includes(b.type));
-    for (const id of state.order) {
-      const r = state.residents[id] as ResidentState;
-      if (r.departed) continue;
-      const home = doorOf(r.homeId);
-      if (!home) continue;
-      const job = doorOf(r.jobId);
-      if (job) walk(home, job, 2);
-      for (const g of gathering) walk(home, placeTile(g), 1);
-    }
+    const wear = state.wear ?? {};
     const ctx = this.pathCanvas.getContext('2d') as CanvasRenderingContext2D;
     ctx.clearRect(0, 0, this.pathCanvas.width, this.pathCanvas.height);
-    for (const [k, w] of wear) {
+    for (const [k, w] of Object.entries(wear)) {
+      if (w < 1.5) continue;
       const [x, y] = k.split(',').map(Number) as [number, number];
-      // Under buildings no path shows (the building covers it anyway); worn more, darker.
-      // At about half strength since paths can be laid (owner's choice): a hint, not a road.
-      const a = Math.min(0.45, 0.12 + w * 0.03);
+      // Worn more, paler. Kept to about half strength since paths can be laid (owner's choice):
+      // a hint, not a road.
+      const a = Math.min(0.45, 0.05 + w * 0.015);
       const g = ctx.createRadialGradient(x * 4 + 2, y * 4 + 2, 0, x * 4 + 2, y * 4 + 2, 3.2);
       g.addColorStop(0, `rgba(255,255,255,${a})`);
       g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -455,8 +464,15 @@ export class TownView {
       }
       const [w, d] = sizeOf(b);
       g.position.set(b.x + w / 2, 0, b.y + d / 2);
-      g.rotation.y = -(b.rot ?? 0) * (Math.PI / 2);
+      g.rotation.y = -(b.type === 'jetty' ? (brookSide(state, b.x, b.y) ?? b.rot ?? 0) : (b.rot ?? 0)) * (Math.PI / 2);
       g.userData.buildingId = b.id;
+      const windows: THREE.Mesh[] = [];
+      g.traverse((o) => o instanceof THREE.Mesh && o.name === 'window' && windows.push(o));
+      if (windows.length) {
+        g.userData.windows = windows;
+        g.userData.porch = g.getObjectByName('porch');
+        g.userData.porchLamp = g.getObjectByName('porch-lamp');
+      }
       g.traverse((o) => {
         if (o instanceof THREE.Mesh && o.name === 'canopy') o.material = this.leafMat;
         if (o instanceof THREE.Mesh && o.name === 'canopy-v') o.material = this.leafMatV;
@@ -576,6 +592,7 @@ export class TownView {
     this.moon.intensity = night * 0.55;
 
     glow.window.emissiveIntensity = night * 2.2;
+    this.lightWindows(state);
     // Lamps are lit from dusk to dawn only (review: lanterns glowing at noon).
     glow.lantern.emissiveIntensity = night * 2.6;
     glow.pool.opacity = night * 0.55;
@@ -632,6 +649,8 @@ export class TownView {
       if (type) {
         this.ghost = buildingMesh(type);
         this.ghost.traverse((o) => {
+          // The lamp's light pool is not part of the building: tinted green it read as a second, offset footprint.
+          if (o instanceof THREE.Mesh && o.material === glow.pool) o.visible = false;
           if (o instanceof THREE.Mesh) {
             o.material = new THREE.MeshBasicMaterial({ color: 0x6fcf6f, transparent: true, opacity: 0.55 });
             o.castShadow = false;
@@ -645,7 +664,7 @@ export class TownView {
     if (!tile) return;
     const [w, d] = footprint(type, rot);
     this.ghost.position.set(tile[0] + w / 2, 0.01, tile[1] + d / 2);
-    this.ghost.rotation.y = -rot * (Math.PI / 2);
+    this.ghost.rotation.y = -(type === 'jetty' ? (brookSide(this.game.sim.state, tile[0], tile[1]) ?? rot) : rot) * (Math.PI / 2);
     this.ghost.traverse((o) => {
       if (o instanceof THREE.Mesh) (o.material as THREE.MeshBasicMaterial).color.setHex(valid ? 0x6fcf6f : 0xe05050);
     });

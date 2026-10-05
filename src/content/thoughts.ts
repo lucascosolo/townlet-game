@@ -84,7 +84,7 @@ export const MIND_LINES: Record<string, Lines> = {
   },
   'feel:annoyance': {
     plain: ['Still cross about {x}.', '{X}. Hmph.'],
-    formal: ['I cannot quite let go of {x}.', 'Frankly, {x} still irritates me.'],
+    formal: ['I find {x} still vexes me.', 'Frankly, {x} still irritates me.'],
     warm: ['I keep stewing over {x}. I should let it go.', '{X} is still getting under my skin.'],
     chatty: ['{X}! Honestly! Can you believe it?', "Don't get me started on {x}!"],
     dreamy: ['{X} sits in my chest like a stone.'],
@@ -214,6 +214,24 @@ export const MIND_LINES: Record<string, Lines> = {
     warm: ["I'm worried we won't have enough to eat."],
     chatty: ['The larder! Empty! Again!'],
     dreamy: ['The shelves are bare and echoing.'],
+  },
+};
+
+/** The same feelings said to the steward's face in talk, where "the steward" would be "you" and the lines above would not bend. */
+export const TO_STEWARD_LINES: Record<string, Lines> = {
+  'feel:gratitude': {
+    plain: ['You did right by me.', 'I owe you one.'],
+    formal: ['I am grateful to you. I should have said so sooner.'],
+    warm: ["You've been so good to me lately.", 'I keep meaning to thank you properly. Thank you.'],
+    chatty: ['You! What a treasure you are!', 'Did I ever thank you? Thank you!'],
+    dreamy: ['You were kind when I needed it.'],
+  },
+  'feel:annoyance': {
+    plain: ['Still cross with you.', 'You. Hmph.'],
+    formal: ['I confess I am still put out with you.', 'Frankly, you still irritate me.'],
+    warm: ["I keep stewing over what you did. I should let it go.", "You're still getting under my skin, I'm afraid."],
+    chatty: ['Honestly! You! Can you believe it? I can\'t!', "Don't get me started on you!"],
+    dreamy: ['What you did sits in my chest like a stone.'],
   },
 };
 

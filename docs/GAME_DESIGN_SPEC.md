@@ -322,7 +322,7 @@ Four options for the slice's single biome, a **temperate riverside valley** (bro
 - **Early Access or full release on Steam** at a price in line with comparable cozy builders at launch time (roughly the $15–25 band today, to be checked against the market at launch).
 - A **free demo** for Steam Next Fest, plus a short **browser demo on townlet.app** if the engine choice allows it. Wishlists are the main pre-launch metric.
 - **Paid expansions after launch:** new biomes (coast, highlands, fen) each with a new cast and aspirations; "neighbour" resident packs with authored arcs; perhaps a multi-townlet region mode. Free updates fund goodwill.
-- **No free-to-play, energy timers, gacha or ads.** They work against pillar 4 and against attachment to residents.
+- **No free-to-play, energy timers or gacha.** They work against pillar 4 and against attachment to residents. *Ads were also ruled out here; the owner reopened that on 2026-10-05 (see DECISIONS.md). How ads would work is undecided.*
 - **No ongoing per-player cost** comes with the recommended AI option (B). That is a structural advantage: an LLM-core design would need a subscription or a large local model, and Townlet needs neither. If the optional voice layer (D) ever ships, it runs locally and is included in the price.
 - **Later:** a soundtrack and artbook DLC, and console ports (the lightweight AI makes Switch-class hardware realistic).
 

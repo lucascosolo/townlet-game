@@ -35,6 +35,12 @@ export interface Stage {
   placeId?: number;
   /** Time at the place counts only with the partner there too. */
   together?: boolean;
+  /**
+   * Only needed until this building stands: designing it, asking for it. If the steward has already
+   * built it, the step is skipped (owner playtest: Juniper drew and asked for a glasshouse that was
+   * already there).
+   */
+  until?: string;
 }
 
 export interface AspirationDef {
@@ -86,6 +92,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       {
         id: 'ask',
         next: 'Ask the steward for an orchard',
+        until: 'orchard',
         check: (h, r) => days(h, r) >= 1,
         enter: (h, r) => {
           if (!exists(h.state, 'orchard')) askFor(h, r, 'orchard');
@@ -209,12 +216,14 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       {
         id: 'design',
         next: 'Sketch a glasshouse at the workshop',
+        until: 'glasshouse',
         place: 'workshop',
         check: (_h, r) => r.aspiration.minutes >= 10 * 60,
       },
       {
         id: 'ask',
         next: 'Ask the steward for a glasshouse',
+        until: 'glasshouse',
         check: () => true,
         enter: (h, r) => {
           if (!exists(h.state, 'glasshouse')) askFor(h, r, 'glasshouse');
@@ -257,6 +266,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       {
         id: 'ask',
         next: 'Ask the steward for a banner pole',
+        until: 'banner',
         check: () => true,
         enter: (h, r) => {
           if (!exists(h.state, 'banner')) askFor(h, r, 'banner');
@@ -397,8 +407,20 @@ export function aspirationsAfterBuild(h: AspirationHost, waiting: Set<string>): 
 /** Move a resident on to the next step of their dream if this one is reached. */
 function advanceStage(h: AspirationHost, r: ResidentState): void {
   const def = dreamOf(h.state, r);
+  if (!def) return;
+  // Steps made moot by a building that already stands are passed over quietly; the step that
+  // waits for the building then lands at once, and they know you got there first.
+  let skipped = false;
+  for (let s = currentStage(h.state, r); s?.until && exists(h.state, s.until); s = currentStage(h.state, r)) {
+    r.aspiration.stage++;
+    skipped = true;
+  }
+  if (skipped) {
+    r.aspiration.since = h.state.tick;
+    r.aspiration.minutes = 0;
+  }
   const stage = currentStage(h.state, r);
-  if (!def || !stage || !stage.check(h, r)) return;
+  if (!stage || !stage.check(h, r)) return;
   stage.enter?.(h, r);
   r.aspiration.stage++;
   r.aspiration.since = h.state.tick;
@@ -418,6 +440,7 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
     stage: stage.id,
     index: r.aspiration.stage,
     done: r.aspiration.done,
+    ...(skipped ? { early: true } : {}),
     ...(r.aspiration.partner ? { partner: r.aspiration.partner } : {}),
     ...(r.aspiration.outcome ? { outcome: r.aspiration.outcome } : {}),
     ...(r.aspiration.kind ? { kind: r.aspiration.kind } : {}),

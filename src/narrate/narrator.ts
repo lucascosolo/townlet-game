@@ -562,7 +562,7 @@ export class Narrator {
           }
           break;
         }
-        const line = ASPIRATION_LINES[`${e.who}:${e.stage}${e.outcome ? `:${e.outcome}` : ''}`];
+        const line = (e.early ? ASPIRATION_LINES[`${e.who}:${e.stage}:early`] : undefined) ?? ASPIRATION_LINES[`${e.who}:${e.stage}${e.outcome ? `:${e.outcome}` : ''}`];
         if (!line) break;
         const partner = e.partner ? this.name(e.partner) : 'someone';
         this.live(e.t, line.replace(/\{partner\}/g, partner).replace(/\{you\}/g, this.you ? 'you' : 'the steward'));

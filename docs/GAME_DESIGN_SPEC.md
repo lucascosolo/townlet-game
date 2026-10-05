@@ -843,6 +843,25 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 - **Arguments with a topic quote a line about that topic,** on the speaker's side of it. "Words about the steward" no longer quote "You never listen, Ada".
 - **One earlier miss is met again.** Friends now keep company under a careless steward at 2.02× (target 2×), up from 1.94×, so that M3a test is no longer an expected failure. The likely cause is that asks now close sooner.
 
+
+**Paths criteria (predeclared 2026-10-05, before any path code).** Quiet town, seeds 1–5, unless stated. A failure is reported as a failure, not redefined.
+
+1. **Laying paths.**
+   - A Path tile is in the build tray and costs nothing.
+   - Dragging lays a line on a desktop and on a phone.
+   - Remove takes a tile up.
+   - Each tile is one logged command, so a replay lays the same paths.
+2. **Nobody walks through buildings.** Over 7 days, no resident steps onto a tile of a building other than the one they set out from or are going to. Path tiles, the commons and the brook are the exceptions.
+3. **Paths help.**
+   - **Twin:** the same town, with and without a path laid along a resident's commute. With it, the walk takes at least 25% fewer minutes.
+   - When paths link homes to work, at least 60% of the steps residents take near them are on the path.
+4. **What you see.** Laid paths are drawn crisply. Worn tracks show at about half strength, including where people walk off the paths you laid.
+5. **No regressions.**
+   - Earlier unit and browser tests pass. Any earlier measurement that moves is re-measured and reported.
+   - Determinism holds.
+   - Sim stepping at 10× with 12 residents stays under 2 ms a frame.
+   - The one-year soak with newcomers shows no degenerate state.
+
 ---
 
 ## 10. Risks

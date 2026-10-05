@@ -532,7 +532,7 @@ export type SimEvent =
   | { t: number; type: 'invite'; a: string; b: string; place: number }
   /** Something on a resident's mind surfaced as a passing thought (M3a). Always one of their top three. */
   | { t: number; type: 'thought'; who: string; key: string; about?: SubjectId; vars: Record<string, string>; rank: number }
-  | { t: number; type: 'aspiration'; who: string; stage: string; index: number; done: boolean; partner?: string; outcome?: string; kind?: string; subject?: SubjectId }
+  | { t: number; type: 'aspiration'; who: string; stage: string; index: number; done: boolean; partner?: string; outcome?: string; kind?: string; subject?: SubjectId; /** The steward built it before they asked. */ early?: boolean }
   /** A new dream forms from what they have lived through (M3b). */
   | { t: number; type: 'dream_formed'; who: string; kind: string; subject?: SubjectId; title: string }
   /** A longer mood starts or ends (M3b). */

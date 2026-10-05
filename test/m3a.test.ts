@@ -152,12 +152,7 @@ describe('criterion 3: relationships you can see', () => {
     expect(c.invitesPerWeek).toBeGreaterThanOrEqual(2);
   });
 
-  // MISSED since M4, reported in spec 9.3: with the random stand-in steward the friend ratio is
-  // 1.94× (2.19× when M3a closed). M4's hungrier winters and lingering grudges moved it. Every lever
-  // tried to win it back (a pull towards friends, more calling-round) herded the town into one
-  // place and broke the M1 spread band, which was judged worse. Kept as an expected failure so it
-  // stays visible and flips when it is met again.
-  it.fails('friends keep company under a careless steward too', { timeout: 240_000 }, () => {
+  it('friends keep company under a careless steward too', { timeout: 240_000 }, () => {
     const c = coLocation('random');
     expect(c.friend / c.neutral).toBeGreaterThanOrEqual(2);
   });

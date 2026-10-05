@@ -282,7 +282,65 @@ function completeGoal(sim: ReturnType<typeof runScenario>, kind: GoalKind): void
         sim.schedule([{ at: sim.state.tick, kind: 'favour', who: r.id, favour: 'catch' }]);
         sim.flushCommands();
       }
-      sim.runUntil(at(Math.floor(sim.state.tick / 1440) + 1, 21));
+      sim.step();
+      sim.runUntil(Math.min(at(Math.floor(sim.state.tick / 1440) + 1, 21), sim.state.tick + 60));
+      if (!todaysGoals(sim.state).find((g) => g.kind === kind)?.done) sim.runUntil(at(Math.floor(sim.state.tick / 1440) + 1, 21));
       break;
   }
 }
+
+describe('owner playtest: a dream building put up before it was asked for', () => {
+  it('Ada, Juniper and Wren skip asking for what already stands, and know you got there first', { timeout: 120_000 }, () => {
+    for (const [who, type, stage] of [
+      ['juniper', 'glasshouse', 'built'],
+      ['ada', 'orchard', 'planted'],
+      ['wren', 'banner', 'paint'],
+    ] as const) {
+      const sim = runScenario('quiet', 1, 'none');
+      const narrator = new Narrator(sim, { stewardIsYou: true });
+      sim.runUntil(at(1, 9));
+      sim.state.stock.timber = 50;
+      let spot: [number, number] | null = null;
+      for (let y = 0; y < 22 && !spot; y++) for (let x = 0; x < 22 && !spot; x++) if (canPlace(sim.state, type, x, y) === null) spot = [x, y];
+      sim.schedule([{ at: sim.state.tick, kind: 'build', type, x: spot![0], y: spot![1] }]);
+      const steps: Array<{ stage: string; early?: boolean }> = [];
+      sim.on((e) => {
+        if (e.type === 'aspiration' && e.who === who) steps.push({ stage: e.stage, ...(e.early ? { early: true } : {}) });
+      });
+      sim.runUntil(at(28, 0));
+      expect(steps.map((s) => s.stage), who).not.toContain('ask');
+      expect(steps.find((s) => s.stage === stage)?.early, `${who} knew it was early`).toBe(true);
+      expect(sim.state.requests.filter((q) => q.by === who && q.wants === type), `${who} never asked`).toEqual([]);
+      expect(narrator.text()).not.toMatch(new RegExp(`${who === 'ada' ? 'Ada' : who === 'wren' ? 'Wren' : 'Juniper'} (screws up her courage and )?asks you,? (quietly, )?for an? ${type === 'banner' ? 'banner pole' : type}`));
+    }
+  });
+});
+
+describe('owner playtest: granting an ask counts the same day', () => {
+  it('an ask met by a build closes at once, and the "grant an ask" goal is done that day', { timeout: 300_000 }, () => {
+    let checked = 0;
+    for (let d = 2; d <= 20 && checked < 3; d++) {
+      const sim = runScenario('quiet', 1, 'none');
+      sim.runUntil(at(d, 8));
+      const goal = todaysGoals(sim.state).find((g) => g.kind === 'answer');
+      if (!goal) continue;
+      completeGoal(sim, 'answer');
+      const now = todaysGoals(sim.state).find((g) => g.kind === 'answer');
+      if (!sim.state.requests.some((q) => q.status === 'fulfilled' && dayOfTick(q.closedTick ?? 0) === d)) continue;
+      expect(now?.done, `day ${d}`).toBe(true);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+
+  it('the goal is never offered when the only asks open are for a quieter night', { timeout: 300_000 }, () => {
+    const sim = runScenario('quiet', 2, 'none');
+    for (let d = 2; d <= 21; d++) {
+      sim.runUntil(at(d, 8));
+      const open = sim.state.requests.filter((q) => q.status === 'open');
+      if (todaysGoals(sim.state).some((g) => g.kind === 'answer')) expect(open.some((q) => q.kind !== 'quieter_home'), `day ${d}`).toBe(true);
+    }
+  });
+});
+
+const dayOfTick = (t: number) => Math.floor(t / 1440) + 1;

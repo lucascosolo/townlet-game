@@ -426,6 +426,7 @@ export class Simulation implements AspirationHost {
         const waiting = waitingOnStage(this);
         this.build(c.type, c.x, c.y, c.rot ?? 0);
         aspirationsAfterBuild(this, waiting);
+        this.closeMetAfterBuild();
       }
     } else if (c.kind === 'remove') this.remove(c.x, c.y);
     else if (c.kind === 'talk') {
@@ -551,6 +552,33 @@ export class Simulation implements AspirationHost {
     const produced = (this.state.produced ??= {});
     const mine = (produced[by] ??= {});
     mine[res] = (mine[res] ?? 0) + v;
+  }
+
+  /** Close an ask that is met: fulfilled if the steward built something since it was made. */
+  private closeIfMet(ctx: MindContext, r: ResidentState, q: Request): boolean {
+    const state = this.state;
+    const a = assess(state, r, q.kind, q.postedTick, q.wants);
+    if (!a.met) return false;
+    const stewardActed = q.kind === 'quieter_home' || state.buildings.some((b) => b.placedBy === 'steward' && b.placedTick >= q.postedTick);
+    q.status = stewardActed ? 'fulfilled' : 'resolved';
+    q.closedTick = state.tick;
+    if (stewardActed) this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'listens_to_me', valence: 1, base: 1.3, source: 'witnessed', note: ASK_THANKS[q.kind] });
+    this.emit({ t: state.tick, type: 'request_closed', request: { ...q } });
+    return true;
+  }
+
+  /**
+   * Right after a build, asks it meets are granted at once (owner playtest: an ask granted in the
+   * day only closed overnight, after the day's "grant an ask" goal had gone). A quieter night can
+   * only be judged after one.
+   */
+  private closeMetAfterBuild(): void {
+    const ctx = this.ctx();
+    for (const q of this.state.requests) {
+      if (q.status !== 'open' || q.kind === 'quieter_home') continue;
+      const r = this.state.residents[q.by];
+      if (r && !r.departed) this.closeIfMet(ctx, r, q);
+    }
   }
 
   /** Homes nobody lives in. */
@@ -1002,16 +1030,8 @@ export class Simulation implements AspirationHost {
     // Asks: close the ones dealt with, lapse the ignored, and voice at most one new one.
     for (const q of state.requests) {
       if (q.by !== r.id || q.status !== 'open') continue;
-      const a = assess(state, r, q.kind, q.postedTick, q.wants);
-      const stewardActed = q.kind === 'quieter_home' || state.buildings.some((b) => b.placedBy === 'steward' && b.placedTick >= q.postedTick);
-      if (a.met) {
-        q.status = stewardActed ? 'fulfilled' : 'resolved';
-        q.closedTick = tick;
-        if (stewardActed) {
-          this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'listens_to_me', valence: 1, base: 1.3, source: 'witnessed', note: ASK_THANKS[q.kind] });
-        }
-        this.emit({ t: tick, type: 'request_closed', request: { ...q } });
-      } else if (tick - q.postedTick > ASK_LAPSE_DAYS[q.kind] * TICKS_PER_DAY) {
+      if (this.closeIfMet(ctx, r, q)) continue;
+      if (tick - q.postedTick > ASK_LAPSE_DAYS[q.kind] * TICKS_PER_DAY) {
         // Being ignored hurts most the first time; after that it is disappointment, not news.
         const before = lapsesOf(state, r.id, q.kind, tick);
         q.status = 'lapsed';

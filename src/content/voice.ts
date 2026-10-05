@@ -185,6 +185,22 @@ export const SPEECH: Record<string, Lines> = {
     chatty: ['{other}, you are a treasure, you know that?', 'What would we do without you, {other}?'],
     dreamy: ['{other}, you make things feel possible.', 'You notice things, {other}. I like that.'],
   },
+  /** Words over someone or something: {s} is what it is about. The speaker likes it, the other doesn't. */
+  argue_for: {
+    plain: ['You are wrong about {s}, {other}.', 'Leave {s} alone, {other}.'],
+    formal: ['I cannot agree with you about {s}, {other}.', 'You are most unfair to {s}, {other}.'],
+    warm: ["You're too hard on {s}, {other}. Honestly.", "Why can't you see the good in {s}, {other}?"],
+    chatty: ['{S}? You are SO wrong about {s}, {other}!', 'Oh, come off it, {other}, {s} is fine!'],
+    dreamy: ['You never listen, {other}. {S} is good, and you know it.', 'You see {s} all crooked, {other}.'],
+  },
+  /** The speaker dislikes it, the other defends it. */
+  argue_against: {
+    plain: ['How can you stick up for {s}, {other}?', "Don't defend {s} to me, {other}."],
+    formal: ['I really must disagree about {s}, {other}.', 'You are far too easy on {s}, {other}.'],
+    warm: ["I can't believe you're on {s}'s side, {other}.", "You don't see what {s} is really like, {other}."],
+    chatty: ['{S}? Really? You LIKE {s}, {other}?!', 'Oh, come off it, {other}! {S} is a disaster!'],
+    dreamy: ['You never listen, {other}. {S} is not what you think.', 'You only see the bright side of {s}, {other}.'],
+  },
   argue: {
     plain: ['Leave it, {other}.'],
     formal: ['I really must disagree, {other}.'],

@@ -884,6 +884,25 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Stepping at 10× costs 1.08 ms a frame (under 2 ms; route-finding roughly doubled it).
    - The one-year soak with newcomers (bakery, 10 seeds × 112 days) finds no degenerate state: 1.5 rival pairs a run, an argument in every run, no departures, and the busiest place takes 49% of socialising.
 
+
+**Playtest round 2 criteria (predeclared 2026-10-05, before the footstep-wear code).** Quiet town, seeds 1–5, unless stated. A failure is reported as a failure, not redefined.
+
+1. **Worn tracks are worn by feet.**
+   - Placing or removing a building changes no worn track at that moment.
+   - A tile's wear rises only when a resident steps on it off a laid path.
+   - A track nobody walks fades: after 7 days unused, a tile keeps at most half its wear.
+   - The founding town starts with its everyday walks already worn in.
+   - Wear is part of the simulation, so a replayed save shows the same tracks.
+2. **Routes hold still.** Placing a building changes no route that does not cross its footprint.
+3. **Talk to your face reads right.** Feelings about the steward, said to the steward, are written for "you" ("You were kind when I needed it"). No line becomes "you wa", "you is" or "you vexes", and nobody says they "cannot let go of" you.
+4. **The jetty reaches the water.** A jetty can only be placed beside the brook, and its boards run out over the water. The founding jetty is beside the brook.
+5. **The placement preview is the building.** Nothing in the preview lies outside the building's footprint. The lamp's light pool, which showed as an offset green square, is left out.
+6. **Houses go dark when everyone is asleep.** At night a home's windows are lit while someone inside is awake, and dark once everyone inside is asleep. Its porch lantern goes out with it.
+7. **The desktop bottom bar is one row.** At widths from 1100 to 1920 the bar is no taller than 56 px, and its hint stays on one line.
+   - *Added later the same day, for two reports that came in mid-round, written alongside their fixes rather than before them:* the journal scroll, rolled or not, sits below the top bar on desktop.
+   - A fact learned in talk is in the resident's reply: for every fact a talk reveals, the reply contains the resident's own line for it.
+8. **No regressions.** Earlier unit and browser tests pass. Any measurement that moves is re-measured and reported. Determinism holds. Stepping at 10× stays under 2 ms a frame.
+
 ---
 
 ## 10. Risks

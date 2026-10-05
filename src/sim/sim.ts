@@ -65,7 +65,7 @@ import {
   type SimEvent,
   type SimState,
 } from './types.js';
-import { ambientAt, canPlace, distanceTo, emptyQualities, footprint, getBuilding, liveBuildings, mainSource, placeTile, route, sizeOf } from './world.js';
+import { ambientAt, canPlace, distanceTo, emptyQualities, footprint, getBuilding, liveBuildings, mainSource, placeTile, route, seedWear, sizeOf, wearDawn, wearStep } from './world.js';
 
 export type Command =
   | { at: number; kind: 'build'; type: string; x: number; y: number; rot?: number }
@@ -297,6 +297,7 @@ export class Simulation implements AspirationHost {
 
   static fromScenario(scenario: Scenario, seed: number, mind: Mind = StructuredMind): Simulation {
     const sim = new Simulation(createState(scenario, seed), mind);
+    seedWear(sim.state);
     sim.schedule(scenario.commands ?? []);
     return sim;
   }
@@ -405,6 +406,7 @@ export class Simulation implements AspirationHost {
       }
       storesDawn(this);
       progressDawn(this);
+      wearDawn(state);
     }
 
     for (const id of state.order) {
@@ -933,6 +935,7 @@ export class Simulation implements AspirationHost {
       const [x, y] = r.path.shift() as [number, number];
       r.x = x;
       r.y = y;
+      wearStep(state, x, y);
       if (r.path.length === 0) this.arrive(ctx, r);
       return;
     }

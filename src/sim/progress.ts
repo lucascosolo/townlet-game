@@ -240,6 +240,70 @@ export function progressEvent(h: ProgressHost, e: SimEvent): void {
   }
 }
 
+const QUIRK_SAID: Record<string, string> = {
+  light_sleeper: 'I sleep lightly. The least noise at night and I am awake.',
+  early_riser: 'I am up before anyone else, most days.',
+  homebody: 'I am happiest at home, truth be told.',
+  restless: "I can't sit still for long.",
+};
+
+const NEED_SAID: Record<string, string> = {
+  rest: 'a good long sleep',
+  food: 'a full plate',
+  comfort: 'my comforts',
+  company: 'company',
+  purpose: 'something useful to do',
+  delight: 'a little fun',
+};
+
+/**
+ * The same fact as the resident says it, so what you learn is what you were told (owner playtest:
+ * "Getting to know Ada: can't abide noise at night" followed a reply about something else).
+ */
+export function factSaid(state: SimState, r: ResidentState, key: string): string {
+  const def = residentDef(r.id);
+  const value = factValue(state, r, key);
+  switch (key) {
+    case 'job': {
+      const job = r.jobId !== null ? state.buildings.find((b) => b.id === r.jobId) : undefined;
+      return job ? `I work at the ${buildingDef(job.type).name.toLowerCase()}.` : def.job ? `I'd love to work at a ${buildingDef(def.job).name.toLowerCase()}.` : 'I keep house and help where I can.';
+    }
+    case 'lifts':
+      return `Nothing lifts me like ${lowerFirst(value.replace(/^Loves /, ''))}.`;
+    case 'dislikes':
+      return value.startsWith("Can't abide") ? `I can't abide ${value.replace(/^Can't abide /, '')}.` : 'Not much bothers me, truly.';
+    case 'quirk':
+      return def.quirks.length ? def.quirks.map((q) => QUIRK_SAID[q] ?? '').filter(Boolean).join(' ') || 'I have my habits, like anyone.' : 'I have no odd habits to speak of.';
+    case 'needs': {
+      const most = (Object.entries(r.setpoints) as Array<[string, number]>).sort((a, b) => b[1] - a[1])[0];
+      return most ? `I need ${NEED_SAID[most[0]] ?? most[0]}, more than most.` : 'I am easy to please.';
+    }
+    case 'dream': {
+      const d = dreamTitle(state, r);
+      return d ? `What I want most is to ${lowerFirst(d).replace(/\b(his|her|their)\b/g, 'my')}.` : 'I am still working out what I want.';
+    }
+    case 'values':
+      return `What matters to me is ${value.replace(/^Cares about /, '')}.`;
+    case 'background':
+      return 'Since you ask, let me tell you a little about myself.';
+    case 'friend':
+      return value.startsWith('Closest to ') ? `${value.replace(/^Closest to /, '')} is my closest friend here.` : "I haven't a close friend here yet.";
+    case 'favourite':
+      return value.startsWith('Favourite spot: ') ? `My favourite spot is ${value.replace(/^Favourite spot: /, '')}.` : "I haven't found a favourite spot yet.";
+  }
+  return '';
+}
+
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+
+/** The fact a question would reveal now, if any: one per question per resident per day, the next not yet known. */
+export function nextFact(state: SimState, who: string, question: TalkQuestion): string | null {
+  const p = progressOf(state);
+  if (p.asked[`${who}|${question}`] === dayOf(state.tick)) return null;
+  const known = p.known[who] ?? [];
+  return (FACTS[question] ?? []).find((f) => !known.includes(f)) ?? null;
+}
+
 function onTalk(h: ProgressHost, who: string, question: TalkQuestion, counted: boolean): void {
   const state = h.state;
   const p = progressOf(state);
@@ -248,12 +312,10 @@ function onTalk(h: ProgressHost, who: string, question: TalkQuestion, counted: b
     p.talkedToday.push(who);
     bump(h, 'talk');
   }
-  const key = `${who}|${question}`;
-  if (p.asked[key] === day) return;
-  p.asked[key] = day;
-  const known = (p.known[who] ??= []);
-  const fact = (FACTS[question] ?? []).find((f) => !known.includes(f));
+  const fact = nextFact(state, who, question);
+  p.asked[`${who}|${question}`] = day;
   if (!fact) return;
+  const known = (p.known[who] ??= []);
   const first = known.length === 0;
   known.push(fact);
   h.emitEvent({ t: state.tick, type: 'fact', who, key: fact, first });

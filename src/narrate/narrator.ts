@@ -6,14 +6,14 @@
 import { buildingDef, singularName } from '../content/buildings.js';
 import { residentDef } from '../content/residents.js';
 import { ASPIRATION_LINES, DILEMMA_NAMES, DREAM_DONE_LINES, GATHERING_START, PREPOSITIONS, PROPOSALS } from '../content/story.js';
-import { MIND_LINES } from '../content/thoughts.js';
+import { MIND_LINES, TO_STEWARD_LINES } from '../content/thoughts.js';
 import { FAVOUR_DONE, FAVOUR_NO, FAVOUR_YES, TALK_HOPE, TALK_HOPE_DONE, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON } from '../content/talk.js';
 import { firstPerson } from '../sim/mind/thoughts.js';
 import { opinion } from '../sim/mind/memory.js';
 import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
 import { chance, deriveSeed, pick, type RngHolder } from '../sim/rng.js';
 import { subjectWords } from '../sim/story/aspirations.js';
-import { factValue, goalLabel, TIER_GIFT } from '../sim/progress.js';
+import { factSaid, factValue, goalLabel, nextFact, TIER_GIFT } from '../sim/progress.js';
 import type { Simulation } from '../sim/sim.js';
 import { DAWN_MINUTE, clock, dayOf, minuteOf, seasonOf } from '../sim/time.js';
 import type { Belief, FavourKind, MindMention, Resource, ResidentDef, SimEvent, SimState, SubjectId, TalkAnswer } from '../sim/types.js';
@@ -30,6 +30,13 @@ function sentenceCase(s: string): string {
 }
 
 type Person = { subj: string; obj: string; poss: string };
+/** "listens" to "listen", "misses" to "miss", "worries" to "worry": the verb to follow "you". */
+function plainVerb(v: string): string {
+  if (/ies$/i.test(v)) return v.slice(0, -3) + 'y';
+  if (/(ss|sh|ch|x|zz|o)es$/i.test(v)) return v.slice(0, -2);
+  return /ss$/i.test(v) ? v : v.slice(0, -1);
+}
+
 const FIRST_PERSON: Person = { subj: 'I', obj: 'me', poss: 'my' };
 
 export type EntryKind = 'day' | 'board' | 'live' | 'aside' | 'note' | 'thought';
@@ -773,7 +780,7 @@ export class Narrator {
   /** An answer to the steward, in the resident's voice (the words only). */
   answer(who: string, a: TalkAnswer): string {
     const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
-    const mind = (m: Pick<MindMention, 'key' | 'vars'>) => this.utter(who, MIND_LINES[m.key], m.vars);
+    const mind = (m: Pick<MindMention, 'key' | 'vars' | 'about'>) => this.utter(who, (m.about === STEWARD_ID && this.you && TO_STEWARD_LINES[m.key]) || MIND_LINES[m.key], m.vars);
     switch (a.question) {
       case 'how': {
         const top = a.topics?.[0];
@@ -809,7 +816,10 @@ export class Narrator {
             : a.question === 'me'
               ? `what ${p.subj} ${p.subj === 'they' ? 'think' : 'thinks'} of ${this.you ? 'you' : 'the steward'}`
               : `what ${p.subj} ${p.subj === 'they' ? 'think' : 'thinks'} of ${a.about ? this.subjectName(a.about) : 'things'}`;
-    const words = this.toSteward(this.answer(e.who, a));
+    // A fact this question reveals (M4 Folk album) is said in the reply, so the album learns what you were told.
+    const fact = nextFact(this.state, e.who, a.question);
+    const told = fact ? factSaid(this.state, this.state.residents[e.who]!, fact) : '';
+    const words = [this.toSteward(this.answer(e.who, a)), told].filter(Boolean).join(' ');
     this.lastReply = { who: e.who, t: e.t, text: words };
     this.live(e.t, `${this.you ? 'You ask' : 'The steward asks'} ${name} ${asking}. "${words}"`);
   }
@@ -817,18 +827,19 @@ export class Narrator {
   /** Said to the steward's face: "the steward listens" becomes "you listen" (in the browser, where you are the steward). */
   toSteward(text: string): string {
     if (!this.you) return text;
-    const verbs: Array<[RegExp, string]> = [
+    const verbs: Array<[RegExp, string | ((m: string, v: string) => string)]> = [
       [/\bwhoever the steward is, they care\b/gi, 'you care'],
       [/\b(the )?steward doesn't\b/gi, "you don't"],
       [/\b(the )?steward does\b/gi, 'you do'],
       [/\bthe steward is\b/gi, 'you are'],
       [/\bthe steward has\b/gi, 'you have'],
       [/\bthe steward's\b/gi, 'your'],
-      [/\bthe steward (\w+?)s\b/gi, 'you $1'],
+      [/\bthe steward was\b/gi, 'you were'],
+      [/\bthe steward (\w+s)\b/gi, (_m: string, v: string) => `you ${plainVerb(v)}`],
       [/\bthe steward\b/gi, 'you'],
     ];
     let out = text;
-    for (const [re, to] of verbs) out = out.replace(re, to);
+    for (const [re, to] of verbs) out = typeof to === 'string' ? out.replace(re, to) : out.replace(re, to);
     return out.replace(/(^|[.!?] )you\b/g, (_m, p: string) => `${p}You`);
   }
 

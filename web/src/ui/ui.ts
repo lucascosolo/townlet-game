@@ -463,6 +463,7 @@ export class Ui {
 
   status(text: string): void {
     this.statusEl.textContent = text;
+    this.statusEl.title = text;
   }
 
   get modalOpen(): boolean {

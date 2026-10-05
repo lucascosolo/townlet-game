@@ -478,6 +478,8 @@ export interface SimState {
   stores?: { year: number; target: number; asked: boolean; by?: string; outcome?: 'met' | 'short'; /** Quarters of the way there already told. */ told?: number };
   /** Work done towards clearing each wild plot, in minutes, by building id (M3c). */
   clearing?: Record<string, number>;
+  /** How worn each tile is by feet off the laid paths, by "x,y": footsteps, fading each dawn (owner playtest 2026-10-05). */
+  wear?: Record<string, number>;
 }
 
 // ---------------------------------------------------------------- events

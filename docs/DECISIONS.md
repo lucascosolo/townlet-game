@@ -2,6 +2,29 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-05: Worn tracks worn by feet, and playtest round 2
+
+**The asks (owner):**
+- "Why do the paths shift and change when I place a new object?"
+- "Worn tracks shouldn't instantly move around when I place something, they should be worn down by character activity."
+- Also: a broken talk line ("You wa kind when I needed it"), an odd one ("I cannot quite let go of you"), the fishing jetty sitting on dry land, an offset green square while placing, houses lit while everyone sleeps, a cramped desktop bottom bar, the rolled-up journal over the top bar, and a "Getting to know" note about something the resident never said.
+
+**Chosen:**
+- **Worn tracks come from footsteps.** The simulation keeps a wear count per tile. It rises each time a resident steps there off a laid path, and fades a little every dawn. The view only draws it. The founding town starts with its everyday walks worn in, so day 1 doesn't look untrodden.
+  - *Why in the sim and not the view:* a save is the command log replayed, so wear kept in the sim comes back exactly on load. The view never sees the ticks a load replays.
+- **Routes prefer the straight line when costs tie.** Over open ground many routes cost the same, and which one won depended on how the search happened to unfold, so any new building could flip routes elsewhere. A tiny extra cost for straying from the straight line picks one route. It stays far below any real difference.
+- **Feelings about the steward said to the steward have their own lines,** written for "you", not run through the "the steward" → "you" rewrite. The rewrite also now turns "was" into "were" and keeps verbs like "misses" whole.
+- **A jetty must be beside the brook,** and its boards run out over the water.
+- **A house is lit only while someone inside is awake.** Once all are asleep, its windows and porch lantern go out. Street lamps and the teahouse's lanterns stay lit, so the town still reads at night.
+- **A fact you learn in talk is said in the reply.** Each question still reveals one fact a day for the Folk album, but now the resident says it ("I can't abide noise, especially at night."), so the "Getting to know…" note matches what you heard.
+  - *Rejected:* dropping the fact notes from talk. Learning about people by talking to them is the album's point.
+- **On desktop the journal scroll hangs below the top bar,** rolled or not, so neither covers the other.
+
+**Rejected:**
+- *Recomputing the tracks from routes, only more stably.* The owner asked for tracks worn by activity, and a recomputed track still jumps the moment a building changes a route.
+- *Wear kept only in the view.* It would vanish on reload and differ between a played and a loaded town.
+- *Drawing the jetty over the water anywhere it is placed.* A jetty in a field is still a jetty in a field.
+
 ## 2026-10-05: Paths you lay down
 
 **The ask (owner):** "Maybe make a way to add new paths."

@@ -1818,9 +1818,13 @@ export class Ui {
     sack.hidden = !hasGranary(state);
     if (!sack.hidden) {
       const put = Math.floor(state.granary ?? 0);
-      const text = state.stores?.asked && !state.stores.outcome ? `${put}/${state.stores.target}` : String(put);
+      // The target is shown small, and hidden on phones where the top bar is tight (it is on the Goals tab).
+      const target = state.stores?.asked && !state.stores.outcome ? `/${state.stores.target}` : '';
       const b = sack.querySelector('b') as HTMLElement;
-      if (b.textContent !== text) b.textContent = text;
+      if (b.dataset.text !== `${put}${target}`) {
+        b.dataset.text = `${put}${target}`;
+        b.replaceChildren(document.createTextNode(String(put)), ...(target ? [el('span', { class: 'of' }, target)] : []));
+      }
       sack.title = `Granary: ${put} food put by (room for ${granaryRoom(state)})`;
     }
     this.renderBoard();

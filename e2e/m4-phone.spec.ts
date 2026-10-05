@@ -98,3 +98,35 @@ test('criterion 6: tapping someone in the town opens a card with Talk, Favour an
   await page.getByTestId('ask-how').tap();
   await expect(page.getByTestId('talk-reply')).toContainText('“');
 });
+
+test('owner playtest: the top bar fits a narrow phone with full stores, a granary and a long tier name', async ({ browser }) => {
+  for (const width of [360, 390]) {
+    const ctx = await browser.newContext({ viewport: { width, height: 800 }, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage();
+    await page.goto('/?intro=0&scenario=quiet&seed=1&speed=0');
+    await page.waitForFunction(() => (window as unknown as { __townlet?: unknown }).__townlet !== undefined);
+    await page.evaluate(() => {
+      const h = (window as unknown as { __townlet: Handle & { game: { sim: { state: any } } } }).__townlet;
+      const s = h.game.sim.state;
+      s.stock.food = 40;
+      s.stock.timber = 100;
+      Object.assign(s.progress ?? (s.progress = { renown: 0, tier: 0, goals: { day: 0, list: [], bonus: false }, known: {}, talkedToday: [], asked: {} }), { tier: 2, renown: 388 });
+      s.granary = 288;
+      s.stores = { year: 0, target: 330, asked: true };
+      s.buildings.push({ ...s.buildings[0], id: 999, type: 'granary', x: 40, y: 40, removed: false });
+      h.runTicks(60);
+    });
+    await page.waitForTimeout(500);
+    const spill = await page.evaluate(() => {
+      const hud = document.querySelector('.hud')!.getBoundingClientRect();
+      return [...document.querySelectorAll<HTMLElement>('.hud *')]
+        .filter((e) => e.offsetParent !== null && getComputedStyle(e).display !== 'none')
+        .map((e) => ({ what: e.className || e.tagName, r: e.getBoundingClientRect() }))
+        .filter(({ r }) => r.width > 0 && (r.right > hud.right + 0.5 || r.left < hud.left - 0.5 || r.right > window.innerWidth))
+        .map(({ what, r }) => `${what} ${Math.round(r.left)}–${Math.round(r.right)}`);
+    });
+    expect(spill, `top bar at ${width}px`).toEqual([]);
+    await expect(page.getByTestId('granary-stock')).toBeVisible();
+    await ctx.close();
+  }
+});

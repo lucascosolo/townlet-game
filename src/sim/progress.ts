@@ -279,7 +279,8 @@ export function progressDawn(h: ProgressHost): void {
     { goal: { kind: 'learn', target: 2, count: 0, done: false }, weight: 1 },
     { goal: { kind: 'green', target: 1, count: 0, done: false }, weight: 0.6 },
   ];
-  if (open.length) candidates.push({ goal: { kind: 'answer', target: 1, count: 0, done: false }, weight: 3 });
+  // Only asks a build can grant today: a quieter night is judged after the night.
+  if (open.some((q) => q.kind !== 'quieter_home')) candidates.push({ goal: { kind: 'answer', target: 1, count: 0, done: false }, weight: 3 });
   if (unmet.length) candidates.push({ goal: { kind: 'meet', target: 1, count: 0, done: false }, weight: 2.5 });
   if (storesOn) candidates.push({ goal: { kind: 'stores', target: 15, count: 0, done: false, from: Math.floor(state.granary ?? 0) }, weight: 2 });
   const rng: RngHolder = { rng: deriveSeed(state.seed, `goals:${day}`) };

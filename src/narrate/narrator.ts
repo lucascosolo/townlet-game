@@ -9,6 +9,7 @@ import { ASPIRATION_LINES, DILEMMA_NAMES, DREAM_DONE_LINES, GATHERING_START, PRE
 import { MIND_LINES } from '../content/thoughts.js';
 import { FAVOUR_DONE, FAVOUR_NO, FAVOUR_YES, TALK_HOPE, TALK_HOPE_DONE, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON } from '../content/talk.js';
 import { firstPerson } from '../sim/mind/thoughts.js';
+import { opinion } from '../sim/mind/memory.js';
 import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
 import { chance, deriveSeed, pick, type RngHolder } from '../sim/rng.js';
 import { subjectWords } from '../sim/story/aspirations.js';
@@ -727,8 +728,14 @@ export class Narrator {
         break;
       }
       case 'argue': {
-        const about = e.topic ? ` about ${this.subjectName(e.topic.subject)}` : '';
-        text = `${at}${a} and ${b} have words${about}. ${this.voice(e.a, SPEECH.argue, { other: b })}`;
+        const about = e.topic ? ` about ${e.topic.subject === STEWARD_ID && this.you ? 'you' : this.subjectName(e.topic.subject)}` : '';
+        // What they say is about what they argue over (owner playtest: "words about the steward"
+        // quoted a line that wasn't). Between themselves, residents call you "the steward".
+        const s = e.topic ? (e.topic.subject === STEWARD_ID ? 'the steward' : this.subjectName(e.topic.subject)) : '';
+        // Which side they take: the speaker's own view of it (the event itself carries no side).
+        const view = e.topic ? (e.topic.subject === STEWARD_ID ? (this.state.residents[e.a]?.rel.steward?.affinity ?? 0) : opinion(this.state.residents[e.a]!, e.topic.subject)) : 0;
+        const lines = e.topic ? (view >= 0 ? SPEECH.argue_for : SPEECH.argue_against) : SPEECH.argue;
+        text = `${at}${a} and ${b} have words${about}. ${this.voice(e.a, lines, { other: b, s })}`;
         break;
       }
       case 'apologize':

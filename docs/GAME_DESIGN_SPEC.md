@@ -836,6 +836,13 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
      - **Winter stores.** The target is now 30 food per resident, so meeting it covers a winter (25 did not, once winters bit). The favour-asking steward meets it on 3 of 5 seeds and the considerate steward on 4 of 5. The considerate steward now retries a build it couldn't afford, and the stores e2e reads the target from state.
      - **Harness.** The browser popup helpers now also put off the tier celebration. The phone build test uses the tab bar. The 12-resident speed test starts as a Hamlet, because a Clearing holds 8.
 
+
+**After M4, from the owner's playtest (2026-10-05).**
+- **A dream building put up before it was asked for** used to be ignored for days. Juniper drew a glasshouse that already stood, then asked for it. The steps that only lead up to the building (designing it, asking for it) are now skipped when it already stands. The resident notices at once, with their own line.
+- **Asks met by a build close at once,** not overnight. An ask granted in the day used to close after that day's "grant an ask" goal had gone, so the goal could not be met. "Grant an ask" is no longer offered when the only open asks are for a quieter night, because that can only be judged after a night's sleep.
+- **Arguments with a topic quote a line about that topic,** on the speaker's side of it. "Words about the steward" no longer quote "You never listen, Ada".
+- **One earlier miss is met again.** Friends now keep company under a careless steward at 2.02× (target 2×), up from 1.94×, so that M3a test is no longer an expected failure. The likely cause is that asks now close sooner.
+
 ---
 
 ## 10. Risks

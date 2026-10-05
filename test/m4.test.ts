@@ -282,7 +282,9 @@ function completeGoal(sim: ReturnType<typeof runScenario>, kind: GoalKind): void
         sim.schedule([{ at: sim.state.tick, kind: 'favour', who: r.id, favour: 'catch' }]);
         sim.flushCommands();
       }
-      sim.runUntil(at(Math.floor(sim.state.tick / 1440) + 1, 21));
+      sim.step();
+      sim.runUntil(Math.min(at(Math.floor(sim.state.tick / 1440) + 1, 21), sim.state.tick + 60));
+      if (!todaysGoals(sim.state).find((g) => g.kind === kind)?.done) sim.runUntil(at(Math.floor(sim.state.tick / 1440) + 1, 21));
       break;
   }
 }
@@ -313,3 +315,32 @@ describe('owner playtest: a dream building put up before it was asked for', () =
     }
   });
 });
+
+describe('owner playtest: granting an ask counts the same day', () => {
+  it('an ask met by a build closes at once, and the "grant an ask" goal is done that day', { timeout: 300_000 }, () => {
+    let checked = 0;
+    for (let d = 2; d <= 20 && checked < 3; d++) {
+      const sim = runScenario('quiet', 1, 'none');
+      sim.runUntil(at(d, 8));
+      const goal = todaysGoals(sim.state).find((g) => g.kind === 'answer');
+      if (!goal) continue;
+      completeGoal(sim, 'answer');
+      const now = todaysGoals(sim.state).find((g) => g.kind === 'answer');
+      if (!sim.state.requests.some((q) => q.status === 'fulfilled' && dayOfTick(q.closedTick ?? 0) === d)) continue;
+      expect(now?.done, `day ${d}`).toBe(true);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+
+  it('the goal is never offered when the only asks open are for a quieter night', { timeout: 300_000 }, () => {
+    const sim = runScenario('quiet', 2, 'none');
+    for (let d = 2; d <= 21; d++) {
+      sim.runUntil(at(d, 8));
+      const open = sim.state.requests.filter((q) => q.status === 'open');
+      if (todaysGoals(sim.state).some((g) => g.kind === 'answer')) expect(open.some((q) => q.kind !== 'quieter_home'), `day ${d}`).toBe(true);
+    }
+  });
+});
+
+const dayOfTick = (t: number) => Math.floor(t / 1440) + 1;

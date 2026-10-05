@@ -12,7 +12,8 @@ These are decisions that change what gets built. Each entry says what was chosen
 **Chosen:**
 - **Worn tracks come from footsteps.** The simulation keeps a wear count per tile. It rises each time a resident steps there off a laid path, and fades a little every dawn. The view only draws it. The founding town starts with its everyday walks worn in, so day 1 doesn't look untrodden.
   - *Why in the sim and not the view:* a save is the command log replayed, so wear kept in the sim comes back exactly on load. The view never sees the ticks a load replays.
-- **Routes prefer the straight line when costs tie.** Over open ground many routes cost the same, and which one won depended on how the search happened to unfold, so any new building could flip routes elsewhere. A tiny extra cost for straying from the straight line picks one route. It stays far below any real difference.
+- **Ties between equally short routes always break the same way.** Over open ground many routes cost the same, and which one won depended on how the search happened to unfold, so any new building could flip routes elsewhere. A fixed, tiny per-tile grain now settles every tie the same way. It stays far below any real difference in cost.
+  - *Rejected:* breaking ties toward the straight line. It looked tidier, but it changed everyday walks enough to push two tuned M1.5 measures past their bands (the busiest place's share of socialising, and the bench-memory twin).
 - **Feelings about the steward said to the steward have their own lines,** written for "you", not run through the "the steward" → "you" rewrite. The rewrite also now turns "was" into "were" and keeps verbs like "misses" whole.
 - **A jetty must be beside the brook,** and its boards run out over the water.
 - **A house is lit only while someone inside is awake.** Once all are asleep, its windows and porch lantern go out. Street lamps and the teahouse's lanterns stay lit, so the town still reads at night.

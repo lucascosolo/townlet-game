@@ -192,16 +192,12 @@ function findRoute(state: SimState, from: [number, number], to: [number, number]
   // The buildings you set out from and are going to can be walked through.
   const startB = cells[from[1] * W + from[0]] as number;
   const endB = cells[to[1] * W + to[0]] as number;
-  // Over open ground many ways tie; a whisker of cost for straying from the straight line picks
-  // the one that hugs it, so a route only changes where something new is really in the way
-  // (owner playtest: worn tracks jumped about whenever anything was built). Kept far below one,
-  // the smallest real difference between two routes.
-  const lx = to[0] - from[0];
-  const ly = to[1] - from[1];
-  const len = Math.hypot(lx, ly);
-  // Two tiles the same distance either side of the line still tie: a fixed, far smaller per-tile
-  // grain settles those the same way every time.
-  const stray = (i: number) => (2e-5 * Math.abs(((i % W) - from[0]) * ly - (Math.floor(i / W) - from[1]) * lx)) / len + 1e-9 * ((i * 2654435761) % 1009) / 1009;
+  // Over open ground many ways tie, and which one won used to depend on how the search happened to
+  // unfold, so any new building could flip walks elsewhere (owner playtest: tracks jumped about).
+  // A fixed per-tile grain, far below one (the smallest real difference between two routes),
+  // settles every tie the same way, so a route only changes where something new is in the way.
+  // (A pull towards the straight line was tried first; it moved two tuned M1.5 measures past their bands.)
+  const grain = (i: number) => (1e-9 * ((i * 2654435761) % 1009)) / 1009;
   const base = (i: number): number => {
     const c = cells[i] as number;
     if (c === 0) return TILE_COST.open;
@@ -210,7 +206,7 @@ function findRoute(state: SimState, from: [number, number], to: [number, number]
     if (c === 3) return TILE_COST.brook;
     return c === startB || c === endB ? TILE_COST.open : Infinity;
   };
-  const cost = (i: number): number => base(i) + stray(i);
+  const cost = (i: number): number => base(i) + grain(i);
   const n = W * H;
   const best = new Float64Array(n).fill(Infinity);
   const prev = new Int32Array(n).fill(-1);

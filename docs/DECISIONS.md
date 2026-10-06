@@ -2,6 +2,25 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-05: Getting Townlet seen; ads no longer ruled out
+
+**The asks (owner):** "Is there any level of SEO we can do for Townlet to get it out there, and is there any fun way to monetize it?" Then: "I'm not opposed to ad revenue actually. Definitely we should do the common sense basic stuff like giving it proper meta data and share cards for sharing. Maybe work on ad copy for an itch.io listing."
+
+**Chosen:**
+- **Ad revenue is no longer ruled out.** This reverses the "no ads" line in spec section 7. No ads are built yet, and how they would work is still open.
+- **The page gets proper metadata:**
+  - a real title and description, and a canonical link to townlet.app;
+  - Open Graph and Twitter share cards with a 1200×630 image of the town at dusk;
+  - VideoGame structured data, and a short noscript description for crawlers;
+  - `robots.txt` and `sitemap.xml`.
+- **An itch.io listing is drafted** in `docs/marketing/itch-listing.md`. The owner posts it, since it needs their itch.io account.
+
+**Still to decide:**
+- How ads would work, if they come. Interruptive ads during play would cut against pillar 4 (a calm, unhurried game). An optional ad the player chooses to watch for a small reward fits better. So does a web portal (CrazyGames, Poki) that runs its own ads around the game.
+
+**Rejected:**
+- *Deeper SEO work (content pages, blog).* For a small browser game, most players come from game portals, itch.io and social posts. Search ranking matters less than a good share card.
+
 ## 2026-10-05: Worn tracks worn by feet, and playtest round 2
 
 **The asks (owner):**

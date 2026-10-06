@@ -3,8 +3,39 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <title>Townlet</title>
-    <meta name="description" content="A cozy management sim where every resident remembers. Greybox preview." />
+    <title>Townlet: a cozy town sim where everyone remembers</title>
+    <meta name="description" content="Build a little town for people who remember what you do. They make friends, hold grudges and chase their dreams. Free to play in your browser." />
+    <link rel="canonical" href="https://townlet.app/" />
+    <meta name="theme-color" content="#2b3a4a" />
+    <!-- Share cards: what a link to the game shows in chats and feeds. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Townlet" />
+    <meta property="og:url" content="https://townlet.app/" />
+    <meta property="og:title" content="Townlet: a cozy town sim where everyone remembers" />
+    <meta property="og:description" content="Build a little town for people who remember what you do. They make friends, hold grudges and chase their dreams. Free in your browser." />
+    <meta property="og:image" content="https://townlet.app/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A small low-poly town at dusk: cottages around a lamplit green, residents gathered on it, a brook and a fishing jetty." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Townlet: a cozy town sim where everyone remembers" />
+    <meta name="twitter:description" content="Build a little town for people who remember what you do. Free in your browser." />
+    <meta name="twitter:image" content="https://townlet.app/og.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Townlet",
+        "url": "https://townlet.app/",
+        "image": "https://townlet.app/og.png",
+        "description": "A cozy town-building sim. Each resident has needs, opinions, friendships and a dream of their own, and remembers what you build, take down and say to them.",
+        "genre": ["Simulation", "City builder", "Cozy"],
+        "gamePlatform": ["Web browser", "Mobile web"],
+        "applicationCategory": "Game",
+        "operatingSystem": "Any",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 8 8 3l6 5v6H2z' fill='%23b5653e'/%3E%3Crect x='6' y='10' width='4' height='4' fill='%23ffd27a'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,6 +43,10 @@
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
+    <noscript>
+      <h1>Townlet</h1>
+      <p>A cozy town-building sim where everyone remembers. Lay out a small valley town for its residents. Each has needs, opinions, friends, rivals and a dream of their own, and they remember what you build, what you take down and what you say to them. Townlet needs JavaScript and WebGL to run.</p>
+    </noscript>
     <div id="app">
       <div id="stage"></div>
     </div>

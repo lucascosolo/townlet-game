@@ -223,6 +223,9 @@ describe('criterion 5: the Folk album', () => {
 
   it('all five questions, about a person and a place, reveal everything over two days, and facts are true', { timeout: 120_000 }, () => {
     const sim = runScenario('quiet', 2, 'none');
+    // Bar round 2: the background is learned by reading their page, which the look command logs.
+    sim.schedule([{ at: sim.state.tick, kind: 'look', who: 'wren' }]);
+    sim.flushCommands();
     for (const day of [2, 3]) {
       sim.runUntil(at(day, 10));
       for (const q of ['how', 'mind', 'hope', 'me'] as TalkQuestion[]) {

@@ -13,6 +13,10 @@ import type { Simulation } from '../sim/sim.js';
 import { clock, dayOf } from '../sim/time.js';
 import { NEEDS, type Need, type ResidentState } from '../sim/types.js';
 
+/** Activities in words (bar round 2: "socialize at the old oak" on the quick card). */
+const DOING: Record<string, string> = { sleep: 'asleep', eat: 'eating', work: 'working', socialize: 'socialising', stroll: 'strolling', rest: 'resting', forage: 'foraging' };
+const TO_DO: Record<string, string> = { sleep: 'sleep', eat: 'eat', work: 'work', socialize: 'socialise', stroll: 'stroll', rest: 'rest', forage: 'forage' };
+
 export interface ReportSource {
   when: string;
   how: string;
@@ -62,9 +66,9 @@ export function residentReport(sim: Simulation, id: string, names: Narrator = ne
   const dream = dreamOf(sim.state, r);
   const place = (pid: number | null) => (pid === null ? 'on the path' : names.subjectName(`b:${pid}`));
   const doing = r.activity
-    ? `${r.activity.id} at ${place(r.activity.placeId)} until ${clock(r.activity.until)}`
+    ? `${DOING[r.activity.id]} at ${place(r.activity.placeId)} until ${clock(r.activity.until)}`
     : r.pending
-      ? `walking to ${place(r.pending.placeId)} to ${r.pending.id}`
+      ? `walking to ${place(r.pending.placeId)} to ${TO_DO[r.pending.id]}`
       : 'deciding';
 
   const subjects = [...new Set(Object.values(r.beliefs).map((b) => b.subject))];

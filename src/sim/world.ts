@@ -148,26 +148,37 @@ interface Grid {
   key: string;
   /** Per tile: 0 open, 1 laid path, 2 commons, 3 brook, otherwise the id + 10 of the building on it. */
   cells: Int32Array;
+  /** How much cheaper a worn tile is to cross, from the day's dawn (bar round 2: desire paths). */
+  worn: Float32Array;
   width: number;
   height: number;
   cache: Map<string, Array<[number, number]> | null>;
 }
+
+/** The most a well-worn track takes off an open tile's cost: never cheaper than a laid path. */
+const WORN_DISCOUNT = 1.5;
 
 const grids = new WeakMap<SimState, Grid>();
 
 /** The walking grid, rebuilt only when buildings change. */
 function gridOf(state: SimState): Grid {
   const live = liveBuildings(state);
-  const key = `${state.nextBuildingId}|${live.length}|${state.width}x${state.height}`;
+  // Rebuilt when buildings change and once a day, so the day's walking follows yesterday's tracks.
+  const key = `${state.nextBuildingId}|${live.length}|${state.width}x${state.height}|${Math.floor(state.tick / 1440)}`;
   const old = grids.get(state);
   if (old && old.key === key) return old;
   const cells = new Int32Array(state.width * state.height);
+  const worn = new Float32Array(state.width * state.height);
+  for (const [k, w] of Object.entries(state.wear ?? {})) {
+    const [x, y] = k.split(',').map(Number) as [number, number];
+    if (x >= 0 && y >= 0 && x < state.width && y < state.height) worn[y * state.width + x] = Math.min(WORN_DISCOUNT, Math.max(0, ((w as number) - 1) * 0.15));
+  }
   for (const b of live) {
     const [w, h] = sizeOf(b);
     const v = b.type === 'path' ? 1 : b.type === 'commons' ? 2 : b.type === 'brook' ? 3 : b.id + 10;
     for (let y = b.y; y < b.y + h; y++) for (let x = b.x; x < b.x + w; x++) if (x >= 0 && y >= 0 && x < state.width && y < state.height) cells[y * state.width + x] = v;
   }
-  const grid: Grid = { key, cells, width: state.width, height: state.height, cache: new Map() };
+  const grid: Grid = { key, cells, worn, width: state.width, height: state.height, cache: new Map() };
   grids.set(state, grid);
   return grid;
 }
@@ -180,7 +191,7 @@ export function isPath(state: SimState, x: number, y: number): boolean {
 /** A* over the walking grid. Steps along laid paths are taken two at a time. */
 function findRoute(state: SimState, from: [number, number], to: [number, number]): Array<[number, number]> | null {
   const g = gridOf(state);
-  const { width: W, height: H, cells } = g;
+  const { width: W, height: H, cells, worn } = g;
   const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H;
   if (!inside(from[0], from[1]) || !inside(to[0], to[1])) return null;
   if (from[0] === to[0] && from[1] === to[1]) return [];
@@ -194,7 +205,7 @@ function findRoute(state: SimState, from: [number, number], to: [number, number]
   const endB = cells[to[1] * W + to[0]] as number;
   const cost = (i: number): number => {
     const c = cells[i] as number;
-    if (c === 0) return TILE_COST.open;
+    if (c === 0) return TILE_COST.open - (worn[i] as number);
     if (c === 1) return TILE_COST.path;
     if (c === 2) return TILE_COST.commons;
     if (c === 3) return TILE_COST.brook;
@@ -313,6 +324,9 @@ export const WEAR_SHOW = 6;
 
 /** A footstep off the laid paths wears the ground a little. */
 export function wearStep(state: SimState, x: number, y: number): void {
+  // Only open ground wears (bar round 2): the commons and every other footprint stay as drawn.
+  const g = gridOf(state);
+  if (x < 0 || y < 0 || x >= g.width || y >= g.height || g.cells[y * g.width + x] !== 0) return;
   if (isPath(state, x, y)) return;
   const wear = (state.wear ??= {});
   const k = `${x},${y}`;

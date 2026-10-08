@@ -60,14 +60,21 @@ export function feelingAbout(r: ResidentState, subject: SubjectId, now: number):
 export function talkAnswer(state: SimState, r: ResidentState, question: TalkQuestion, about?: SubjectId): TalkAnswer {
   const top = topOfMind(state, r, 3).map((t, rank) => ({ key: t.key, ...(t.about ? { about: t.about } : {}), vars: t.vars, rank }));
   switch (question) {
-    case 'how':
+    case 'how': {
+      // Asked by someone who has let them down badly, "how are you" is no better than fair, and
+      // says why (bar round 2: the page said "unhappy with you" while the mouth said "rather good spirits").
+      const sour = rel(r, STEWARD).affinity < -0.5;
+      const band = moodBand(r.mood);
+      const capped = sour && (band === 'good' || band === 'great');
+      const topics = capped ? [{ key: 'steward:-', about: STEWARD as SubjectId, vars: {}, rank: 0 }, ...top.slice(0, 1).map((t) => ({ ...t, rank: 1 }))] : top.slice(0, 1);
       return {
         question,
-        band: moodBand(r.mood),
-        value: r.mood,
-        topics: top.slice(0, 1),
+        band: capped ? 'fair' : band,
+        value: capped ? Math.min(r.mood, 0.6) : r.mood,
+        topics,
         ...(r.moodArc ? { mood: { kind: r.moodArc.kind, reason: r.moodArc.reason } } : {}),
       };
+    }
     case 'mind':
       return { question, topics: top };
     case 'hope':
@@ -104,7 +111,42 @@ export function reconcile(answer: TalkAnswer): TalkAnswer {
       return true;
     });
   }
+  // One feeling per subject in one breath (bar round 2: "I am grateful to you... you still
+  // irritate me"): where two topics about the same thing pull opposite ways, the higher-ranked one stays.
+  if (answer.topics) {
+    const seen = new Map<string, number>();
+    answer.topics = answer.topics.filter((t) => {
+      const sign = topicSign(t.key);
+      const subject = t.about ?? '';
+      if (!subject || sign === 0) return true;
+      const prior = seen.get(subject);
+      if (prior !== undefined && prior !== sign) return false;
+      seen.set(subject, sign);
+      return true;
+    });
+  }
   return answer;
+}
+
+/** Which way a mind topic leans about its subject, or 0 for a plain observation. */
+export function topicSign(key: string): number {
+  if (key === 'steward:+' || key === 'belief:+' || key === 'belief_person:+' || /^feel:(joy|gratitude|pride)/.test(key)) return 1;
+  if (key === 'steward:-' || key === 'steward:fresh' || key === 'belief:-' || key === 'belief_person:-' || key === 'grudge' || /^feel:(annoyance|worry|grief|loneliness)/.test(key)) return -1;
+  return 0;
+}
+
+/** Whether a memory about any subject agrees with what the answer already says about it (bar round 2). */
+export function memoryAgrees(answer: TalkAnswer, memory: { subject: SubjectId; valence: number }): boolean {
+  const sign = Math.sign(memory.valence);
+  if (sign === 0) return true;
+  for (const t of answer.topics ?? []) if (t.about === memory.subject && topicSign(t.key) !== 0 && topicSign(t.key) !== sign) return false;
+  if (answer.but && memory.subject === STEWARD && sign > 0) return false;
+  // "Bram is pleasant company" does not go on "it still weighs on me that Bram and I argued".
+  if (answer.about === memory.subject && answer.band) {
+    const bandSign = ['love', 'like'].includes(answer.band) ? 1 : ['dislike', 'hate'].includes(answer.band) ? -1 : 0;
+    if (bandSign !== 0 && bandSign !== sign) return false;
+  }
+  return true;
 }
 
 /** Whether a memory about the steward with this feeling fits the answer's band. */

@@ -215,6 +215,27 @@ export const SPEECH: Record<string, Lines> = {
     chatty: ['{other}! I was a fool before. Forgive me?'],
     dreamy: ['I said things I did not mean, {other}.'],
   },
+  thinSupper: {
+    plain: ['Thin pickings.', 'That was not a supper.', 'Bread and not much else.'],
+    formal: ['One does not complain. One does, however, notice.', 'A thin supper, and the larder bare. We have had better evenings.', 'I shall go to bed hungry, I think.'],
+    warm: ['Not much on the plate tonight, is there.', 'We will manage. We always do. But I am hungry.', 'I gave the last of mine to the cat. Silly of me.'],
+    chatty: ['Is that it? Is that ALL?', 'My stomach is writing a strongly worded letter!', 'Thin soup again! Who is running this town?'],
+    dreamy: ['The plate is mostly plate tonight.', 'Hunger has a sound. It is a sort of hum.', 'I dreamt of bread last night. I may again.'],
+  },
+  forage: {
+    plain: ["Found some. Won't last."],
+    formal: ['Not a feast, but it will do for tonight.', 'The hedgerows are generous, if the larder is not.'],
+    warm: ['Something, at least. Better than nothing on the table.', 'The brook never lets you down, not entirely.'],
+    chatty: ['Berries! And a mushroom I am nearly sure about!', 'Provisions! Of a sort!'],
+    dreamy: ['The hedge gave what it had.', 'The brook keeps a little back for the hungry.'],
+  },
+  letGo: {
+    plain: ['Not this season, then.', "Asked. Waited. Done waiting."],
+    formal: ['I shall not ask again. One learns to make do.', 'It was a hope, not a plan. I have let it go.'],
+    warm: ["I'll make do. I always have.", 'One day, perhaps. Not now. That is all right.'],
+    chatty: ['Fine! Fine! I have other ideas!', 'Never mind! Plenty more dreams where that came from!'],
+    dreamy: ['The wish folds itself up and goes back in the drawer.', 'I will dream something else. The valley has room.'],
+  },
   leaving: {
     plain: ['Maybe this place is not for me.'],
     formal: ['I have begun to wonder whether I belong here.'],

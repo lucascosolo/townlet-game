@@ -228,6 +228,21 @@ function morning(host: StoryHost): void {
     }
   }
 
+  // Nothing to decide for three mornings running: the town finds something to put to the steward
+  // (bar round 2: thirteen of the last fourteen mornings had nothing to decide). Asks and wishes
+  // are things to do, not decisions, so only an open proposal resets the count.
+  const nothingToDecide = !story.dilemmas.some((d) => d.status === 'open');
+  story.quietMornings = nothingToDecide ? (story.quietMornings ?? 0) + 1 : 0;
+  if (story.quietMornings >= 3 && day >= 2) {
+    const beat = EVENTS.find((e) => e.id === 'dilemma');
+    const cast = beat?.cast(host);
+    if (beat && cast) {
+      story.quietMornings = 0;
+      record(story, beat.id, t, beat.tone);
+      beat.fire(host, cast);
+      return;
+    }
+  }
   draw(host, 'morning', day <= 3 ? 1 : 0.55);
 }
 
@@ -468,7 +483,7 @@ const EVENTS: StoryEventDef[] = [
     slot: 'morning',
     tone: 'neutral',
     weight: 0.9,
-    cooldownDays: 4,
+    cooldownDays: 3,
     early: true,
     cast: (host) => {
       const state = host.state;
@@ -526,7 +541,14 @@ function checkWishes(host: StoryHost): void {
   for (const w of state.story.wishes) {
     if (w.status !== 'open') continue;
     const people = w.supporters.map((id) => state.residents[id]).filter((r): r is ResidentState => !!r && !r.departed);
-    if (people.length === 0 || !people.every((r) => assess(state, r, w.kind, w.madeTick).met)) continue;
+    // A wish goes with the last of those who made it.
+    if (people.length === 0) {
+      w.status = 'dropped';
+      w.closedTick = state.tick;
+      host.emitEvent({ t: state.tick, type: 'wish', phase: 'dropped', wish: { ...w } });
+      continue;
+    }
+    if (!people.every((r) => assess(state, r, w.kind, w.madeTick).met)) continue;
     w.status = 'granted';
     w.closedTick = state.tick;
     for (const r of active(state)) {

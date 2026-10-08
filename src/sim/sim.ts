@@ -24,7 +24,7 @@ import { StructuredMind } from './mind/structured.js';
 import { ASK_KINDS, ASK_LAPSE_DAYS, assess } from './asks.js';
 import { voiceTopic } from './mind/thoughts.js';
 import { runExchange } from './social.js';
-import { memoryFits, reconcile, talkAnswer } from './talk.js';
+import { memoryFits, reconcile, talkAnswer, memoryAgrees } from './talk.js';
 import {
   ASKS_BEFORE_GRATING,
   CLEAR_MINUTES,
@@ -42,9 +42,9 @@ import {
 import { aspirationMinute, aspirationMorning, aspirationsAfterBuild, waitingOnStage, type AspirationHost } from './story/aspirations.js';
 import { activeGatherings, newStoryState, storyStep } from './story/director.js';
 import { closeDilemma } from './story/dilemmas.js';
-import { progressDawn, progressEvent, progressHourly, residentCap } from './progress.js';
+import { progressDawn, progressEvent, progressHourly, residentCap, learnFact } from './progress.js';
 import { LARDER_CAP, drawFromGranary, overflowToGranary, storesDawn, storesHourly } from './stores.js';
-import { DAWN_MINUTE, TICKS_PER_DAY, dayOf, minuteOf, seasonOf } from './time.js';
+import { DAWN_MINUTE, TICKS_PER_DAY, dayOf, minuteOf, seasonOf, type Season } from './time.js';
 import {
   NEEDS,
   QUALITIES,
@@ -81,7 +81,9 @@ export type Command =
   /** A trader's cart stops by with a gift: the reward for a watched ad, at most once a day (2026-10-08). */
   | { at: number; kind: 'gift'; from: 'trader' }
   /** Talk back after an answer: agree, push back, say sorry or explain (bar round 1). */
-  | { at: number; kind: 'reply'; who: string; reply: ReplyKind };
+  | { at: number; kind: 'reply'; who: string; reply: ReplyKind }
+  /** The steward reads a resident's page (bar round 2): their background is learned there, not recited in talk. */
+  | { at: number; kind: 'look'; who: string };
 
 export interface Scenario {
   name: string;
@@ -114,6 +116,11 @@ const SIGHT = 6;
 export const WORD_OF_MOUTH = 8 * 60;
 /** Food one meal takes from the town's stores. */
 export const MEAL = 0.5;
+/** How much of a meal a meagre one is worth. */
+export const MEAGRE_FILL = 0.1;
+/** Foraging (bar round 2): a hungry resident with nothing in the larder goes to the brook or the wild edge. */
+export const FORAGE_MINUTES = 90;
+export const FORAGE_YIELD: Record<Season, number> = { spring: 1, summer: 1.6, autumn: 1.6, winter: 0.5 };
 /** Meals take this much more in winter. */
 export const WINTER_APPETITE = 2;
 export const STOCK_CAP: Record<Resource, number> = { food: LARDER_CAP, timber: 100 };
@@ -451,6 +458,8 @@ export class Simulation implements AspirationHost {
       this.traderGift();
     } else if (c.kind === 'reply') {
       if (this.state.residents[c.who]) this.reply(c.who, c.reply);
+    } else if (c.kind === 'look') {
+      if (this.state.residents[c.who]) learnFact(this, c.who, 'background');
     } else {
       const d = this.state.story.dilemmas.find((x) => x.type === c.dilemma && x.status === 'open');
       if (d) this.decide(d.id, c.option);
@@ -485,7 +494,7 @@ export class Simulation implements AspirationHost {
     // A memory they bring up (2026-10-08): told once in three days, and telling it keeps it alive.
     // One that would contradict the answer's band is kept for another day (bar round 1).
     const found = recallFor(r, state.tick, question, about);
-    const memory = found && memoryFits(answer, found) ? found : null;
+    const memory = found && memoryFits(answer, found) && memoryAgrees(answer, found) ? found : null;
     if (memory) {
       answer.memory = memory;
       (r.recalled ??= {})[storyKey(memory)] = state.tick;
@@ -962,7 +971,8 @@ export class Simulation implements AspirationHost {
     const delta = {} as Record<Need, number>;
     for (const n of NEEDS) {
       delta[n] = sleeping && n === 'rest' ? 0 : BASE_DECAY[n] / 60;
-      if (doing) delta[n] += ((ACTIVITY_EFFECTS[doing][n] ?? 0) * (doing === 'eat' && n === 'food' && act?.meagre ? 0.35 : 1)) / 60;
+      // A meagre meal fills little (bar round 2: a week of them used to leave mood untouched).
+      if (doing) delta[n] += ((ACTIVITY_EFFECTS[doing][n] ?? 0) * (doing === 'eat' && n === 'food' && act?.meagre ? MEAGRE_FILL : 1)) / 60;
     }
     const tile: [number, number] = r.at !== null ? placeTile(getBuilding(state, r.at)) : [r.x, r.y];
     const amb = r.at !== null || r.path.length > 0 ? ambientAt(state, tile[0], tile[1], this.worked) : emptyQualities();
@@ -1055,7 +1065,13 @@ export class Simulation implements AspirationHost {
       r.activity = null;
       this.checkUnseen(ctx, r, true);
     }
-    const next = this.favourNext(r) ?? this.mind.decide(ctx, r);
+    // Back from foraging: what they found goes in the larder.
+    if (act?.id === 'forage' && r.at === act.placeId && tick >= act.until) {
+      const found = Math.round((FORAGE_YIELD[seasonOf(tick)] ?? 1) * 10) / 10;
+      state.stock.food += found;
+      this.emit({ t: tick, type: 'forage', who: r.id, placeId: act.placeId, food: found });
+    }
+    const next = this.favourNext(r) ?? this.forageNext(r) ?? this.mind.decide(ctx, r);
     if (next.night && !(act?.id === 'sleep' && act.night)) {
       r.sleepNoiseMax = 0;
       r.disturbedBy = [];
@@ -1122,6 +1138,26 @@ export class Simulation implements AspirationHost {
     adjust(r, friend.id, { familiarity: 0.02 }, state.tick);
     adjust(friend, r.id, { familiarity: 0.02 }, state.tick);
     this.emit({ t: state.tick, type: 'invite', a: r.id, b: friend.id, place: next.placeId });
+  }
+
+  /**
+   * A hungry resident with nothing in the larder or the granary goes foraging once a day, in
+   * daylight, along the brook or at the wild edge (bar round 2): a town nobody feeds goes hungry
+   * and sullen, but it does not simply empty.
+   */
+  private forageNext(r: ResidentState): ActivityState | null {
+    const state = this.state;
+    const tick = state.tick;
+    const minute = minuteOf(tick);
+    if (minute < 8 * 60 || minute > 16 * 60) return null;
+    if (r.favour || r.needs.food >= 0.5 || r.lastForageDay === dayOf(tick)) return null;
+    const meal = seasonOf(tick) === 'winter' ? MEAL * WINTER_APPETITE : MEAL;
+    if (state.stock.food >= meal || (state.granary ?? 0) >= meal) return null;
+    const spots = liveBuildings(state).filter((b) => b.type === 'brook' || b.type === 'wild');
+    if (spots.length === 0) return null;
+    const spot = spots.sort((a, b) => distanceTo(a, r.x, r.y) - distanceTo(b, r.x, r.y))[0] as BuildingState;
+    r.lastForageDay = dayOf(tick);
+    return { id: 'forage', placeId: spot.id, until: tick + FORAGE_MINUTES };
   }
 
   private arrive(ctx: MindContext, r: ResidentState): void {

@@ -891,7 +891,11 @@ export class Ui {
     const ask = Object.fromEntries((Object.entries(FACTS) as Array<[TalkQuestion, string[]]>).flatMap(([q, keys]) => keys.map((k) => [k, q]))) as Record<string, TalkQuestion>;
     const label = (q: TalkQuestion) => (q === 'opinion' ? 'What do you think of…' : (QUESTIONS.find(([x]) => x === q)?.[1] ?? q));
     const ul = el('ul');
-    for (const k of ALL_FACTS) if (known.includes(k)) ul.appendChild(el('li', { 'data-fact': k }, factValue(state, r, k)));
+    // The bio is above (shown once); a fact with several parts (quirks) takes a line each.
+    for (const k of ALL_FACTS) {
+      if (!known.includes(k) || k === 'background') continue;
+      for (const part of factValue(state, r, k).split('; ')) ul.appendChild(el('li', { 'data-fact': k }, part));
+    }
     if (known.length === 0) ul.appendChild(el('li', { class: 'quiet' }, 'Nothing yet. Talk to them to find out.'));
     sec.appendChild(ul);
     // What is left to learn, one line per question rather than one per fact (design pass, 2026-10-08).
@@ -1326,7 +1330,8 @@ export class Ui {
     if (e.type === 'tier') this.celebrateTier(e);
     if (e.type === 'standing') {
       const notes = this.standingNotes.get(e.who) ?? [];
-      notes.unshift(`${e.delta > 0 ? '▲' : '▼'} Day ${dayOf(e.t)}: ${e.reasons.join('; ')}`);
+      const other = e.also && e.also.length > 0 ? ` · ${e.delta > 0 ? '▼' : '▲'} ${e.also.join('; ')}` : '';
+      notes.unshift(`${e.delta > 0 ? '▲' : '▼'} Day ${dayOf(e.t)}: ${e.reasons.join('; ')}${other}`);
       this.standingNotes.set(e.who, notes.slice(0, 5));
       this.bubble(e.who, e.delta > 0 ? `♥ Thinks better of you: ${e.reasons[0]}` : `☁ Thinks less of you: ${e.reasons[0]}`, e.delta > 0 ? 'up' : 'down');
     }
@@ -1344,9 +1349,19 @@ export class Ui {
     // Who is speaking, so a line never floats over an anonymous figure (review).
     const who = el('span', { class: 'speaker' }, residentDef(id).name);
     who.style.background = cssColor(residentColor(id));
-    // Cut long lines at a word, never mid-word (bar round 1: "before the cart's last v…").
+    // A long line is cut at a sentence, never mid-word and never with an ellipsis (bar round 2):
+    // whole sentences up to the limit, or the first sentence alone when even that runs over.
     const limit = this.phone ? 110 : 140;
-    const cut = text.length > limit ? `${text.slice(0, text.lastIndexOf(' ', limit - 1) > 40 ? text.lastIndexOf(' ', limit - 1) : limit - 1)}…` : text;
+    let cut = text;
+    if (text.length > limit) {
+      const sentences = text.match(/[^.!?]+[.!?]+["”]?\s*|[^.!?]+$/g) ?? [text];
+      let kept = '';
+      for (const sentence of sentences) {
+        if (kept && (kept + sentence).trim().length > limit) break;
+        kept += sentence;
+      }
+      cut = kept.trim() || text;
+    }
     b.el.replaceChildren(who, document.createTextNode(cut));
     b.el.dataset.who = id;
     b.born = performance.now();
@@ -1362,12 +1377,23 @@ export class Ui {
     const requests = state.requests.filter((q) => q.status === 'open');
     const wishes = state.story.wishes.filter((w) => w.status === 'open');
     const progress = wishes.map((w) => wishProgress(state, w).met);
-    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick), state.buildings.length, Math.floor(state.granary ?? 0), state.stores]);
+    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick), state.buildings.length, Math.floor(state.granary ?? 0), state.stores, state.order.filter((id) => this.game.sim.resident(id).leaving).join()]);
     if (key === this.lastBoardKey) return;
     this.lastBoardKey = key;
     const pane = this.boardEl;
     pane.replaceChildren();
 
+    // Someone thinking of leaving is the first thing on the board (bar round 2: the first a player saw of it was "has left").
+    const leaving = state.order.map((id) => this.game.sim.resident(id)).filter((r) => !r.departed && r.leaving);
+    if (leaving.length > 0) {
+      pane.appendChild(el('h3', {}, 'Thinking of leaving'));
+      for (const r of leaving) {
+        const card = el('div', { class: 'card warning', 'data-testid': `leaving-${r.id}` });
+        card.appendChild(el('p', {}, `${residentDef(r.id).name} has been thinking of leaving since day ${r.leaving!.sinceDay}.`));
+        card.appendChild(el('p', { class: 'quiet' }, 'Answer what they have asked for, and talk to them. A few good days turn it round.'));
+        pane.appendChild(card);
+      }
+    }
     pane.appendChild(el('h3', {}, 'Town Wishes this season'));
     if (wishes.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'No wishes outstanding.'));
     for (const w of wishes) {
@@ -1914,6 +1940,8 @@ export class Ui {
       return;
     }
     j.appendChild(el('p', { class: 'quiet' }, rep.background));
+    // Reading their page is how you learn their background (bar round 2); logged like a question, so a save replays it.
+    if (!rep.departed && !knownFacts(this.game.sim.state, rep.id).includes('background')) this.game.command({ kind: 'look', who: rep.id });
     if (!rep.departed) j.appendChild(this.factsSection(rep.id));
     if (!rep.departed) {
       const mem = this.memoriesSection(rep.id);
@@ -1929,7 +1957,7 @@ export class Ui {
         el(
           'p',
           { class: 'quiet', 'data-testid': 'hope-next' },
-          rep.hope.done ? (rep.hope.outcome === 'leave' ? 'Decided to go.' : rep.hope.outcome === 'stay' ? 'Decided to stay.' : 'Done!') : `Next: ${rep.hope.next}`,
+          rep.hope.done ? (rep.hope.outcome === 'leave' ? 'Decided to go.' : rep.hope.outcome === 'stay' ? 'Decided to stay.' : rep.hope.outcome === 'let_go' ? 'Let it go, for now.' : 'Done!') : `Next: ${rep.hope.next}`,
         ),
       );
       j.appendChild(hope);

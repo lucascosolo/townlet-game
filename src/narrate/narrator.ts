@@ -59,6 +59,8 @@ export function importanceOf(e: SimEvent): Importance {
     case 'left_town':
     case 'disturbed_sleep':
     case 'shortage':
+    case 'forage':
+    case 'dream_let_go':
     case 'aspiration':
     case 'plot_cleared':
     case 'arrived':
@@ -416,7 +418,13 @@ export class Narrator {
         break;
       }
       case 'shortage':
-        this.live(e.t, `The larder is bare. ${this.name(e.who)} makes do with a meagre meal.`);
+        this.live(e.t, `The larder is bare. ${this.name(e.who)} makes do with a thin supper. ${this.voice(e.who, SPEECH.thinSupper)}`);
+        break;
+      case 'forage':
+        this.live(e.t, `${this.name(e.who)} goes ${this.at(e.placeId)} with a basket and comes back with ${e.food} food. ${this.voice(e.who, SPEECH.forage)}`);
+        break;
+      case 'dream_let_go':
+        this.live(e.t, `${this.name(e.who)} stops waiting for ${/^[aeiou]/i.test(buildingDef(e.wants).name) ? 'an' : 'a'} ${buildingDef(e.wants).name.toLowerCase()}. ${this.voice(e.who, SPEECH.letGo)}`);
         break;
       case 'recall': {
         const key = `${e.who}|${e.subject}`;
@@ -461,6 +469,7 @@ export class Narrator {
       case 'wish':
         if (e.phase === 'made') this.pushBoard(() => `Town Wish for the season: ${e.wish.label}. (${this.names(e.wish.supporters)} would like this.)`);
         else if (e.phase === 'granted') this.announce(e.t, `Wish granted: ${e.wish.label.toLowerCase()}. The whole town feels it.`);
+        else if (e.phase === 'dropped') this.pushBoard(() => `The wish for ${e.wish.label.toLowerCase()} leaves with ${this.names(e.wish.supporters)}.`);
         else this.pushBoard(() => `The season ended without ${e.wish.label.toLowerCase()}. ${this.names(e.wish.supporters)} had hoped for it.`);
         break;
       case 'standing': {
@@ -645,6 +654,9 @@ export class Narrator {
       else if (g.kind === 'market') this.announce(e.t, `It's market day ${at}.`);
       else if (g.kind === 'musician') this.announce(e.t, `A travelling fiddler wanders into the valley. There will be music ${at} tonight.`);
       else if (g.kind === 'contraption') this.announce(e.t, `${g.label} will be unveiled ${at} tomorrow afternoon.`);
+      else if (g.kind === 'lantern_walk') this.announce(e.t, `Tomorrow night: a lantern walk, setting off ${at}.`);
+      else if (g.kind === 'tales') this.announce(e.t, `Tomorrow evening: a night of tales ${at}.`);
+      else if (g.kind === 'bonfire') this.announce(e.t, `Tomorrow evening: a bonfire ${at}.`);
       return;
     }
     if (e.phase === 'start') {
@@ -652,7 +664,7 @@ export class Narrator {
       this.live(e.t, cap(template.replace('{at}', at).replace('{festival}', g.label)));
       return;
     }
-    if (g.kind === 'trade_cart' || g.kind === 'musician' || g.kind === 'market') {
+    if (g.kind === 'trade_cart' || g.kind === 'musician' || g.kind === 'market' || g.kind === 'lantern_walk' || g.kind === 'tales' || g.kind === 'bonfire') {
       const who = g.attendees.length > 0 ? `${this.names(g.attendees)} came by.` : 'Hardly anyone came.';
       this.live(e.t, `${cap(g.label)} packs up. ${who}`);
     }

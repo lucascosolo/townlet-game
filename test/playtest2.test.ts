@@ -135,7 +135,7 @@ describe('playtest round 2', () => {
     expect(n.toSteward('I hope the steward misses nothing.')).toBe('I hope you miss nothing.');
     expect(n.toSteward('The steward worries too much.')).toBe('You worry too much.');
     for (const key of Object.keys(TO_STEWARD_LINES)) {
-      const said = new Set(Object.values(TO_STEWARD_LINES[key]!).flat() as string[]);
+      const said = new Set((Object.values(TO_STEWARD_LINES[key]!).flat() as string[]).map((l) => l.replace(/\{x\}/g, 'the steward')));
       for (let i = 0; i < 20; i++) {
         const words = n.answer('ada', { question: 'mind', topics: [{ key, about: 'steward', vars: { x: 'the steward' }, rank: 0 }] } as never);
         expect([...said].some((l) => words.toLowerCase().includes(l.toLowerCase())), words).toBe(true);
@@ -160,8 +160,9 @@ describe('playtest round 2', () => {
         }
       });
       // Bar round 1 moved the facts: an opinion reveals the closest friend only when asked about a
-      // person, so the opinion here is about someone.
-      const questions = ['how', 'mind', 'hope', 'me', 'opinion'] as const;
+      // person, so the opinion here is about someone. Bar round 2 moved the background to the
+      // resident's page, so "what do you think of me" reveals nothing and is left out here.
+      const questions = ['how', 'mind', 'hope', 'opinion'] as const;
       const other = sim.state.order.find((o) => o !== 'ada')!;
       sim.schedule(questions.map((q, i) => ({ at: at(1, 10) + i, kind: 'talk' as const, who: 'ada', question: q, ...(q === 'opinion' ? { about: `r:${other}` } : {}) })));
       sim.runUntil(at(1, 11));

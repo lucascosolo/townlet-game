@@ -4,9 +4,14 @@ import { Narrator } from '../src/narrate/narrator.js';
 import { runScenario } from '../src/scenarios/index.js';
 import { beliefKey } from '../src/sim/mind/memory.js';
 import { ownNote } from '../src/sim/replies.js';
+import { topicSign } from '../src/sim/talk.js';
+import { residentDef } from '../src/content/residents.js';
 import { at } from '../src/sim/time.js';
 import { STEWARD, type TalkAnswer, type TalkQuestion } from '../src/sim/types.js';
 import { liveBuildings } from '../src/sim/world.js';
+import { DILEMMAS } from '../src/sim/story/dilemmas.js';
+import { LET_GO_DAYS } from '../src/sim/story/aspirations.js';
+import { WEAR_SHOW } from '../src/sim/world.js';
 import { SEEDS } from './helpers.js';
 
 const awake = (sim: ReturnType<typeof runScenario>, id: string) => {
@@ -120,5 +125,220 @@ describe('round 2, criterion 1: replies that fit', () => {
       }
     }
     expect(checked).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('round 2, criterion 2: answers that speak', () => {
+  it('no bio inside "what do you think of me"; first "mind" facts vary; one feeling per subject in a breath', { timeout: 900_000 }, () => {
+    const questions: TalkQuestion[] = ['how', 'mind', 'hope', 'me', 'opinion'];
+    let answers = 0;
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'considerate');
+      const n = new Narrator(sim, { stewardIsYou: true });
+      const firstMind = new Map<string, string>();
+      sim.on((e) => {
+        if (e.type !== 'talk') return;
+        answers++;
+        const a = e.answer;
+        const text = n.lastReply?.text ?? '';
+        const bio = residentDef(e.who).bio;
+        if (a.question === 'me' && bio) expect(text, `${e.who}: ${text}`).not.toContain(bio.slice(0, 30));
+        if (a.question === 'mind' && !firstMind.has(e.who)) firstMind.set(e.who, text.split(/(?<=[.!?])\s+/).pop() ?? '');
+        // One feeling per subject: topics, memory and the band about the subject asked about. A
+        // concession ("though you felled the oak") is one coherent statement and is not counted.
+        const signs = new Map<string, number>();
+        const note = (subject: string, sign: number) => {
+          if (!subject || sign === 0) return;
+          const prior = signs.get(subject);
+          expect(prior === undefined || prior === sign, `${e.who} (${a.question}) pulls both ways about ${subject}: ${text}`).toBe(true);
+          signs.set(subject, sign);
+        };
+        if (a.about && a.band) note(a.about, ['love', 'like'].includes(a.band) ? 1 : ['dislike', 'hate'].includes(a.band) ? -1 : 0);
+        for (const t of a.topics ?? []) note(t.about ?? '', topicSign(t.key));
+        if (a.memory) note(a.memory.subject, Math.sign(a.memory.valence));
+      });
+      for (let day = 2; day <= 21; day++) {
+        sim.runUntil(at(day, 12));
+        for (const id of sim.state.order) {
+          if (!awake(sim, id)) continue;
+          for (const q of questions) {
+            const about = q === 'opinion' ? (day % 2 ? `r:${sim.state.order.find((o) => o !== id)}` : `b:${liveBuildings(sim.state).find((b) => b.type === 'commons')!.id}`) : undefined;
+            sim.talk(id, q, about);
+          }
+        }
+      }
+      // The first "what's on your mind" answers in a town do not all end the same way.
+      const counts = new Map<string, number>();
+      for (const last of firstMind.values()) counts.set(last, (counts.get(last) ?? 0) + 1);
+      if (firstMind.size >= 6) for (const [last, c] of counts) expect(c, `seed ${seed}: ${c} first answers end "${last}"`).toBeLessThanOrEqual(3);
+    }
+    expect(answers).toBeGreaterThan(1500);
+  });
+
+  it('on neglected day 22, anyone who thinks badly of you is no better than fair when you ask how they are', { timeout: 300_000 }, () => {
+    let checked = 0;
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'none');
+      sim.runUntil(at(22, 12));
+      for (const id of sim.state.order) {
+        const r = sim.resident(id);
+        if (!awake(sim, id) || (r.rel[STEWARD]?.affinity ?? 0) >= -0.5) continue;
+        const a = sim.talk(id, 'how') as TalkAnswer;
+        expect(['fair', 'low', 'bad'], `${id} seed ${seed}: ${a.band}`).toContain(a.band);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('round 2, criterion 3: troubles reach mood', () => {
+  it('a larder forced empty for a week lowers mean mood by 0.10, puts half the "how are you" answers below good, and has a thin supper each day and a foraging trip', { timeout: 900_000 }, () => {
+    const drops: number[] = [];
+    for (const seed of SEEDS) {
+      const sim = runScenario('bakery', seed, 'none', { scripted: false });
+      const n = new Narrator(sim, { stewardIsYou: true });
+      let forages = 0;
+      sim.on((e) => {
+        if (e.type === 'forage') forages++;
+      });
+      sim.runUntil(at(12, 12));
+      const rs = () => sim.state.order.map((id) => sim.resident(id)).filter((r) => !r.departed);
+      const mean = () => rs().reduce((s, r) => s + r.mood, 0) / rs().length;
+      const before = mean();
+      // Nothing to eat at all for a week: the larder is emptied every minute, foraging finds included.
+      for (let t = at(13, 0); t <= at(19, 12); t++) {
+        sim.state.stock.food = 0;
+        sim.state.granary = 0;
+        sim.runUntil(t);
+      }
+      const after = mean();
+      drops.push(before - after);
+      const bands = sim.state.order.filter((id) => awake(sim, id)).map((id) => (sim.talk(id, 'how') as TalkAnswer).band);
+      const belowGood = bands.filter((b) => b !== 'good' && b !== 'great').length;
+      expect(belowGood * 2, `seed ${seed}: ${bands.join(',')}`).toBeGreaterThanOrEqual(bands.length);
+      const text = n.text();
+      for (let day = 13; day <= 18; day++) expect(text, `seed ${seed} day ${day}`).toMatch(new RegExp(`Day ${day}[\\s\\S]*?thin supper[\\s\\S]*?Day ${day + 1}`));
+      expect(forages, `seed ${seed} forages`).toBeGreaterThanOrEqual(1);
+    }
+    for (const [i, d] of drops.entries()) expect(d, `seed ${SEEDS[i]} drop ${d.toFixed(3)}`).toBeGreaterThanOrEqual(0.1);
+  });
+
+  it('thinking of leaving is said at least three days before anyone leaves', { timeout: 600_000 }, () => {
+    let departures = 0;
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'none');
+      const thinking = new Map<string, number>();
+      sim.on((e) => {
+        if (e.type === 'thinking_of_leaving') thinking.set(e.who, e.t);
+        if (e.type === 'left_town') {
+          departures++;
+          const t = thinking.get(e.who);
+          expect(t, `${e.who} left without a word, seed ${seed}`).toBeDefined();
+          expect(e.t - (t as number)).toBeGreaterThanOrEqual(3 * 1440);
+        }
+      });
+      sim.runUntil(at(28, 0));
+    }
+    expect(departures).toBeGreaterThan(0);
+  });
+});
+
+describe('round 2, criterion 4: a board of decisions', () => {
+  it('eight proposal types; six or more proposals in 30 days on every seed; never three quiet mornings from day 4; no dream step waits more than eight days', { timeout: 900_000 }, () => {
+    expect(DILEMMAS.length).toBeGreaterThanOrEqual(7);
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'none');
+      let posted = 0;
+      const types = new Set<string>();
+      sim.on((e) => {
+        if (e.type === 'dilemma_posted') {
+          posted++;
+          types.add(e.dilemma.type);
+        }
+      });
+      let quiet = 0;
+      for (let day = 1; day <= 30; day++) {
+        sim.runUntil(at(day, 8));
+        const state = sim.state;
+        const open = state.story.dilemmas.some((d) => d.status === 'open') || state.requests.some((q) => q.status === 'open') || state.story.wishes.some((w) => w.status === 'open');
+        quiet = open ? 0 : quiet + 1;
+        if (day >= 4) expect(quiet, `seed ${seed} day ${day}: nothing open for ${quiet} mornings`).toBeLessThanOrEqual(2);
+        for (const id of state.order) {
+          const r = sim.resident(id);
+          if (r.departed || r.aspiration.done) continue;
+          const waiting = state.requests.some((q) => q.by === id && q.kind === 'aspiration' && q.status === 'open' && q.wants && !liveBuildings(state).some((b) => b.type === q.wants));
+          if (waiting) expect((state.tick - r.aspiration.since) / 1440, `seed ${seed} day ${day}: ${id} waiting`).toBeLessThanOrEqual(LET_GO_DAYS + 1);
+        }
+      }
+      expect(posted, `seed ${seed}: ${posted} proposals (${[...types].join(', ')})`).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  it('Hamlet is not reached before day 5 with the favours steward', { timeout: 600_000 }, () => {
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'favours');
+      let hamlet: number | null = null;
+      sim.on((e) => {
+        if (e.type === 'tier' && e.name === 'Hamlet') hamlet = e.t;
+      });
+      sim.runUntil(at(12, 0));
+      expect(hamlet === null || hamlet >= at(5, 0), `seed ${seed}: Hamlet at tick ${hamlet}`).toBe(true);
+    }
+  });
+});
+
+describe('round 2, criterion 5: on-screen faults (headless parts)', () => {
+  it('worn ground forms tracks, never a slab: no 3x3 block of settled tiles all worn on day 12 of an unbuilt town', { timeout: 300_000 }, () => {
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'none');
+      sim.runUntil(at(12, 12));
+      const settled = sim.state.settled ?? { width: sim.state.width, height: sim.state.height };
+      const wear = sim.state.wear ?? {};
+      const worn = (x: number, y: number) => (wear[`${x},${y}`] ?? 0) >= WEAR_SHOW;
+      for (let y = 0; y + 2 < settled.height; y++) {
+        for (let x = 0; x + 2 < settled.width; x++) {
+          let all = true;
+          for (let dy = 0; dy < 3 && all; dy++) for (let dx = 0; dx < 3; dx++) if (!worn(x + dx, y + dy)) { all = false; break; }
+          expect(all, `seed ${seed}: a worn slab at ${x},${y}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('a wish whose wishers have all left is gone from the board the next morning', () => {
+    const sim = runScenario('quiet', 1, 'none');
+    sim.runUntil(at(2, 12));
+    const wish = sim.state.story.wishes.find((w) => w.status === 'open');
+    expect(wish).toBeDefined();
+    for (const id of wish!.supporters) sim.depart(sim.resident(id));
+    let dropped = false;
+    sim.on((e) => {
+      if (e.type === 'wish' && e.phase === 'dropped' && e.wish.id === wish!.id) dropped = true;
+    });
+    sim.runUntil(at(3, 8));
+    expect(wish!.status).toBe('dropped');
+    expect(dropped).toBe(true);
+  });
+
+  it('a standing entry carries reasons for the way it moved and, apart, the other way', { timeout: 300_000 }, () => {
+    let mixed = 0;
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'favours');
+      sim.on((e) => {
+        if (e.type !== 'standing') return;
+        for (const r of e.reasons) expect(e.also ?? []).not.toContain(r);
+        if (e.also && e.also.length > 0) mixed++;
+      });
+      sim.runUntil(at(21, 0));
+    }
+    expect(mixed).toBeGreaterThan(0);
+  });
+
+  it('no narrated line spells it "socialize"', { timeout: 300_000 }, () => {
+    const sim = runScenario('bakery', 2, 'favours');
+    const n = new Narrator(sim, { stewardIsYou: true });
+    sim.runUntil(at(14, 0));
+    expect(n.text()).not.toMatch(/socializ/);
   });
 });

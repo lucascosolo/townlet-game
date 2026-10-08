@@ -367,8 +367,9 @@ body.phone .desk-only, body.phone .dash-left, body.phone .widget-menu { display:
 .dash-left { position: absolute; left: 12px; top: 74px; bottom: 64px; width: 300px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
 .dash-left > * { pointer-events: auto; }
 .widget { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-.widget[data-widget='goals'] { flex: 0 1 auto; max-height: 58%; }
-.widget[data-widget='folk'] { flex: 1 1 auto; }
+/* Goals shows all of itself (bar round 2: its tier card was cut in half); the Folk album takes what is left. */
+.widget[data-widget='goals'] { flex: 0 0 auto; max-height: 72%; }
+.widget[data-widget='folk'] { flex: 1 1 auto; min-height: 96px; }
 .widget-head { display: flex; align-items: center; gap: 4px; padding: 6px 6px 6px 12px; border-bottom: 1px solid var(--paper-edge); background: linear-gradient(#fbf5e6, #f1e6cc); }
 .widget-head h2 { flex: 1; margin: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 16px; cursor: pointer; }
 .widget-head h2 svg { color: var(--accent); }
@@ -490,7 +491,7 @@ body.phone .quick-card { position: absolute; left: 8px; right: 8px; bottom: calc
 body.phone .quick-head { display: flex; align-items: center; gap: 10px; }
 body.phone .quick-head > div { flex: 1; min-width: 0; }
 body.phone .quick-name { font-family: var(--display); font-size: 19px; font-weight: 600; }
-body.phone .quick-head .quiet { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.phone .quick-head .quiet { font-size: 13px; white-space: normal; }
 body.phone .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
 body.phone .quick-actions button { min-height: 46px; font-size: 15px; }
 body.phone .toasts { top: 104px; width: calc(100vw - 16px); }

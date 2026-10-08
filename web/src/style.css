@@ -368,7 +368,7 @@ body.phone .desk-only, body.phone .dash-left, body.phone .widget-menu { display:
 .dash-left > * { pointer-events: auto; }
 .widget { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 /* Goals shows all of itself (bar round 2: its tier card was cut in half); the Folk album takes what is left. */
-.widget[data-widget='goals'] { flex: 0 0 auto; max-height: 72%; }
+.widget[data-widget='goals'] { flex: 0 0 auto; max-height: calc(100% - 110px); }
 .widget[data-widget='folk'] { flex: 1 1 auto; min-height: 96px; }
 .widget-head { display: flex; align-items: center; gap: 4px; padding: 6px 6px 6px 12px; border-bottom: 1px solid var(--paper-edge); background: linear-gradient(#fbf5e6, #f1e6cc); }
 .widget-head h2 { flex: 1; margin: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 16px; cursor: pointer; }

@@ -21,7 +21,7 @@ export const TIER_RENOWN = [0, 100, 300, 650];
 /** How many may live in the valley at each tier. */
 export const TIER_RESIDENTS = [8, 12, 16, 20];
 /** Timber the neighbouring towns send when the town moves up a tier. */
-export const TIER_GIFT = 15;
+export const TIER_GIFT = 8;
 
 export const RENOWN = {
   goal: 3,

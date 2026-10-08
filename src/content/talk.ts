@@ -339,8 +339,8 @@ addLines(FAVOUR_YES.catch, {
   plain: ['Fish it is.'],
   formal: ['I shall try my luck at the water.'],
   warm: ["I'd love to. It's peaceful by the water."],
-  chatty: ['Supper, coming up! Hopefully!'],
-  dreamy: ['I will ask the brook nicely.'],
+  chatty: ['Supper, coming up! Hopefully!', 'Fish! Me! Watch this!', 'Back with a basketful or my name is mud!'],
+  dreamy: ['I will ask the brook nicely.', 'The water will give what it gives.', 'Something silver, if I am patient.'],
 });
 addLines(FAVOUR_YES.garden, {
   plain: ['Garden. Right.'],

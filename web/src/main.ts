@@ -19,7 +19,11 @@ if (fresh) {
   params.delete('new');
   history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params}` : ''}`);
 }
-const saved = !fresh && !params.has('scenario') && !params.has('seed') ? loadSave() : null;
+// A link that names a town restores its save when one matches (bar round 2: a shared link used to
+// start over every time); only ?new=1 starts fresh.
+const found = fresh ? null : loadSave();
+const named = params.has('scenario') || params.has('seed');
+const saved = found && (!named || (found.scenario === (params.get('scenario') ?? 'quiet') && found.seed === (Number(params.get('seed') ?? 1) || 1))) ? found : null;
 const game = new Game(
   saved
     ? { scenario: saved.scenario, seed: saved.seed, steward: saved.steward }

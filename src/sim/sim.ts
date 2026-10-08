@@ -21,7 +21,7 @@ import type { Mind, MindContext, Perception } from './mind/mind.js';
 import { attachment, decayEmotions, emotionBalance, opinion } from './mind/memory.js';
 import { adjust, newRelationship, rel } from './mind/relationships.js';
 import { StructuredMind } from './mind/structured.js';
-import { ASK_KINDS, ASK_LAPSE_DAYS, assess } from './asks.js';
+import { ASK_KINDS, ASK_LAPSE_DAYS, WISH_LABELS, assess } from './asks.js';
 import { voiceTopic } from './mind/thoughts.js';
 import { runExchange } from './social.js';
 import { memoryFits, reconcile, talkAnswer, memoryAgrees } from './talk.js';
@@ -690,7 +690,8 @@ export class Simulation implements AspirationHost {
       r.rel[other] = { ...newRelationship(), familiarity: 0.1 };
       (state.residents[other] as ResidentState).rel[def.id] = { ...newRelationship(), familiarity: 0.1 };
     }
-    r.rel[STEWARD] = { ...newRelationship(), affinity: 0.25, familiarity: 0.3, trust: 0.5 };
+    // A newcomer arrives neutral about the steward (bar round 2); the town's talk and your own doings set them.
+    r.rel[STEWARD] = { ...newRelationship(), affinity: 0, familiarity: 0.2, trust: 0.4 };
     this.assignJobs();
     this.emit({ t: state.tick, type: 'arrived', who: def.id, home: home.id });
   }
@@ -1194,7 +1195,9 @@ export class Simulation implements AspirationHost {
       const waited = (tick - q.postedTick) / TICKS_PER_DAY;
       if (waited > 1) {
         // The longer it sits, the more it rankles.
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'still_waiting', valence: -0.5, base: Math.min(0.28, 0.07 + 0.035 * waited), source: 'witnessed', note: 'kept me waiting' });
+        const days = Math.floor(waited);
+        const forWhat = q.kind === 'aspiration' && q.wants ? `${/^[aeiou]/i.test(buildingDef(q.wants).name) ? 'an' : 'a'} ${buildingDef(q.wants).name.toLowerCase()}` : WISH_LABELS[q.kind].toLowerCase();
+        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'still_waiting', valence: -0.5, base: Math.min(0.28, 0.07 + 0.035 * waited), source: 'witnessed', note: `kept me waiting ${days} day${days === 1 ? '' : 's'} for ${forWhat}` });
       }
       if (tick - q.postedTick > ASK_LAPSE_DAYS[q.kind] * TICKS_PER_DAY) {
         // Being ignored hurts most the first time; after that it is disappointment, not news.

@@ -14,6 +14,7 @@ import { wishProgress } from '../../../src/sim/story/director.js';
 import { dilemmaDef, stanceScore } from '../../../src/sim/story/dilemmas.js';
 import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
 import { daysToWinter, granaryRoom, hasGranary } from '../../../src/sim/stores.js';
+import { dreamTitle } from '../../../src/sim/story/aspirations.js';
 import { ALL_FACTS, FACTS, TIERS, factValue, goalLabel, knownFacts, nextTier, progressOf, todaysGoals, unlocked, RENOWN } from '../../../src/sim/progress.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
@@ -1439,7 +1440,11 @@ export class Ui {
       card.appendChild(el('div', { class: 'card-title' }, `${who.name} ${ASK_TITLES[q.kind]}${q.wants ? `: ${/^[aeiou]/.test(singularName(q.wants)) ? 'an' : 'a'} ${singularName(q.wants)}` : ''}`));
       if (q.kind === 'quieter_home') card.appendChild(el('p', {}, `${cap(this.game.narrator.statement(q.by, { subject: q.subject, aspect: 'noisy_at_night' }))}.`));
       if (q.kind === 'more_green') card.appendChild(el('p', { 'data-testid': 'green-progress' }, this.greenLine(q.by)));
-      card.appendChild(el('p', { class: 'quiet' }, ASK_HINTS[q.kind]));
+      // A dream ask quotes the dreamer (bar round 2: "it matters a great deal to them" on every card).
+      if (q.kind === 'aspiration') {
+        const title = dreamTitle(state, this.game.sim.resident(q.by));
+        if (title) card.appendChild(el('p', { class: 'quiet', 'data-testid': 'dream-quote' }, `“${title.charAt(0).toUpperCase()}${title.slice(1)}.” That is ${who.name}'s hope, and this is part of it.`));
+      } else card.appendChild(el('p', { class: 'quiet' }, ASK_HINTS[q.kind]));
       const show = el('button', {}, 'Show me');
       show.addEventListener('click', () => {
         const home = state.buildings.find((b) => b.id === this.game.sim.resident(q.by).homeId);

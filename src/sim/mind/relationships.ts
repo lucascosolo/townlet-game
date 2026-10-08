@@ -6,7 +6,8 @@ import type { MindContext } from './mind.js';
 import { opinion } from './memory.js';
 
 /** The most a single night's dealings with the steward can move standing, each way. */
-export const STEWARD_NIGHT_CAP = { good: 0.3, bad: 0.6 } as const;
+/** Bar round 2: good news moves standing half as far as it did (0.3), so nobody thinks the world of you by day 3. */
+export const STEWARD_NIGHT_CAP = { good: 0.15, bad: 0.6 } as const;
 
 export function newRelationship(): Relationship {
   return { affinity: 0.1, familiarity: 0.3, trust: 0.4, lastContact: -1, lastArgue: -1, tags: [] };

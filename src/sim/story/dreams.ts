@@ -90,7 +90,8 @@ const SETTLE: DreamTemplate = {
   fits: () => false,
   build: (_state, r) => ({
     who: r.id,
-    title: 'Settle into the valley',
+    // Their own hope, as their trade gave it (bar round 2: every newcomer "settles into the valley").
+    title: residentDef(r.id).aspiration?.replace(/\.$/, '') || 'Settle into the valley',
     stages: [
       {
         id: 'meet',

@@ -1061,6 +1061,25 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Bubbles: no two bubbles overlap, and none is narrower than 120 px on a phone.
 6. **No regressions.** Earlier unit and browser tests pass, determinism holds, stepping at 10× stays under 2 ms a frame, and the one-year soak finds no degenerate state. Measures that move are re-measured and reported.
 
+**Bar round 1 status (2026-10-08): all six met; three earlier bands moved and are reported under 6.** The tests are in `test/round1.test.ts`, `test/round1b.test.ts` and `e2e/round1.spec.ts`. Quiet town, seeds 1–5.
+
+1. **Consequence: met.**
+   - Day-21 mood gap between a considerate steward and none: 0.176 averaged over the seeds (target 0.15). It took three tries to get there: mood with needs alone gave 0.11, so standing was raised to a fifth of mood and the home term scaled up.
+   - Neglect: someone is thinking of leaving by day 14 on 5 of 5 seeds; at most 1 resident has left by day 21 on any seed (target 2). The first version of the "still waiting" pang overshot (three gone by day 21 on one seed, standing at −1.0), and was halved.
+   - Recoverable: a steward who then answers and talks daily turns the leaver round within 5 days on at least 3 of 5 seeds.
+   - Home counts: hedges and flower beds beside every home lift day-7 mood by at least 0.04. The first attempt (faster delight decay without a fond place) inverted an earlier memories-twin test and was replaced by a small mood term.
+2. **The fan club: met.** One flower bed on day 1 leaves the highest standing at 0.27 on day 2 (target under 0.7). Felling the oak costs at least 1.5 times what the bed earned. Opponents of a lapsed proposal react at zero or better, supporters below zero. "You listen" is the stated reason in at most half of 20 days of answers.
+3. **Talking back: met.** Four replies, each a logged command that replays the same. Sorry after felling a loved place weakens the grievance by at least a third and is retold ("you and I made it up"). Push back raises a steady resident's trust and lowers a touchy one's affinity. Explain softens a declined proposal's grievance only when trust is above 0.4. Sorry and explain are offered only with something to answer. One change after the first measurement, recorded in DECISIONS.md: sorry softens every fresh grievance rather than only the strongest, because the test's felled oak was not always the strongest one.
+4. **Answers that aren't stitched: met.** Over 5 seeds and 20 days of all five questions to everyone (over 1500 answers): no doubled dream, no "closest friend" unless the question was about a person, no dislike in "think of me", no band contradiction, backgrounds in the first person, no tic twice in a day.
+5. **Rough edges: met.** Whole numbers, no raw type ids, a/an and singulars, festival capitals, no festival at a felled place, at most 30% of settled tiles worn on day 12, modal speed restored, first proposal waits, no scripted steward in the browser bakery, bubbles neither overlapping nor under 120 px on a phone. Added at the owner's request in the same round: desktop panels drag by their header and dock back on a double-click.
+6. **No regressions: met with three earlier measures moved, each kept visible.**
+   - Random-builder soak departures: 4 of 10 runs over 28 days (band was 1). That steward never answers or talks, which now counts as neglect; the band is re-set to 4 with that note. Nobody leaves a considerate steward's town.
+   - Rivalries under the considerate steward (M3a): none form in 28 days (the old code formed one pair on one seed). Kept as a visible expected failure for round 2.
+   - Busiest place's share of socialising: 0.606 (band under 0.6). Kept as a visible expected failure for round 2.
+   - The M4 Folk album count moved by design: four questions now reveal 7 of 10 facts (was 8 of 10), because the opinion question reveals a friend or a favourite only when asked about a person or a place. The old test is a visible expected failure beside a new one that asks five questions with a subject.
+
+   Determinism holds, 10× stepping stays under 2 ms a frame, and the one-year soak with newcomers finds no degenerate state.
+
 ### 9.4 The bar (set 2026-10-08)
 
 Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:

@@ -208,7 +208,11 @@ export class Ui {
   private speedBeforeModal = 1;
   /** Whether the player has opened a page or tab yet, and the tick the game began on. */
   private lookedAround = false;
-  /** Game minutes the player has watched go by: a jump (a loaded save, a test) counts as a moment, not hours. */
+  /**
+   * Game minutes the player has watched go by. Ticks arriving a few at a time are play and count
+   * at most five a frame; a jump of two hours or more in one frame is a fast-forward (a test, a
+   * replay), not a first look, and counts in full.
+   */
   private watched = 0;
   private watchedFrom: number;
   private lastBoardKey = '';
@@ -2077,7 +2081,8 @@ export class Ui {
     if (!this.tabs.get('you')!.pane.hidden) this.renderYou();
     // New proposals get a popup, but not before the player has looked around (bar round 1: on a
     // phone the first thing after the intro was a decision about people you had not met).
-    this.watched += Math.min(5, Math.max(0, state.tick - this.watchedFrom));
+    const passed = Math.max(0, state.tick - this.watchedFrom);
+    this.watched += passed >= 120 ? passed : Math.min(5, passed);
     this.watchedFrom = state.tick;
     if (!this.modal && (this.lookedAround || this.watched >= 120)) {
       const d = state.story.dilemmas.find((x) => x.status === 'open' && !this.shownDilemmas.has(x.id));

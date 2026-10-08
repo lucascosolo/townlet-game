@@ -50,7 +50,8 @@ test('talking back: an answer offers replies, a reply lands and is answered, and
 });
 
 test('closing a modal restores the speed from before it opened, paused included', async ({ page }) => {
-  await open(page, 'scenario=quiet&seed=1&speed=0', at(1, 8));
+  // Before the day's first proposal is posted, so the first popup comes while we watch.
+  await open(page, 'scenario=quiet&seed=1&speed=0', at(1, 5));
   await page.getByTestId('tab-journal').click();
   // Run until a proposal pops.
   for (let i = 0; i < 40 && (await page.getByTestId('decision').count()) === 0; i++) {
@@ -63,12 +64,13 @@ test('closing a modal restores the speed from before it opened, paused included'
 });
 
 test('the first proposal waits until the player has opened a page or two game hours have passed', async ({ page }) => {
-  await open(page, 'scenario=quiet&seed=1&speed=0', at(1, 8));
-  for (let i = 0; i < 3; i++) {
+  // Played from the start at a fast speed (never a jump of two hours in one frame) to day 1, 09:30.
+  await open(page, 'scenario=quiet&seed=1&speed=0', 0);
+  for (let i = 0; i < 19; i++) {
     await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.runTicks(30));
     await frames(page);
   }
-  // 90 minutes in, nothing opened: no modal yet, though a proposal is open on the board.
+  // Under two watched hours, nothing opened: no modal yet, though a proposal is open on the board.
   const open1 = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.sim.state.story.dilemmas.some((d: { status: string }) => d.status === 'open'));
   expect(open1).toBe(true);
   await expect(page.getByTestId('decision')).toHaveCount(0);

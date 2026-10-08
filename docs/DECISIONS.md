@@ -2,6 +2,45 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-08: Memories in conversation (M3b), the complex feature
+
+**The ask (owner):** "Do one complex feature." Of the candidates offered, memories in conversation was recommended first. It is the game's tagline ("everyone remembers") and the review's sharpest gap: residents remember a great deal, but the player rarely hears it.
+
+**Chosen:**
+- **Residents bring up real, dated memories when you talk to them.** "I have not forgotten that you put the bakery where it is, three days ago." Every memory they mention is one they actually hold: an episode in their long-term memory, with the same subject, the same kind and the same feeling, and a time phrase that matches when it happened.
+- **Which memory depends on the question.**
+  - "What do you think of me?" recalls something about you.
+  - "What do you think of…?" recalls something about that person or place.
+  - "How are you?" and "What's on your mind?" recall something only when one is vivid enough to be on their mind.
+  - "What are you hoping for?" stays about the dream.
+- **Only memories worth retelling.** Each kind of memory has a weight: a granted wish, a lost place, an apology or a festival night counts for a lot, and a pleasant smell for little. Everyday impressions (a peaceful spot, a crowded room) are never retold. What is recalled is the most vivid by weight, how strongly it was felt, and how recent it is.
+- **Not the same story twice in a row.** A memory told to you isn't told again for three days.
+- **Remembering keeps a memory alive.** Recalling it rehearses the feeling a little, as reminiscing between residents already does. So a kindness you keep being thanked for fades more slowly than one never spoken of. All of this goes through the logged talk command, so saves and replays are unchanged.
+- **A resident's page shows what they remember most:** up to three dated memories in their own words.
+
+**Rejected:**
+- *Quoting the raw memory notes.* They mix voices ("built the bakery for him", "Bram came to see me"). Each kind of memory gets its own wording, written in first person and in the speaker's register.
+- *A random chance of reminiscing.* Answers would differ between a played game and its replay, and a test couldn't check them. The choice is a pure function of what they hold and when.
+- *Recalling told memories ("heard it from Ada").* Hearsay is already the gossip system. Only things they lived through are retold as their own.
+
+## 2026-10-08: Design pass
+
+**The ask (owner):** "Do another design pass."
+
+The main screens were captured on desktop (1440×900) and phone (390×844) and read as a player would. Three things were worth fixing now.
+
+- **A resident's page listed what you don't know ten times over.** It showed "??? Ask 'How are you?'" twice, then each other question twice. Now what you know is listed first ("Nothing yet. Talk to them to find out." when it's nothing), and below it a short "Still to learn" box shows one line per question with how many facts it still holds. A question already asked today reads "ask again tomorrow".
+- **The notice board spoke in percentages.** "Fen: 0% green enough" became words: nothing green nearby yet, wants more green nearby, nearly green enough, green enough. The Town Wish card groups people by that ("Nothing green nearby yet: Ada, Fen and Wren.") instead of repeating it per person.
+- **On desktop the build tray showed 5 of about 20 cards, with no sign of the rest.** Now:
+  - the tray has a chip per group (Paths and green, Gathering, Work and food, Homes, Dreams) that jumps to it;
+  - the mouse wheel scrolls the row sideways;
+  - the edges fade while there is more to see;
+  - the row starts at its first group label instead of snapping past it.
+
+  On phones the chips are hidden, since swiping is natural there.
+
+**Looked at and left:** the log, night view, goals, Folk album and phone sheets read well. The desktop hint line is cut short with "…", but its full text is in the tooltip.
+
 ## 2026-10-08: Quick wins: installable, faster to load, and a rewarded bonus
 
 **The asks (owner):** "Do the quick wins. I like the idea of watching [an ad] for earning a bonus, that would be a good small revenue stream."

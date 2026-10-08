@@ -1,5 +1,6 @@
 // The simulation loop. Owns the body and the world; delegates cognition to a Mind.
 
+import { recallFor, storyKey } from './recall.js';
 import { buildingDef } from '../content/buildings.js';
 import { generateNewcomer } from '../content/newcomers.js';
 import { registerResident, residentDef } from '../content/residents.js';
@@ -115,6 +116,8 @@ export const WINTER_APPETITE = 2;
 export const STOCK_CAP: Record<Resource, number> = { food: LARDER_CAP, timber: 100 };
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
 /** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */
+/** How much telling a memory rehearses it: about as much as reminiscing with a friend. */
+export const RECALL_REHEARSAL = 0.15;
 export const TRADER_GIFT: Record<Resource, number> = { timber: 8, food: 6 };
 /** Seasonal yield of buildings that grow food on their own. */
 const PASSIVE_SEASON: Record<string, Record<ReturnType<typeof seasonOf>, number>> = {
@@ -465,6 +468,14 @@ export class Simulation implements AspirationHost {
       adjust(r, STEWARD, { familiarity: 0.03 }, state.tick);
     }
     const answer = talkAnswer(state, r, question, about);
+    // A memory they bring up (2026-10-08): told once in three days, and telling it keeps it alive.
+    const memory = recallFor(r, state.tick, question, about);
+    if (memory) {
+      answer.memory = memory;
+      (r.recalled ??= {})[storyKey(memory)] = state.tick;
+      for (const [id, t] of Object.entries(r.recalled)) if (state.tick - t > 7 * TICKS_PER_DAY) delete r.recalled[id];
+      this.mind.perceive(this.ctx(), r, { subject: memory.subject, aspect: memory.aspect, valence: memory.valence, base: RECALL_REHEARSAL, source: 'recalled', note: 'told the steward about it' });
+    }
     this.emit({ t: state.tick, type: 'talk', who, answer, counted });
     return answer;
   }

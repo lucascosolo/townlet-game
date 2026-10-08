@@ -320,7 +320,7 @@ button.primary:hover { background: #a3572f; }
 .tray-info .gives::before, .tray-info .likes:not(:empty)::before { content: ' · '; }
 .tray-info .need { color: var(--warn); font-weight: 700; }
 .menu .cards { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 6px; scroll-snap-type: x proximity; grid-template-columns: none; }
-.tray-group { flex: none; writing-mode: vertical-rl; transform: rotate(180deg); align-self: center; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); padding: 0 2px; }
+.tray-group { flex: none; scroll-snap-align: start; writing-mode: vertical-rl; transform: rotate(180deg); align-self: center; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); padding: 0 2px; }
 .menu .build-card { position: relative; flex: none; width: 128px; scroll-snap-align: start; padding: 5px 6px 7px; }
 .menu .build-card .thumb { height: 70px; }
 .menu .build-card .card-title { font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 700; line-height: 1.2; margin-top: 3px; }
@@ -550,3 +550,24 @@ body.phone .place-bar.laying .quiet { display: inline; font-size: 13px; }
 .trader-card button { margin-top: 4px; }
 .ad-test { position: fixed; z-index: 60; }
 .ad-test .ad-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Design pass (2026-10-08). */
+/* The build tray: jump chips per group, and fading edges while there is more to scroll. */
+.tray-jumps { display: flex; gap: 6px; flex-wrap: wrap; margin: 2px 0 2px; }
+.tray-jumps .chip { font-size: 12px; padding: 3px 10px; min-height: 0; }
+.menu .cards.more-right { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent); }
+.menu .cards.more-left { -webkit-mask-image: linear-gradient(90deg, transparent, #000 48px); mask-image: linear-gradient(90deg, transparent, #000 48px); }
+.menu .cards.more-left.more-right { -webkit-mask-image: linear-gradient(90deg, transparent, #000 48px, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(90deg, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
+/* A resident's page: what is left to learn, one line per question. */
+.to-learn { margin: 8px 0 4px; padding: 8px 10px; border-radius: 8px; background: #f6efdf; border: 1px dashed var(--paper-edge); }
+.to-learn-head { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; }
+.to-learn .ask-row { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; padding: 2px 0; }
+.to-learn .ask-row .n { color: var(--ink-soft); white-space: nowrap; font-size: 12.5px; }
+.to-learn .ask-row.later { opacity: 0.6; }
+body.phone .tray-jumps { display: none; }
+/* What a resident remembers most (memories in conversation, 2026-10-08). */
+.memories { margin: 10px 0 4px; }
+.memories .memory { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; padding: 6px 8px; margin: 4px 0; border-radius: 8px; background: #fffaf0; border-left: 3px solid var(--good); font-size: 14px; line-height: 1.35; }
+.memories .memory.bad { border-left-color: var(--warn); }
+.memories .memory .day { font-size: 11.5px; font-weight: 700; color: var(--ink-soft); padding-top: 2px; white-space: nowrap; }
+.memories .memory q { quotes: '\201C' '\201D'; font-style: italic; }

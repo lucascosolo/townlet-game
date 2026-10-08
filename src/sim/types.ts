@@ -279,6 +279,8 @@ export interface ResidentState {
   unseen: Unseen[];
   /** Progress through their personal aspiration (M3a). */
   aspiration: AspirationState;
+  /** Story (subject|aspect) -> tick it was last told to the steward (memories in conversation, 2026-10-08). */
+  recalled?: Record<string, number>;
   /** Mind topic key -> tick it was last thought or said, so they don't repeat themselves. */
   lastThoughts?: Record<string, number>;
   rng: number;
@@ -329,6 +331,8 @@ export interface TalkAnswer {
   about?: SubjectId;
   /** opinion/me: the belief behind it, if any. */
   because?: { subject: SubjectId; aspect: string };
+  /** A memory they bring up, if any (memories in conversation, 2026-10-08). */
+  memory?: import('./recall.js').Recollection;
 }
 
 /** A mind topic as it was voiced: see mind/thoughts.ts. */

@@ -159,8 +159,11 @@ describe('playtest round 2', () => {
           replies.push(n.lastReply?.text ?? '');
         }
       });
+      // Bar round 1 moved the facts: an opinion reveals the closest friend only when asked about a
+      // person, so the opinion here is about someone.
       const questions = ['how', 'mind', 'hope', 'me', 'opinion'] as const;
-      sim.schedule(questions.map((q, i) => ({ at: at(1, 10) + i, kind: 'talk' as const, who: 'ada', question: q })));
+      const other = sim.state.order.find((o) => o !== 'ada')!;
+      sim.schedule(questions.map((q, i) => ({ at: at(1, 10) + i, kind: 'talk' as const, who: 'ada', question: q, ...(q === 'opinion' ? { about: `r:${other}` } : {}) })));
       sim.runUntil(at(1, 11));
       expect(facts.length).toBe(questions.length);
       facts.forEach((f, i) => expect(replies[i]).toContain(factSaid(sim.state, sim.resident(f.who), f.key)));

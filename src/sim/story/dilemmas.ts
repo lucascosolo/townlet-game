@@ -118,7 +118,8 @@ export function closeDilemma(host: StoryHost, d: Dilemma, outcome: 'approved' | 
       continue;
     }
     const score = stanceScore(r, def);
-    const v = outcome === 'approved' ? score : outcome === 'declined' ? -0.6 * score : -0.3 * Math.abs(score) - 0.1;
+    // A lapse disappoints those who backed it and quietly relieves those who opposed it (bar round 1).
+    const v = outcome === 'approved' ? score : outcome === 'declined' ? -0.6 * score : -0.5 * score;
     if (Math.abs(v) < 0.15) continue;
     const sign = Math.sign(v);
     host.mind.perceive(ctx, r, {
@@ -127,7 +128,10 @@ export function closeDilemma(host: StoryHost, d: Dilemma, outcome: 'approved' | 
       valence: 0.6 * sign,
       base: clamp(Math.abs(v)) * 0.7,
       source: 'witnessed',
-      note: `${outcome === 'approved' ? 'said yes to' : outcome === 'declined' ? 'said no to' : 'never answered'} ${residentDef(d.proposer).name}'s ${d.type.replace('_', ' ')}`,
+      note:
+        outcome === 'lapsed' && sign > 0
+          ? `let ${residentDef(d.proposer).name}'s ${d.type.replace('_', ' ')} quietly drop`
+          : `${outcome === 'approved' ? 'said yes to' : outcome === 'declined' ? 'said no to' : 'never answered'} ${residentDef(d.proposer).name}'s ${d.type.replace('_', ' ')}`,
     });
     reactions.push({ who: r.id, valence: sign });
   }

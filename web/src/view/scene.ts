@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { buildingDef } from '../../../src/content/buildings.js';
 import { minuteOf, seasonOf, type Season } from '../../../src/sim/time.js';
 import type { BuildingState, ResidentState, SimState } from '../../../src/sim/types.js';
-import { brookSide, footprint, placeTile, sizeOf } from '../../../src/sim/world.js';
+import { WEAR_SHOW, brookSide, footprint, placeTile, sizeOf } from '../../../src/sim/world.js';
 import type { Game } from '../game.js';
 import { buildingMesh, glow, mat, residentMesh, seasonalLeaf } from './meshes.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -377,11 +377,12 @@ export class TownView {
     const ctx = this.pathCanvas.getContext('2d') as CanvasRenderingContext2D;
     ctx.clearRect(0, 0, this.pathCanvas.width, this.pathCanvas.height);
     for (const [k, w] of Object.entries(wear)) {
-      if (w < 1.5) continue;
+      // Only real traffic shows (bar round 1: the whole centre was mud by day 12).
+      if (w < WEAR_SHOW) continue;
       const [x, y] = k.split(',').map(Number) as [number, number];
       // Worn more, paler. Kept to about half strength since paths can be laid (owner's choice):
       // a hint, not a road.
-      const a = Math.min(0.45, 0.05 + w * 0.015);
+      const a = Math.min(0.3, 0.04 + (w - WEAR_SHOW) * 0.012);
       const g = ctx.createRadialGradient(x * 4 + 2, y * 4 + 2, 0, x * 4 + 2, y * 4 + 2, 3.2);
       g.addColorStop(0, `rgba(255,255,255,${a})`);
       g.addColorStop(1, 'rgba(255,255,255,0)');

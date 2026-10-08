@@ -48,9 +48,10 @@ function named(name: string): NamedScenario {
 }
 
 /** A simulation of a named scenario with its stand-in steward attached. */
-export function runScenario(name: string, seed: number, steward?: StewardPolicy): Simulation {
+export function runScenario(name: string, seed: number, steward?: StewardPolicy, opts: { scripted?: boolean } = {}): Simulation {
   const s = named(name);
-  const sim = Simulation.fromScenario(s.scenario, seed);
+  // In the browser the player is the steward, so a scenario's scripted steward commands are left out (bar round 1).
+  const sim = Simulation.fromScenario(opts.scripted === false ? { ...s.scenario, commands: [] } : s.scenario, seed);
   attachSteward(sim, steward ?? s.steward);
   return sim;
 }

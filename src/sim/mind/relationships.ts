@@ -5,6 +5,9 @@ import { STEWARD, TRAITS, VALUES, type Relationship, type RelTag, type ResidentD
 import type { MindContext } from './mind.js';
 import { opinion } from './memory.js';
 
+/** The most a single night's dealings with the steward can move standing, each way. */
+export const STEWARD_NIGHT_CAP = { good: 0.3, bad: 0.6 } as const;
+
 export function newRelationship(): Relationship {
   return { affinity: 0.1, familiarity: 0.3, trust: 0.4, lastContact: -1, lastArgue: -1, tags: [] };
 }
@@ -64,9 +67,13 @@ export function nightlyRelationships(ctx: MindContext, r: ResidentState, steward
     if (other === STEWARD) {
       // The steward's standing: today's dealings move it directly; settled beliefs lean on it;
       // with nothing happening it relaxes slowly back toward a mild default.
+      // Bar round 1: a night's evidence is capped, bad news weighing twice as much as good, so one
+      // answered ask no longer makes a devotee overnight and a felled oak costs more than a bed of
+      // flowers earns; and standing relaxes faster when nothing happens.
       const op = opinion(r, STEWARD);
-      x.affinity = clamp(x.affinity + 0.03 * (0.2 - x.affinity) + 0.6 * stewardEvidence + 0.03 * op, -1, 1);
-      x.trust = clamp(x.trust + 0.03 * (0.5 - x.trust) + 0.3 * stewardEvidence + 0.02 * op);
+      const ev = clamp(stewardEvidence, -STEWARD_NIGHT_CAP.bad, STEWARD_NIGHT_CAP.good);
+      x.affinity = clamp(x.affinity + 0.05 * (0.2 - x.affinity) + 0.5 * ev + 0.03 * op, -1, 1);
+      x.trust = clamp(x.trust + 0.04 * (0.5 - x.trust) + 0.3 * ev + 0.02 * op);
       continue;
     }
     // Left alone, affinity settles toward how well the two fit: kindred spirits warm, poor

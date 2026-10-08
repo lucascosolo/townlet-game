@@ -48,7 +48,7 @@ export class Game {
 
   constructor(options: GameOptions) {
     this.options = options;
-    this.sim = runScenario(options.scenario, options.seed, options.steward);
+    this.sim = runScenario(options.scenario, options.seed, options.steward, { scripted: false });
     // In the browser the player is the steward: narrate their actions as "you".
     this.narrator = new Narrator(this.sim, { stewardIsYou: true });
     this.sim.on((e) => {
@@ -90,6 +90,6 @@ export class Game {
     this.commandLog.push(cmd);
     this.sim.schedule([cmd]);
     // Talk, favours and the trader's gift answer at once, even when paused; the log replays them at the same tick.
-    if (cmd.kind === 'talk' || cmd.kind === 'favour' || cmd.kind === 'gift') this.sim.flushCommands();
+    if (cmd.kind === 'talk' || cmd.kind === 'favour' || cmd.kind === 'gift' || cmd.kind === 'reply') this.sim.flushCommands();
   }
 }

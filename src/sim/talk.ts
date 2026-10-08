@@ -18,10 +18,12 @@ export function feelingBand(v: number): string {
   return v > 0.3 ? 'love' : v > 0.05 ? 'like' : v >= -0.05 ? 'neutral' : v >= -0.3 ? 'dislike' : 'hate';
 }
 
-function strongestBelief(r: ResidentState, subject: SubjectId): Belief | undefined {
-  return Object.values(r.beliefs)
+function strongestBelief(r: ResidentState, subject: SubjectId, skip: Record<string, number> = {}): Belief | undefined {
+  const all = Object.values(r.beliefs)
     .filter((b) => b.subject === subject)
-    .sort((a, b) => b.strength * Math.abs(b.valence) - a.strength * Math.abs(a.valence))[0];
+    .sort((a, b) => b.strength * Math.abs(b.valence) - a.strength * Math.abs(a.valence));
+  // One not given as the reason lately, if there is one (bar round 1: "you listen" every day).
+  return all.find((b) => skip[b.aspect] === undefined) ?? all[0];
 }
 
 /** How a resident feels about someone or something, for "what do you think of…": people by affinity and belief, places by belief. */
@@ -60,8 +62,38 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
     }
     case 'me': {
       const v = feelingAbout(r, STEWARD, state.tick);
-      const b = strongestBelief(r, STEWARD);
+      const b = strongestBelief(r, STEWARD, r.cited ?? {});
       return { question, about: STEWARD, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
     }
   }
+}
+
+/**
+ * An answer agrees with itself (bar round 1): someone who says they are wonderful does not add a
+ * grievance about you in the same breath, and someone low does not add joy. Drops the topics
+ * that contradict the band; says whether a memory of the given feeling would fit.
+ */
+export function reconcile(answer: TalkAnswer): TalkAnswer {
+  const band = answer.band ?? '';
+  const sunny = band === 'great' || band === 'good' || band === 'love' || band === 'like';
+  const dark = band === 'low' || band === 'bad' || band === 'dislike' || band === 'hate';
+  if (answer.topics && (sunny || dark)) {
+    answer.topics = answer.topics.filter((t) => {
+      if (sunny && (t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)))) return false;
+      if (dark && (t.key === 'feel:joy' || t.key === 'steward:+' || (t.about === STEWARD && t.key === 'feel:gratitude'))) return false;
+      return true;
+    });
+  }
+  return answer;
+}
+
+/** Whether a memory about the steward with this feeling fits the answer's band. */
+export function memoryFits(answer: TalkAnswer, memory: { subject: SubjectId; valence: number }): boolean {
+  if (memory.subject !== STEWARD) return true;
+  const band = answer.band ?? '';
+  const sunny = band === 'great' || band === 'good' || band === 'love' || band === 'like';
+  const dark = band === 'low' || band === 'bad' || band === 'dislike' || band === 'hate';
+  if (sunny && memory.valence < 0) return false;
+  if (dark && memory.valence > 0) return false;
+  return true;
 }

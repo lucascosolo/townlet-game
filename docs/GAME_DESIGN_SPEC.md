@@ -1021,6 +1021,78 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Stepping at 10× costs 0.99 ms a frame.
    - The one-year soak with newcomers finds no degenerate state, with the same figures as before: 1.0 rival pairs a run, an argument in every run, no departures, and the busiest place takes 48% of socialising.
 
+
+
+**Bar round 1 criteria (predeclared 2026-10-08, before code).** Quiet town, seeds 1–5, unless stated. A failure is reported as a failure, not redefined.
+
+1. **Consequence.**
+   - On day 21, mean mood with a considerate steward exceeds mean mood with no steward by at least 0.15, averaged over the seeds.
+   - In a neglected town, someone is thinking of leaving by day 14 on at least 3 of 5 seeds, and no more than 2 residents have left by day 21 on any seed.
+   - Recoverable: once someone is thinking of leaving, a steward who then answers their open asks and talks to them daily turns them round within 5 days on at least 3 of 5 seeds.
+   - Home counts: twin towns, one with a hedge and a flower bed beside every home, differ in mean mood by at least 0.04 on day 7.
+2. **The fan club.**
+   - One flower bed on day 1 leaves every resident's standing below "thinks the world of you" (affinity under 0.7) on day 2.
+   - Felling the old oak on day 5 moves standing down by at least 1.5 times what a flower bed moved it up.
+   - A lapsed proposal: every opponent's reaction is zero or better, every supporter's is below zero.
+   - In a 20-day engaged run asking "What do you think of me?" daily, "you listen" (the listens_to_me belief) is the stated reason in at most half the answers.
+3. **Talking back.**
+   - Four replies exist (agree, push back, sorry, explain), each a logged command that replays the same.
+   - Sorry after felling a loved place: the resident's negative belief about you loses at least a third of its strength, and the apology is retold later ("you said sorry").
+   - Push back: a steady resident's trust rises; an unsteady one's affinity falls.
+   - Explain after a declined proposal: the proposer's grievance weakens when their trust in you is above 0.4, and not otherwise.
+   - Sorry is offered only when they hold a grievance against you; explain only after a decision they minded.
+4. **Answers that aren't stitched.** Over seeds 1–5 and 20 days of all five questions to everyone daily:
+   - no answer says the dream title twice;
+   - no "closest friend" sentence unless the question was about a person;
+   - no dislike ("can't abide") in a "think of me" answer;
+   - no answer pairs a great or good band with a grievance about you, or a low or bad band with joy;
+   - a background is said in the first person and never as a bare lead-in;
+   - no verbal tic appears twice in one resident's lines in one day.
+5. **Rough edges.**
+   - Every quantity in the narrated log is a whole number.
+   - No narrated line contains a raw building type id whose display name differs (flowerbed, teahouse, woodlot, glasshouse).
+   - "Wants to work at a garden plots" and its kind are gone: every "a/an" before a building name is right and the name is singular.
+   - Gathering labels keep their capitals after a tic.
+   - A festival is never placed at a removed building.
+   - Worn tracks: in an unbuilt quiet town on day 12, at most 30% of the settled tiles show wear.
+   - Closing a modal restores the speed from before it opened, paused included.
+   - The first proposal modal does not open before the player has opened a page or tab, or two game hours have passed since the game began, whichever comes first.
+   - In the browser, the bakery scenario runs no scripted steward commands.
+   - Bubbles: no two bubbles overlap, and none is narrower than 120 px on a phone.
+6. **No regressions.** Earlier unit and browser tests pass, determinism holds, stepping at 10× stays under 2 ms a frame, and the one-year soak finds no degenerate state. Measures that move are re-measured and reported.
+
+**Bar round 1 status (2026-10-08): five of six met; criterion 6 met in part (the year-long soak flags one seed), with three earlier bands moved and reported under 6.** The tests are in `test/round1.test.ts`, `test/round1b.test.ts` and `e2e/round1.spec.ts`. Quiet town, seeds 1–5.
+
+1. **Consequence: met.**
+   - Day-21 mood gap between a considerate steward and none: 0.176 averaged over the seeds (target 0.15). It took three tries to get there: mood with needs alone gave 0.11, so standing was raised to a fifth of mood and the home term scaled up.
+   - Neglect: someone is thinking of leaving by day 14 on 5 of 5 seeds; at most 1 resident has left by day 21 on any seed (target 2). The first version of the "still waiting" pang overshot (three gone by day 21 on one seed, standing at −1.0), and was halved.
+   - Recoverable: a steward who then answers and talks daily turns the leaver round within 5 days on at least 3 of 5 seeds.
+   - Home counts: hedges and flower beds beside every home lift day-7 mood by at least 0.04. The first attempt (faster delight decay without a fond place) inverted an earlier memories-twin test and was replaced by a small mood term.
+2. **The fan club: met.** One flower bed on day 1 leaves the highest standing at 0.27 on day 2 (target under 0.7). Felling the oak costs at least 1.5 times what the bed earned. Opponents of a lapsed proposal react at zero or better, supporters below zero. "You listen" is the stated reason in at most half of 20 days of answers.
+3. **Talking back: met.** Four replies, each a logged command that replays the same. Sorry after felling a loved place weakens the grievance by at least a third and is retold ("you and I made it up"). Push back raises a steady resident's trust and lowers a touchy one's affinity. Explain softens a declined proposal's grievance only when trust is above 0.4. Sorry and explain are offered only with something to answer. One change after the first measurement, recorded in DECISIONS.md: sorry softens every fresh grievance rather than only the strongest, because the test's felled oak was not always the strongest one.
+4. **Answers that aren't stitched: met.** Over 5 seeds and 20 days of all five questions to everyone (over 1500 answers): no doubled dream, no "closest friend" unless the question was about a person, no dislike in "think of me", no band contradiction, backgrounds in the first person, no tic twice in a day.
+5. **Rough edges: met.** Whole numbers, no raw type ids, a/an and singulars, festival capitals, no festival at a felled place, at most 30% of settled tiles worn on day 12, modal speed restored, first proposal waits (two game hours counted as watched, a few minutes a frame; a jump of two hours or more in one frame, as in a test's fast-forward, is two hours passed and counts in full), no scripted steward in the browser bakery, bubbles neither overlapping nor under 120 px on a phone. Added at the owner's request in the same round: desktop panels drag by their header and dock back on a double-click.
+6. **No regressions: met with three earlier measures moved, each kept visible.**
+   - Random-builder soak departures: 4 of 10 runs over 28 days (band was 1). That steward never answers or talks, which now counts as neglect; the band is re-set to 4 with that note. Nobody leaves a considerate steward's town.
+   - Rivalries under the considerate steward (M3a): none form in 28 days (the old code formed one pair on one seed). Kept as a visible expected failure for round 2.
+   - Busiest place's share of socialising: 0.606 (band under 0.6). Kept as a visible expected failure for round 2.
+   - The M4 Folk album count moved by design: four questions now reveal 7 of 10 facts (was 8 of 10), because the opinion question reveals a friend or a favourite only when asked about a person or a place. The old test is a visible expected failure beside a new one that asks five questions with a subject.
+
+   Determinism holds (the browser and Node runs of the same unscripted scenario match) and 10× stepping stays under 2 ms a frame.
+   - **The one-year soak with newcomers is flagged on seed 3: missed.** The soak's steward builds at random and never keeps the town fed; the bakery town on seed 3 runs out of food around day 27 and stays bare for the rest of the year. Before round 1 that cost nothing: people ate meagre meals at a mood of 0.7 and stayed. Now a bare larder is held against the steward, and 24 of 35 residents left over 112 days. Blame for hunger was then made to fade (the first three days of a shortage hurt most, after that it is resignation at under a third of the weight), which brought it to 14 of 33, still over the soak's one-third flag. The sim is doing what the bar asks of a town nobody feeds for eighty days, but a town that empties is not what the game wants either: round 2's economy work gives residents something to do about hunger themselves (forage, tend plots) rather than wait on the steward, and the soak is re-run then. The nightly slow workflow is red on this step until it is.
+
+### 9.4 The bar (set 2026-10-08)
+
+Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:
+
+1. **Fun.** A player who sits down for an hour wants a second hour. There is always something to decide or someone to answer, choices change what happens, and the town surprises you.
+2. **Polished.** Nothing on screen reads as broken, placeholder or raw: no bare data, no repeated lines, no layout that overflows or hides what you need, on a phone or a desktop. Loading, saving and the first five minutes all just work.
+3. **Thinking sims.** Residents act for reasons you can find out: needs, memories, plans and friendships drive what they do, and the game can show you why.
+4. **Opinionated sims.** Residents disagree with each other and with you. They have likes, grudges, tastes and dreams of their own that you did not choose and cannot simply buy.
+5. **Expressive and interactive.** They tell you what they think in their own words, in ways that are fun to read, and you can talk back: ask, argue, agree, make amends, and see it land.
+
+The reviewer's report lists a score for each, a verdict, and the problems ranked by how much they hold the game back. A round that fixes the top problems is followed by a fresh review.
+
 ---
 
 ## 10. Risks

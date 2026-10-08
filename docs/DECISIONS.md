@@ -2,6 +2,49 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-08: Bar round 1: consequence, talking back, the fan club, and rough edges
+
+**The review** (`docs/reviews/2026-10-08-bar-review-1.md`) scored the game 5, 6, 7, 5, 5 against a pass mark of 8. Round 1 takes the problems it ranked 1, 3, 4, 5, 8 and 9. Density, newcomers, the economy and the log (2, 6, 7, 10) go in round 2.
+
+**Chosen:**
+- **The town moves how people feel.** Mood was three parts needs, one part feelings, and every need was met by the day's routine whatever the town was like, so mood sat at 0.8 in a neglected town and an engaged one alike. Now:
+  - **Home counts.** Comfort while at home follows what is around the home: green and water for those who like them lift it, noise and bare ground lower it. A cottage with nothing round it is no longer as good as one by a flower bed.
+  - **Something to look forward to counts.** Delight fades faster for someone with no place in town they are fond of.
+  - **How you treat them counts.** Mood is now 0.5 needs, 0.15 feelings, 0.12 home, 0.03 a place in town they are fond of, 0.2 standing with you (the first mix, 0.55/0.15/0.15/0.15, left only a 0.11 gap between a considerate and an absent steward against the 0.15 declared, so standing and home were raised). A resident you keep ignoring is lower than one you listen to, and it shows in how they are.
+  - **A bare larder costs you.** A meagre meal is remembered as you letting them go hungry, once a day. The first three days of a shortage hurt most; after that it is resignation at under a third of the weight, so a long shortage settles into a grudge rather than driving everyone out (the first version emptied a town the soak's random steward never fed: 24 of 35 gone in a year; with the fade, 14 of 33, which still trips the soak's flag and is reported as a miss).
+  - **Someone can leave.** With mood able to fall, the existing "thinking of leaving" rule can fire. It still takes three low mornings to start and seven days to go, and answering them and talking to them turns it round.
+- **Praise is slower, and costs are heavier.** One answered ask used to move standing by +0.78 in a night. Now a night's evidence is capped, with bad news weighing twice as much as good (+0.3, −0.6), and standing relaxes toward neutral faster when nothing happens. Felling a loved place costs more than a flower bed earns.
+- **A lapsed proposal relieves the people who opposed it** and disappoints those who backed it. Before, everyone minded.
+- **You can talk back.** Every answer offers replies: agree ("That's fair"), push back, say sorry, or explain. A sorry clears the air: every fresh grievance (under three days old) loses most of its strength and older ones a little, rather than only the strongest one, because the thing you are sorry for is not always what they mind most. Each is a logged command, each moves how they feel in a way that depends on who they are (a steady resident respects pushback; a touchy one sulks), and each is remembered and retold like anything else. Sorry is offered only when they hold something against you, explain only after they complained about a decision.
+- **Answers are no longer stitched.** A learned fact is said only when it belongs: the dream when asked about hopes is the answer itself, not a second sentence; the closest friend only when asked about a person; backgrounds in first person; dislikes never in "what do you think of me". A topic that contradicts the answer's band (fine but furious at you) is dropped. A verbal tic is used at most once a day.
+- **Rough edges:** whole numbers in the log; building names, not type ids; a/an and singulars; festival names keep their capitals; festivals avoid felled places; worn tracks need real traffic to show and fade faster; bubbles size to their text and don't stack; the Goals widget scrolls; the first proposal waits until the player has looked around; closing a modal restores the real previous speed, paused included; the `bakery` scenario's scripted steward commands don't run in the browser.
+
+**Three earlier bands moved (one re-set, two kept as visible failures), and one count moved by design:**
+- **Departures in the random-builder soak** (M1.5 band: at most 1 run of 10) are now 4 of 10 over 28 days. That soak's steward builds at random and never answers an ask or talks to anyone, which now counts as neglect, so one resident leaving such a town inside a month is the sim doing what the bar asks. The band is re-set to 4 with that note; nobody leaves a considerate steward's town, and a leaver can be turned round (round 1 criterion 1).
+- **Rivalries under the considerate steward** (M3a): on the old code only one of five seeds ever formed a rival pair in 28 days; on the new code that seed's quarrels play out differently and none forms. Kept as a visible expected failure. Quarrels that stick belong with round 2's work on opinionated sims.
+- **The busiest place's share of socialising** (M1.5 band: under 0.6) is 0.606, one seed at 97% pulling the mean. Kept as a visible expected failure for round 2.
+- **The year-long soak** flags bakery seed 3 (14 of 33 residents left): the random steward lets the town starve from day 27 for the rest of the year, and hungry people now leave. Reported as a miss, not re-banded; round 2's economy work (residents who act on hunger themselves) is where it is fixed.
+- **The Folk album** (M4): four questions on two days now reveal 7 of 10 facts, not 8, because "what do you think of…" reveals the closest friend only when asked about a person and the favourite spot only about a place. The old test stays as a visible expected failure beside a new one that asks five questions with a subject.
+
+**Rejected:**
+- *Making mood mostly about the steward.* Then a well-laid town with a quiet steward would be miserable. The town itself (home, places) carries as much as standing does.
+- *A free-text chat.* Replies are four fixed moves so they can be simulated, remembered and replayed. The words around them vary by voice.
+- *Lowering the pass mark or the review's weight.* The bar is the bar.
+
+## 2026-10-08: The bar, and working to it without asking each time
+
+**The ask (owner):** "Keep working until you and an independent reviewer can agree that Townlet is a fun, polished game like a Sims-style game but with thinking, opinionated sims that can express to the player what they think in a fun, interactive way."
+
+**Chosen:**
+- **The bar is written down** (spec section 9.4) so the reviewer scores against something fixed, not against whatever was built last.
+- **An independent reviewer plays each round.** A fresh reviewer, given only the bar and the game, plays it headless and in the browser, scores it on five counts, and ranks what is wrong. Its review goes in `docs/reviews/`. It has no part in building, so it can't grade its own work.
+- **The loop:** review, fix the biggest gaps the review names, review again. It ends when a review meets the bar on every count and I agree with it, or when the owner says stop.
+- **No asking before each chunk** while this runs: the owner has authorised the loop. Decisions and criteria are still recorded first, and misses are still reported as misses.
+
+**Rejected:**
+- *Grading it myself.* I built it; the review has to come from outside.
+- *A single big rewrite.* Each round changes what the last review found and nothing else, so the reviews measure the game and not the churn.
+
 ## 2026-10-08: Memories in conversation (M3b), the complex feature
 
 **The ask (owner):** "Do one complex feature." Of the candidates offered, memories in conversation was recommended first. It is the game's tagline ("everyone remembers") and the review's sharpest gap: residents remember a great deal, but the player rarely hears it.

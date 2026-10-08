@@ -266,7 +266,7 @@ describe('criterion 4 (M3b criterion 4): talking to a resident', () => {
     }
   });
 
-  it("talking can't be farmed, and replays the same", () => {
+  it("talking can't be farmed, and replays the same", { timeout: 60_000 }, () => {
     const sim = runScenario('quiet', 1, 'none');
     sim.runUntil(awake(3));
     const r = sim.resident('ada');

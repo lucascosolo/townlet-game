@@ -19,6 +19,8 @@ import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent,
 import { SPEEDS, type Game } from '../game.js';
 import type { AdResult, RewardedAds } from '../ads.js';
 import { TRADER_GIFT } from '../../../src/sim/sim.js';
+import type { ReplyKind } from '../../../src/sim/replies.js';
+import { REPLY_SAID } from '../../../src/content/replies.js';
 import { vividMemories } from '../../../src/sim/recall.js';
 import { residentColor } from '../view/meshes.js';
 import { ICONS } from './icons.js';
@@ -38,6 +40,8 @@ export const BUILD_MENU: Array<{ category: string; types: string[] }> = [
 interface TalkPanel {
   root: HTMLElement;
   reply: HTMLElement;
+  /** Talking back (bar round 1): the replies open after the last answer. */
+  replies: HTMLElement;
   status: HTMLElement;
   controls: Array<HTMLButtonElement | HTMLSelectElement>;
   clear: HTMLButtonElement;
@@ -49,6 +53,9 @@ interface TalkPanel {
   pickKey: string;
   pickButtons: Record<'opinion' | 'visit' | 'mend', HTMLButtonElement>;
 }
+
+/** Talking back: the chips under an answer. */
+const REPLY_LABELS: Record<ReplyKind, string> = { agree: "That's fair", disagree: "I don't see it that way", sorry: "I'm sorry", explain: 'Let me explain' };
 
 const QUESTIONS: Array<[TalkQuestion, string]> = [
   ['how', 'How are you?'],
@@ -199,6 +206,15 @@ export class Ui {
   private readonly shownDilemmas = new Set<number>();
   private modal: HTMLElement | null = null;
   private speedBeforeModal = 1;
+  /** Whether the player has opened a page or tab yet, and the tick the game began on. */
+  private lookedAround = false;
+  /**
+   * Game minutes the player has watched go by. Ticks arriving a few at a time are play and count
+   * at most five a frame; a jump of two hours or more in one frame is a fast-forward (a test, a
+   * replay), not a first look, and counts in full.
+   */
+  private watched = 0;
+  private watchedFrom: number;
   private lastBoardKey = '';
   private lastJournalRender = 0;
   private lastYouRender = 0;
@@ -233,6 +249,7 @@ export class Ui {
 
   constructor(root: HTMLElement, game: Game, view: TownView, opts: { intro: boolean }) {
     this.game = game;
+    this.watchedFrom = game.sim.tick;
     this.view = view;
     this.root = root;
 
@@ -293,6 +310,7 @@ export class Ui {
     const roll = el('button', { class: 'roll', title: 'Roll up or unroll', 'data-testid': 'roll' }, '▴');
     roll.addEventListener('click', () => this.toggleScroll());
     rodTop.append(tabBar, roll);
+    this.draggable(this.scroll, rodTop);
     const body = el('div', { class: 'scroll-body' });
     this.scroll.append(rodTop, body, el('div', { class: 'rod bottom' }));
     for (const [key, label] of [
@@ -403,6 +421,8 @@ export class Ui {
     this.applyLayout(media.matches);
     media.addEventListener('change', (m) => this.applyLayout(m.matches));
     this.showTab('board');
+    // Opening the board ourselves is not the player looking around (bar round 1).
+    this.lookedAround = false;
 
     game.narrator.onEntry((e) => this.onEntry(e));
     game.onEvent((e) => this.onEvent(e));
@@ -474,6 +494,7 @@ export class Ui {
   }
 
   showTab(key: string): void {
+    this.lookedAround = true;
     // On a desktop, goals and the Folk album are widgets of their own: bring the one asked for to the fore.
     if (!this.phone && (key === 'goals' || key === 'folk')) {
       this.setWidget(key, true);
@@ -529,9 +550,78 @@ export class Ui {
 
   // ---------------------------------------------------------------- layout (M4)
 
+  /** Where a dragged panel came from, so it can be docked back. */
+  private readonly homes = new Map<HTMLElement, { parent: HTMLElement; next: Element | null }>();
+
+  /**
+   * On desktop a panel can be dragged by its header (owner, 2026-10-08) and docked back with a
+   * double-click on it. Buttons in the header still work as buttons.
+   */
+  private draggable(box: HTMLElement, handle: HTMLElement): void {
+    let start: { x: number; y: number; left: number; top: number } | null = null;
+    handle.classList.add('grab');
+    handle.addEventListener('pointerdown', (e) => {
+      if (this.phone || e.button !== 0 || (e.target as HTMLElement).closest('button, a, input, select')) return;
+      const r = box.getBoundingClientRect();
+      const root = this.root.getBoundingClientRect();
+      if (!box.classList.contains('dragged')) {
+        // Lifted out of its column at its current place and size.
+        this.homes.set(box, { parent: box.parentElement as HTMLElement, next: box.nextElementSibling });
+        box.style.width = `${r.width}px`;
+        if (box.classList.contains('widget')) box.style.height = `${r.height}px`;
+        box.classList.add('dragged');
+        this.root.appendChild(box);
+      }
+      box.style.left = `${r.left - root.left}px`;
+      box.style.top = `${r.top - root.top}px`;
+      box.style.right = 'auto';
+      box.style.bottom = 'auto';
+      start = { x: e.clientX, y: e.clientY, left: r.left - root.left, top: r.top - root.top };
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add('grabbing');
+      e.preventDefault();
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!start) return;
+      const root = this.root.getBoundingClientRect();
+      box.style.left = `${Math.max(0, Math.min(root.width - 80, start.left + e.clientX - start.x))}px`;
+      box.style.top = `${Math.max(0, Math.min(root.height - 40, start.top + e.clientY - start.y))}px`;
+    });
+    const stop = () => {
+      start = null;
+      handle.classList.remove('grabbing');
+    };
+    handle.addEventListener('pointerup', stop);
+    handle.addEventListener('pointercancel', stop);
+    handle.addEventListener('dblclick', (e) => {
+      if ((e.target as HTMLElement).closest('button, a')) return;
+      this.dock(box);
+    });
+  }
+
+  /** Put a dragged panel back where it came from. */
+  private dock(box: HTMLElement): void {
+    const home = this.homes.get(box);
+    if (!home || !box.classList.contains('dragged')) return;
+    box.classList.remove('dragged');
+    for (const k of ['left', 'top', 'right', 'bottom', 'width', 'height'] as const) box.style[k] = '';
+    if (home.next && home.next.parentElement === home.parent) home.parent.insertBefore(box, home.next);
+    else home.parent.appendChild(box);
+    this.homes.delete(box);
+  }
+
   /** A docked dashboard widget with a title, fold and hide. */
   private widget(key: string, title: string, icon: string, body: HTMLElement): HTMLElement {
     const w = el('section', { class: 'widget paper', 'data-widget': key, 'data-testid': `widget-${key}` });
+    // A widget with more below fades at its foot, so it reads as scrollable, not cut off (bar round 1).
+    queueMicrotask(() => {
+      const body = w.querySelector('.widget-body') as HTMLElement | null;
+      if (!body) return;
+      const edges = () => body.classList.toggle('more-below', body.scrollTop + body.clientHeight < body.scrollHeight - 4);
+      body.addEventListener('scroll', edges, { passive: true });
+      new ResizeObserver(edges).observe(body);
+      new MutationObserver(edges).observe(body, { childList: true, subtree: true });
+    });
     const head = el('header', { class: 'widget-head' });
     const t = el('h2', {});
     t.innerHTML = `${icon}<span>${title}</span>`;
@@ -543,6 +633,7 @@ export class Ui {
     hide.innerHTML = ICONS.close;
     hide.addEventListener('click', () => this.setWidget(key, false));
     head.append(t, fold, hide);
+    this.draggable(w, head);
     const b = el('div', { class: 'widget-body' });
     b.appendChild(body);
     w.append(head, b);
@@ -560,6 +651,7 @@ export class Ui {
   /** Phone (portrait) or desktop: the goals and Folk panes move between the sheet and the widgets. */
   private applyLayout(phone: boolean): void {
     this.phone = phone;
+    if (phone) for (const box of [...this.homes.keys()]) this.dock(box);
     document.body.classList.toggle('phone', phone);
     const body = this.scroll.querySelector('.scroll-body') as HTMLElement;
     if (phone) {
@@ -583,6 +675,7 @@ export class Ui {
 
   /** The phone's tab bar. */
   private nav(key: 'town' | 'goals' | 'folk' | 'build' | 'log'): void {
+    this.lookedAround = true;
     if (key === 'town' || key === 'build') {
       this.quick.hidden = true;
       if (!this.scroll.classList.contains('rolled')) this.toggleScroll();
@@ -1002,7 +1095,8 @@ export class Ui {
 
   private openModal(content: HTMLElement): void {
     this.closeModal();
-    this.speedBeforeModal = this.game.speedIndex || 1;
+    // The real previous speed, paused included (bar round 1: Decide later used to un-pause the game).
+    this.speedBeforeModal = this.game.speedIndex;
     this.setSpeed(0);
     const back = el('div', { class: 'modal-back' });
     const card = el('div', { class: 'modal paper scroll-paper' });
@@ -1248,7 +1342,10 @@ export class Ui {
     // Who is speaking, so a line never floats over an anonymous figure (review).
     const who = el('span', { class: 'speaker' }, residentDef(id).name);
     who.style.background = cssColor(residentColor(id));
-    b.el.replaceChildren(who, document.createTextNode(text.length > 90 ? `${text.slice(0, 87)}…` : text));
+    // Cut long lines at a word, never mid-word (bar round 1: "before the cart's last v…").
+    const limit = this.phone ? 110 : 140;
+    const cut = text.length > limit ? `${text.slice(0, text.lastIndexOf(' ', limit - 1) > 40 ? text.lastIndexOf(' ', limit - 1) : limit - 1)}…` : text;
+    b.el.replaceChildren(who, document.createTextNode(cut));
     b.el.dataset.who = id;
     b.born = performance.now();
     b.until = b.born + 4500;
@@ -1472,7 +1569,8 @@ export class Ui {
     answer.appendChild(portrait(id, 36));
     const reply = el('div', { class: 'bubble-reply', 'data-testid': 'talk-reply' });
     answer.appendChild(reply);
-    convo.append(asked, answer);
+    const replies = el('div', { class: 'replies', 'data-testid': 'talk-replies' });
+    convo.append(asked, answer, replies);
     root.appendChild(convo);
     const controls: HTMLButtonElement[] = [];
     let p!: TalkPanel;
@@ -1524,7 +1622,16 @@ export class Ui {
     const status = el('p', { class: 'quiet', 'data-testid': 'favour-status' });
     root.appendChild(status);
 
-    p = { root, reply, status, controls, clear, asked, picker, pick: null, pickKey: '', pickButtons: { opinion, visit, mend } };
+    p = { root, reply, replies, status, controls, clear, asked, picker, pick: null, pickKey: '', pickButtons: { opinion, visit, mend } };
+    // Talking back: one reply per answer, each a logged command like the question was.
+    replies.addEventListener('click', (ev) => {
+      const chip = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-reply]');
+      if (!chip) return;
+      const kind = chip.dataset.reply as ReplyKind;
+      say(REPLY_SAID[kind]);
+      this.game.command({ kind: 'reply', who: id, reply: kind });
+      this.renderJournal(true);
+    });
     const open = (mode: 'opinion' | 'visit' | 'mend') => {
       p.pick = p.pick === mode ? null : mode;
       this.refreshTalkPanel(id, p);
@@ -1585,6 +1692,14 @@ export class Ui {
     p.picker.hidden = !p.pick;
     const last = this.game.narrator.lastReply;
     p.reply.textContent = asleep ? `${residentDef(id).name} is asleep. Talk in the morning.` : last && last.who === id ? `“${last.text}”` : '';
+    // The replies open to this answer, until one is made.
+    const open = !asleep && last && last.who === id && r.lastAnswer && !r.lastAnswer.replied ? r.lastAnswer.offers : [];
+    const rkey = open.map((o) => o.kind).join('|');
+    if (p.replies.dataset.key !== rkey) {
+      p.replies.dataset.key = rkey;
+      p.replies.replaceChildren(...open.map((o) => el('button', { class: 'chip reply', 'data-reply': o.kind, 'data-testid': `reply-${o.kind}` }, REPLY_LABELS[o.kind])));
+    }
+    p.replies.hidden = open.length === 0;
     const answered = p.reply.textContent !== '';
     (p.reply.parentElement as HTMLElement).hidden = !answered;
     p.asked.hidden = !answered || asleep || p.asked.textContent === '';
@@ -1964,8 +2079,12 @@ export class Ui {
     if (!this.menu.hidden) this.refreshMenu();
     if (!this.tabs.get('journal')!.pane.hidden) this.renderJournal();
     if (!this.tabs.get('you')!.pane.hidden) this.renderYou();
-    // New proposals get a popup.
-    if (!this.modal) {
+    // New proposals get a popup, but not before the player has looked around (bar round 1: on a
+    // phone the first thing after the intro was a decision about people you had not met).
+    const passed = Math.max(0, state.tick - this.watchedFrom);
+    this.watched += passed >= 120 ? passed : Math.min(5, passed);
+    this.watchedFrom = state.tick;
+    if (!this.modal && (this.lookedAround || this.watched >= 120)) {
       const d = state.story.dilemmas.find((x) => x.status === 'open' && !this.shownDilemmas.has(x.id));
       if (d) this.showDilemma(d);
     }
@@ -1981,6 +2100,7 @@ export class Ui {
     const allowed = new Set(live.slice(0, 2).map(([id]) => id));
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    const placed: DOMRect[] = [];
     for (const [id, b] of this.bubbles) {
       const pos = this.view.residentHead(id);
       let show = allowed.has(id) && pos !== null && pos.visible;
@@ -1997,9 +2117,18 @@ export class Ui {
           b.el.style.top = `${pos.y + dy}px`;
           r = b.el.getBoundingClientRect();
         }
+        // Two bubbles that would overlap: the later one moves up out of the way (bar round 1).
+        for (const other of placed) {
+          if (r.left < other.right && r.right > other.left && r.top < other.bottom && r.bottom > other.top) {
+            const lift = r.bottom - other.top + 8;
+            b.el.style.top = `${parseFloat(b.el.style.top) - lift}px`;
+            r = b.el.getBoundingClientRect();
+          }
+        }
         b.el.style.setProperty('--tail', `${Math.max(12, Math.min(r.width - 12, pos.x - r.left))}px`);
         // A bubble that would sit over the scroll, the dock or the top bar waits out of sight.
-        show = r.bottom < vh && !covers.some((c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top);
+        show = r.bottom < vh && r.top > 0 && !covers.some((c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top);
+        if (show) placed.push(r);
       }
       b.el.hidden = !show;
     }

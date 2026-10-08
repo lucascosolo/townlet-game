@@ -8,7 +8,10 @@ import { residentDef } from '../content/residents.js';
 import { ASPIRATION_LINES, DILEMMA_NAMES, DREAM_DONE_LINES, GATHERING_START, PREPOSITIONS, PROPOSALS } from '../content/story.js';
 import { MIND_LINES, TO_STEWARD_LINES } from '../content/thoughts.js';
 import { DAY_WORDS, RECALL_LINES } from '../content/recall.js';
-import { FAVOUR_DONE, FAVOUR_NO, FAVOUR_YES, TALK_HOPE, TALK_HOPE_DONE, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON } from '../content/talk.js';
+import { FESTIVALS } from '../sim/story/director.js';
+import { REPLY_LINES, REPLY_SAID } from '../content/replies.js';
+import { FAVOUR_DONE, FAVOUR_NO, FAVOUR_YES, TALK_HOPE,
+  TALK_HOPE_ONE, TALK_HOPE_DONE, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON } from '../content/talk.js';
 import { firstPerson } from '../sim/mind/thoughts.js';
 import { opinion } from '../sim/mind/memory.js';
 import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
@@ -264,7 +267,10 @@ export class Narrator {
 
   private keepsCapital(text: string): boolean {
     if (/^I\b/.test(text)) return true;
-    return this.state.order.some((id) => text.startsWith(this.name(id)));
+    if (this.state.order.some((id) => text.startsWith(this.name(id)))) return true;
+    // Festival and gathering names keep their capitals ("blossom Day", bar round 1).
+    const labels = [...Object.values(FESTIVALS), ...this.state.story.gatherings.map((g) => g.label), ...this.state.story.memories.map((m) => m.label)];
+    return labels.some((l) => /^[A-Z]/.test(l) && text.startsWith(l));
   }
 
   /** A line in a resident's own voice, with an occasional verbal tic, in quotes. */
@@ -280,9 +286,12 @@ export class Narrator {
     // No tic on a line that already opens with an interjection, a name or a tic of its own
     // ("Honestly, you know, ..." read as a stammer).
     const opensLoud = /^(Oh|Ha|Ooh|Hey|Listen|Kaboom|What)\b/.test(text) || (this.keepsCapital(text) && !/^I\b/.test(text)) || /^[A-Z][a-z']*( [a-z']+)?,/.test(text);
-    const tics = opensLoud ? [] : def.voice.tics.filter((t) => !text.toLowerCase().includes(t.toLowerCase()));
+    const today = dayOf(this.state.tick);
+    const tics = opensLoud ? [] : def.voice.tics.filter((t) => !text.toLowerCase().includes(t.toLowerCase()) && this.ticUsed.get(`${who}|${t}`) !== today);
     if (tics.length > 0 && chance(this.rng, 0.25)) {
       const tic = pick(this.rng, tics);
+      // Once a day each (bar round 1: "Honestly?" opened 15 answers).
+      this.ticUsed.set(`${who}|${tic}`, today);
       if (/[.!?]$/.test(tic)) text = `${tic} ${text}`;
       else text = `${cap(tic)}, ${this.keepsCapital(text) ? text : text.charAt(0).toLowerCase() + text.slice(1)}`;
     }
@@ -538,6 +547,12 @@ export class Narrator {
         break;
       case 'renown':
         break;
+      case 'reply': {
+        const words = this.utter(e.who, REPLY_LINES[e.stance]);
+        this.lastReply = { who: e.who, t: e.t, text: words };
+        this.live(e.t, `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${REPLY_SAID[e.reply]}" "${words}"`);
+        break;
+      }
       case 'gift':
         this.live(e.t, `A trader's cart rattles into town and leaves ${e.timber} timber and ${e.food} food by the well. "Compliments of the road," says the driver, and is gone.`);
         break;
@@ -805,7 +820,7 @@ export class Narrator {
       t.replace(new RegExp(`\\b${p.subj} (was|were)\\b`, 'g'), 'I was').replace(new RegExp(`\\b${p.obj}\\b`, 'g'), 'me');
     const x = rec.subject === STEWARD_ID ? (youAreSteward ? 'you' : 'the steward') : this.subjectName(rec.subject);
     const note = me(rec.note);
-    const verbFirst = /^(built|put|took|granted|planted|said|never|helped|remembered|looked|fed|taught|decided|wouldn't|asked|filled|shared|gave)\b/.test(note);
+    const verbFirst = /^(built|put|took|granted|planted|said|never|helped|remembered|looked|fed|taught|decided|wouldn't|asked|filled|shared|gave|let)\b/.test(note);
     switch (rec.aspect) {
       case 'argued_with_me':
         return `${x} and I argued`;
@@ -838,6 +853,10 @@ export class Narrator {
         const m = /^never answered (.+)'s (.+)$/.exec(note);
         return m ? `${x} never gave ${m[1]} an answer about the ${m[2]}` : `${x} ${note}`;
       }
+      case 'still_waiting':
+        return `${x} kept me waiting`;
+      case 'went_hungry':
+        return `${x} let the larder run bare`;
       case 'kind_to_me':
         if (note.startsWith(x)) return note;
         return verbFirst ? `${x} ${note}` : `${x} gave us ${note}`;
@@ -863,6 +882,9 @@ export class Narrator {
     return sentenceCase(fixArticles(this.fill(this.freshest(who, options), FIRST_PERSON, { clause: this.memoryClause(who, rec, youAreSteward), when: this.whenSaid(rec.tick) })));
   }
 
+  /** `${who}|${tic}` -> the day it was last used, so a tic is heard at most once a day. */
+  private ticUsed = new Map<string, number>();
+
   /** The last thing a resident said to the steward, for the talk panel. */
   lastReply: { who: string; t: number; text: string } | null = null;
 
@@ -879,6 +901,8 @@ export class Narrator {
         return a.topics && a.topics.length > 0 ? a.topics.map(mind).join(' ') : 'Nothing much, honestly.';
       case 'hope':
         if (!a.hope || a.hope.done || !a.hope.next) return this.utter(who, TALK_HOPE_DONE);
+        // When the next step is the dream itself ("make something for Marlow, in the evenings"), say it once.
+        if (a.hope.next.toLowerCase().includes(a.hope.title.toLowerCase())) return this.utter(who, TALK_HOPE_ONE, { title: firstPerson(lower(a.hope.next)) });
         return this.utter(who, TALK_HOPE, { title: firstPerson(lower(a.hope.title)), next: firstPerson(lower(a.hope.next)) });
       case 'opinion':
       case 'me': {
@@ -906,7 +930,7 @@ export class Narrator {
               ? `what ${p.subj} ${p.subj === 'they' ? 'think' : 'thinks'} of ${this.you ? 'you' : 'the steward'}`
               : `what ${p.subj} ${p.subj === 'they' ? 'think' : 'thinks'} of ${a.about ? this.subjectName(a.about) : 'things'}`;
     // A fact this question reveals (M4 Folk album) is said in the reply, so the album learns what you were told.
-    const fact = nextFact(this.state, e.who, a.question);
+    const fact = nextFact(this.state, e.who, a.question, a.about);
     const told = fact ? factSaid(this.state, this.state.residents[e.who]!, fact) : '';
     // A memory they bring up (2026-10-08), in their own words, after the answer itself.
     const remembered = a.memory ? this.memoryLine(e.who, a.memory, this.you) : '';
@@ -941,8 +965,8 @@ export class Narrator {
 
   private got(y: Partial<Record<Resource, number>> | undefined): string {
     const parts = Object.entries(y ?? {})
-      .filter(([, v]) => (v ?? 0) > 0)
-      .map(([k, v]) => `${Math.round((v as number) * 10) / 10} ${k}`);
+      .filter(([, v]) => Math.round(v ?? 0) > 0)
+      .map(([k, v]) => `${Math.round(v as number)} ${k}`);
     return parts.length ? parts.join(' and ') : 'nothing to show';
   }
 

@@ -2,6 +2,7 @@
 // drawn only from the resident's actual state and ranked by how much each matters right now.
 // Thoughts and everyday chat are chosen from the top three, never invented.
 
+import { buildingDef } from '../../content/buildings.js';
 import { residentDef } from '../../content/residents.js';
 import { companyOvershoot, urgency } from '../needs.js';
 import { TICKS_PER_DAY, dayOf } from '../time.js';
@@ -29,7 +30,7 @@ function subjectWord(state: SimState, s: SubjectId): string {
   if (s.startsWith('r:')) return NAME(s.slice(2));
   if (s.startsWith('m:')) return state.story.memories.find((m) => m.id === Number(s.slice(2)))?.label ?? 'that day';
   const b = state.buildings.find((x) => x.id === Number(s.slice(2)));
-  return b ? `the ${b.type === 'oak' ? 'old oak' : b.type}` : 'that place';
+  return b ? (b.type === 'oak' ? 'the old oak' : `the ${buildingDef(b.type).name.toLowerCase()}`) : 'that place';
 }
 
 /** "win the town over with his bread" -> "... with my bread". */

@@ -79,6 +79,8 @@ export interface ResidentDef {
   pronouns: Pronouns;
   age: number;
   background: string;
+  /** The same, as they tell it themselves (bar round 1). */
+  bio?: string;
   /** Bipolar traits in [-1, 1]. sociable=-1 is reserved, steady=-1 is excitable, and so on. */
   traits: Record<Trait, number>;
   /** How much the resident cares about each value, [0, 1]. */
@@ -245,6 +247,16 @@ export interface ResidentState {
   /** Mood arcs so far, and the tick the last one ended. */
   moodArcs?: number;
   lastMoodEnd?: number;
+  /** Their last answer to the steward and the replies it opened (talking back, bar round 1). */
+  lastAnswer?: { tick: number; offers: import('./replies.js').ReplyOffer[]; replied: boolean };
+  /** Belief aspect -> tick it was last given as the reason for their view of the steward. */
+  cited?: Record<string, number>;
+  /** Grievance aspect -> tick the steward last said sorry for it. */
+  sorryFor?: Record<string, number>;
+  /** Day a meagre meal was last held against the steward (bar round 1). */
+  lastHungryDay?: number;
+  /** Consecutive days of meagre meals ending on lastHungryDay. */
+  hungryRun?: number;
   /** Day of the steward's last talk with them that counted (M3b: no farming). */
   lastTalkDay?: number;
   /** A favour they agreed to and are doing (M3c). */
@@ -333,6 +345,8 @@ export interface TalkAnswer {
   because?: { subject: SubjectId; aspect: string };
   /** A memory they bring up, if any (memories in conversation, 2026-10-08). */
   memory?: import('./recall.js').Recollection;
+  /** The replies the steward can make to this answer (talking back, bar round 1). */
+  replies?: import('./replies.js').ReplyKind[];
 }
 
 /** A mind topic as it was voiced: see mind/thoughts.ts. */
@@ -554,6 +568,7 @@ export type SimEvent =
   | { t: number; type: 'plot_cleared'; building: number; by: string[] }
   /** The steward talks with a resident (M3b). */
   | { t: number; type: 'talk'; who: string; answer: TalkAnswer; counted: boolean }
+  | { t: number; type: 'reply'; who: string; reply: import('./replies.js').ReplyKind; stance: import('./replies.js').ReplyStance; aspect?: string }
   /** A resident's view of the steward moved overnight, and why. */
   | { t: number; type: 'standing'; who: string; delta: number; reasons: string[] }
   | { t: number; type: 'thinking_of_leaving'; who: string }

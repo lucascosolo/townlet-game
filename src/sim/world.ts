@@ -306,8 +306,10 @@ export function canPlace(state: SimState, type: string, x: number, y: number, ro
 
 // ---------------------------------------------------------------- worn tracks
 
-/** Each dawn a track keeps this much of its wear: unwalked for 7 days, under half is left. */
-export const WEAR_KEEP = 0.9;
+/** Each dawn a track keeps this much of its wear: unwalked for 7 days, about a fifth is left. */
+export const WEAR_KEEP = 0.8;
+/** Wear below this is not drawn: a track takes real, repeated traffic to show (bar round 1). */
+export const WEAR_SHOW = 6;
 
 /** A footstep off the laid paths wears the ground a little. */
 export function wearStep(state: SimState, x: number, y: number): void {
@@ -353,7 +355,29 @@ export function seedWear(state: SimState): void {
     for (const g of gathering) walk(home, placeTile(g), 1);
   }
   const wear = state.wear ?? {};
-  for (const k of Object.keys(wear)) wear[k] = Math.round((wear[k] as number) * steady * 0.5);
+  for (const k of Object.keys(wear)) wear[k] = Math.round((wear[k] as number) * steady * 0.3);
+}
+
+/** The nearest tile that is not under a building (paths and the commons count as open), searching outward. */
+export function nearestOpen(state: SimState, x: number, y: number): [number, number] | null {
+  const live = liveBuildings(state).filter((b) => b.type !== 'path' && b.type !== 'commons');
+  const blocked = (tx: number, ty: number) =>
+    live.some((b) => {
+      const [bw, bh] = sizeOf(b);
+      return tx >= b.x && tx < b.x + bw && ty >= b.y && ty < b.y + bh;
+    });
+  for (let ring = 1; ring <= 6; ring++) {
+    for (let dy = -ring; dy <= ring; dy++) {
+      for (let dx = -ring; dx <= ring; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+        const tx = x + dx;
+        const ty = y + dy;
+        if (tx < 0 || ty < 0 || tx >= state.width || ty >= state.height) continue;
+        if (!blocked(tx, ty)) return [tx, ty];
+      }
+    }
+  }
+  return null;
 }
 
 /** Which way the brook lies from a tile, as a quarter turn (0 east, 1 south, 2 west, 3 north), or null if it isn't next to it. */

@@ -17,6 +17,21 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **Reasons are specific:** the ledger says what was waited for and how long; a dream card quotes the resident; a newcomer's first dream follows their trade.
 - **A link with a seed restores its save** when one matches, and only `?new=1` starts fresh.
 
+**Settled while building (recorded so the numbers are not a mystery later):**
+- **A kind view concedes a fresh wrong.** "What do you think of me?" from someone who still likes you, the day after you felled their oak, says so and then "though you took away the old oak". The reason given for a feeling now has the feeling's sign, and something fresh (a source in the last two days) counts double, so the day's wrong comes up before an old settled view. The same fresh wrong is on their mind in "what's on your mind".
+- **The bio is learned from the page.** Opening a resident's About page logs a `look` command, which teaches the album their background. "What do you think of me?" reveals no fact at all now.
+- **Hunger weighs 2.5 against rest's 1.2** in the mood's needs term, and a meagre meal fills a tenth of a real one; the first try (weight 2, a sixth) left the hungry week's mood drop at 0.08.
+- **Foraging** is one trip a day in daylight, to the nearest brook or wild edge, when the larder and granary are both below a meal and they are hungry: 1 food in spring, 1.6 in summer and autumn, 0.5 in winter.
+- **A dream-driven departure gives notice.** Marlow's "stay or go" used to leave the morning it was decided; now deciding to go starts the same week of "thinking of leaving" anyone else gets, and the week can still turn it round.
+- **Only an open proposal counts as something to decide.** The three-quiet-mornings rule looks at proposals alone; asks and wishes are things to do. Proposers' thresholds were lowered so the quiet town has someone to propose each kind, and the proposal beat's cooldown is three days.
+- **A dream step waits eight days**, counted from when the step began, with an aspiration ask for a building that is not there; then the ask is withdrawn, the dream ends as "let it go", and a new dream comes in its own time.
+- **Desire paths:** the walking grid is rebuilt each dawn and open ground worn by yesterday's feet is up to 1.5 cheaper to cross (never cheaper than a laid path), so walkers converge on tracks; and nothing wears inside a footprint, so the commons is no longer a mud slab.
+- **Standing: a night's good news is capped at 0.15** (was 0.3); newcomers arrive at 0 affinity and 0.4 trust; a favour needs a score of 0.5 (was 0.45), standing weighs 0.8 and a low mood counts from 0.55 down; the tier gift is 8 timber.
+- **Lines rest four days town-wide** (three for the same speaker), and about three hundred lines were added where a key had under five per register.
+- **Tiers at 100, 300 and 650 renown** (were 40, 180, 520).
+
+**Criteria read as built (reported in the status, not quietly):** "praise" in criterion 1 means a kind view with nothing conceded; the concession clause is one coherent statement and is not counted as pulling both ways under criterion 2; the hungry week in criterion 3 is a larder emptied every minute, foraging finds included, since foraging is the sim's own answer to a bare larder; the favours steward's refusal rate came out at 7.5% against the 15% declared and is kept as a visible expected failure.
+
 **Rejected:**
 - *Proposals with three options.* Yes, no and later keep the modal small on a phone; more sides come from more kinds of proposal, not more buttons.
 - *Residents building things on their own.* Open question 6 stays open; a dream that moves on makes do with what is there.

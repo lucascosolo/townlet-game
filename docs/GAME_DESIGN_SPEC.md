@@ -977,6 +977,24 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Browser tests: all 37 pass, including the M2 journal test that had failed in this container before.
    - Stepping at 10× costs 1.03 ms a frame.
 
+
+**Memories in conversation criteria (predeclared 2026-10-08, before code).** Bakery and quiet towns, seeds 1–5, considerate steward, unless stated. A failure is reported as a failure, not redefined.
+
+1. **Memories come up.** Ask every resident "What do you think of me?" once a day for 14 days. When they hold a retellable memory about you from at least a day ago that hasn't been told to you in the last 3 days, at least 60% of answers include one.
+2. **They are true.**
+   - Every memory mentioned in talk is an episode in that resident's long-term memory, with the same subject, kind and feeling sign.
+   - It is something they witnessed, not hearsay.
+   - Its time phrase matches its age: "yesterday" for one day, "two days ago" and so on up to six, "last week" for 7 to 13 days, then the season ("back in the spring", or "last spring" in an earlier year).
+3. **They fit the question.** "What do you think of me?" only recalls memories about you. "What do you think of X?" only recalls memories about X. "What are you hoping for?" recalls nothing.
+4. **Not the same story twice in a row.** In the 14-day run, no resident tells you the same memory twice within 3 days.
+5. **Remembering keeps it alive.** Twin towns are the same except that one is asked "What do you think of me?" daily. Ten days after a kindness from you, the asked resident's belief about you behind it is stronger than in the twin never asked, on at least 4 of 5 seeds.
+6. **They read right.**
+   - Every kind of retellable memory, in every register, produces a line with no template leftovers.
+   - The line is in first person ("for me", not "for him"), and uses "you" for the steward.
+   - Checked across every episode in five 28-day runs.
+7. **A resident's page shows what they remember most:** up to three memories, each with its day, in their own words.
+8. **No regressions.** Earlier unit and browser tests pass, determinism holds, stepping at 10× stays under 2 ms a frame, and the one-year soak finds no degenerate state.
+
 ---
 
 ## 10. Risks

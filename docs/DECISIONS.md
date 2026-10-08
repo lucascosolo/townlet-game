@@ -2,6 +2,33 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-08: Quick wins: installable, faster to load, and a rewarded bonus
+
+**The asks (owner):** "Do the quick wins. I like the idea of watching [an ad] for earning a bonus, that would be a good small revenue stream."
+
+**Chosen:**
+- **Installable on phones.** A web app manifest and home-screen icons, so "Add to Home Screen" opens Townlet full-screen like an app.
+  - *Not now:* a service worker for offline play. A cached copy that outlives a deploy would show players an old build, which costs more than offline play gives a game that already needs the network for its fonts. Chrome's menu install no longer needs a service worker; its automatic install prompt still does, so that prompt won't appear yet.
+- **Faster to load.**
+  - A loading screen is drawn by the page itself, before any script arrives.
+  - The 3D engine (three.js) ships as its own file. It rarely changes, so returning players' browsers keep it across our deploys and fetch only the game's own code.
+- **A rewarded bonus: the trader's cart.**
+  - Once a day of town time, a button offers a short ad. Watch it through and a trader's cart stops by with 8 timber and 6 food.
+  - The bonus goes into the town as a logged command, like a build. A save replays it exactly.
+  - It is never needed to progress, and it never plays unless the player presses the button.
+  - An ad cut short gives nothing. The game says so plainly, and the offer stays open.
+  - **Ad providers**, behind one small interface:
+    - Google's H5 Games Ads on townlet.app, once the owner has an approved AdSense account and sets its publisher ID at build time;
+    - the CrazyGames SDK when the game runs on CrazyGames;
+    - a test provider for development and tests.
+
+    With no provider available, the button does not show at all. So townlet.app shows nothing until the owner's account is set up.
+  - *Why a trader's cart:* the valley already has a trade cart (Marlow's dream is whether to follow it). A gift of materials helps without touching how residents feel. Bought goodwill would undercut the game's point that the residents' feelings are earned.
+
+**Rejected:**
+- *Interstitial ads between days, and banners.* They interrupt a calm game (pillar 4), and the owner asked for the watch-for-a-bonus kind.
+- *Bigger rewards, or more than one a day.* A rewarded ad should be a small kindness, not the way to play. Eight timber is less than a cottage.
+
 ## 2026-10-05: Getting Townlet seen; ads no longer ruled out
 
 **The asks (owner):** "Is there any level of SEO we can do for Townlet to get it out there, and is there any fun way to monetize it?" Then: "I'm not opposed to ad revenue actually. Definitely we should do the common sense basic stuff like giving it proper meta data and share cards for sharing. Maybe work on ad copy for an itch.io listing."

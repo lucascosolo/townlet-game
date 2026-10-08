@@ -934,6 +934,22 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - The one-year soak with newcomers (bakery, 10 seeds × 112 days) finds no degenerate state: an argument in every run, no departures, and the busiest place takes 48% of socialising.
    - One measure moved: rival pairs fell from 1.5 to 1.0 a run. The soak's random builder can no longer place jetties away from the brook, so its towns grow differently.
 
+
+**Quick wins criteria (predeclared 2026-10-08, before code).** A failure is reported as a failure, not redefined.
+
+1. **Installable.** The page links a manifest giving name, short name, start URL, standalone display, theme and background colours, and icons at 192 and 512 px, including a maskable one. An Apple touch icon is linked too. Every icon the manifest names loads and is the size it claims.
+2. **Faster to load.**
+   - With scripts blocked, the page shows a loading screen with the game's name, so something appears before any script runs.
+   - Once the game is ready, the loading screen is gone.
+   - three.js is in its own file, and the game's own code file is under 400 kB before compression (the single file is 873 kB today).
+3. **The rewarded bonus.**
+   - With no ad provider, there is no bonus button anywhere.
+   - With the test provider, the button shows. Pressing it and finishing the ad adds exactly 8 timber and 6 food (within the stock caps), as a logged command, and the log says a trader's cart came by. A save replays it.
+   - An ad cut short adds nothing and says so. The offer stays open.
+   - The offer comes back once a day of town time, not more often, and no ad ever starts without a press.
+   - The simulation is paused while an ad plays.
+4. **No regressions.** Earlier unit and browser tests pass, determinism holds, and stepping at 10× stays under 2 ms a frame.
+
 ---
 
 ## 10. Risks

@@ -2,6 +2,20 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-08: The bar, and working to it without asking each time
+
+**The ask (owner):** "Keep working until you and an independent reviewer can agree that Townlet is a fun, polished game like a Sims-style game but with thinking, opinionated sims that can express to the player what they think in a fun, interactive way."
+
+**Chosen:**
+- **The bar is written down** (spec section 9.4) so the reviewer scores against something fixed, not against whatever was built last.
+- **An independent reviewer plays each round.** A fresh reviewer, given only the bar and the game, plays it headless and in the browser, scores it on five counts, and ranks what is wrong. Its review goes in `docs/reviews/`. It has no part in building, so it can't grade its own work.
+- **The loop:** review, fix the biggest gaps the review names, review again. It ends when a review meets the bar on every count and I agree with it, or when the owner says stop.
+- **No asking before each chunk** while this runs: the owner has authorised the loop. Decisions and criteria are still recorded first, and misses are still reported as misses.
+
+**Rejected:**
+- *Grading it myself.* I built it; the review has to come from outside.
+- *A single big rewrite.* Each round changes what the last review found and nothing else, so the reviews measure the game and not the churn.
+
 ## 2026-10-08: Memories in conversation (M3b), the complex feature
 
 **The ask (owner):** "Do one complex feature." Of the candidates offered, memories in conversation was recommended first. It is the game's tagline ("everyone remembers") and the review's sharpest gap: residents remember a great deal, but the player rarely hears it.

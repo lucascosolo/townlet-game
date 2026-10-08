@@ -1021,6 +1021,19 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Stepping at 10× costs 0.99 ms a frame.
    - The one-year soak with newcomers finds no degenerate state, with the same figures as before: 1.0 rival pairs a run, an argument in every run, no departures, and the busiest place takes 48% of socialising.
 
+
+### 9.4 The bar (set 2026-10-08)
+
+Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:
+
+1. **Fun.** A player who sits down for an hour wants a second hour. There is always something to decide or someone to answer, choices change what happens, and the town surprises you.
+2. **Polished.** Nothing on screen reads as broken, placeholder or raw: no bare data, no repeated lines, no layout that overflows or hides what you need, on a phone or a desktop. Loading, saving and the first five minutes all just work.
+3. **Thinking sims.** Residents act for reasons you can find out: needs, memories, plans and friendships drive what they do, and the game can show you why.
+4. **Opinionated sims.** Residents disagree with each other and with you. They have likes, grudges, tastes and dreams of their own that you did not choose and cannot simply buy.
+5. **Expressive and interactive.** They tell you what they think in their own words, in ways that are fun to read, and you can talk back: ask, argue, agree, make amends, and see it land.
+
+The reviewer's report lists a score for each, a verdict, and the problems ranked by how much they hold the game back. A round that fixes the top problems is followed by a fresh review.
+
 ---
 
 ## 10. Risks

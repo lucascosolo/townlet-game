@@ -4,6 +4,7 @@
 // acquaintance with the steward; asking again the same day changes nothing.
 
 import { opinion } from './mind/memory.js';
+import { freshGrievance } from './mind/thoughts.js';
 import { TICKS_PER_DAY } from './time.js';
 import { rel } from './mind/relationships.js';
 import { topOfMind } from './mind/thoughts.js';
@@ -18,13 +19,30 @@ export function feelingBand(v: number): string {
   return v > 0.3 ? 'love' : v > 0.05 ? 'like' : v >= -0.05 ? 'neutral' : v >= -0.3 ? 'dislike' : 'hate';
 }
 
-function strongestBelief(r: ResidentState, subject: SubjectId, skip: Record<string, number> = {}): Belief | undefined {
-  const all = Object.values(r.beliefs)
-    .filter((b) => b.subject === subject)
-    .sort((a, b) => b.strength * Math.abs(b.valence) - a.strength * Math.abs(a.valence));
+/**
+ * The reason behind a feeling: the strongest belief about the subject, or a trace still forming.
+ * Bar round 2: the reason has the feeling's sign (no "I am grateful... you still irritate me"),
+ * and something fresh (a source in the last two days) counts double, so the day after you felled
+ * their oak that is what they bring up, not an old settled view.
+ */
+function strongestBelief(r: ResidentState, subject: SubjectId, skip: Record<string, number> = {}, sign = 0, now = 0): Pick<Belief, 'subject' | 'aspect' | 'valence'> | undefined {
+  const fresh = (sources: Array<{ tick: number }>) => sources.some((x) => now - x.tick < 2 * TICKS_PER_DAY);
+  const all: Array<{ subject: SubjectId; aspect: string; valence: number; weight: number }> = [
+    ...Object.values(r.beliefs)
+      .filter((b) => b.subject === subject)
+      .map((b) => ({ subject: b.subject, aspect: b.aspect, valence: b.valence, weight: b.strength * Math.abs(b.valence) * (fresh(b.sources) ? 2 : 1) })),
+    ...Object.values(r.traces)
+      .filter((t) => t.subject === subject && !r.beliefs[`${t.subject}|${t.aspect}`] && Math.abs(t.evidence) > 0.1)
+      .map((t) => ({ subject: t.subject, aspect: t.aspect, valence: Math.sign(t.evidence), weight: 0.5 * Math.abs(t.evidence) * (fresh(t.sources) ? 2 : 1) })),
+  ]
+    .filter((b) => sign === 0 || Math.sign(b.valence) === sign)
+    .sort((a, b) => b.weight - a.weight);
   // One not given as the reason lately, if there is one (bar round 1: "you listen" every day).
   return all.find((b) => skip[b.aspect] === undefined) ?? all[0];
 }
+
+/** The sign a reason must have to fit a feeling: none when the feeling is neutral. */
+const reasonSign = (v: number) => (v > 0.05 ? 1 : v < -0.05 ? -1 : 0);
 
 /** How a resident feels about someone or something, for "what do you think of…": people by affinity and belief, places by belief. */
 export function feelingAbout(r: ResidentState, subject: SubjectId, now: number): number {
@@ -57,13 +75,15 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
     case 'opinion': {
       const subject = about ?? STEWARD;
       const v = feelingAbout(r, subject, state.tick);
-      const b = strongestBelief(r, subject);
+      const b = strongestBelief(r, subject, {}, reasonSign(v), state.tick);
       return { question, about: subject, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
     }
     case 'me': {
       const v = feelingAbout(r, STEWARD, state.tick);
-      const b = strongestBelief(r, STEWARD, r.cited ?? {});
-      return { question, about: STEWARD, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
+      const b = strongestBelief(r, STEWARD, r.cited ?? {}, reasonSign(v), state.tick);
+      // A kind view still concedes a fresh wrong (bar round 2): "I think well of you, though you felled the oak".
+      const fresh = reasonSign(v) >= 0 ? freshGrievance(r, state.tick) : null;
+      return { question, about: STEWARD, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}), ...(fresh ? { but: { aspect: fresh.aspect, note: fresh.note } } : {}) };
     }
   }
 }
@@ -79,7 +99,7 @@ export function reconcile(answer: TalkAnswer): TalkAnswer {
   const dark = band === 'low' || band === 'bad' || band === 'dislike' || band === 'hate';
   if (answer.topics && (sunny || dark)) {
     answer.topics = answer.topics.filter((t) => {
-      if (sunny && (t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)))) return false;
+      if (sunny && (t.key === 'steward:-' || t.key === 'steward:fresh' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)))) return false;
       if (dark && (t.key === 'feel:joy' || t.key === 'steward:+' || (t.about === STEWARD && t.key === 'feel:gratitude'))) return false;
       return true;
     });

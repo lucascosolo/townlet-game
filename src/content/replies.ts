@@ -1,7 +1,7 @@
 // Talking back (bar round 1): what the steward can say after an answer, and how residents take it.
 // Responses are in the resident's register; {aspect} is not used, the grievance is implied.
 
-import type { ReplyKind, ReplyStance } from '../sim/replies.js';
+import { ownNote, type ReplyKind, type ReplyOffer, type ReplyStance } from '../sim/replies.js';
 import type { Lines } from './voice.js';
 
 /** The steward's side, as the chat shows it. */
@@ -11,6 +11,25 @@ export const REPLY_SAID: Record<ReplyKind, string> = {
   sorry: "I'm sorry.",
   explain: 'Let me explain.',
 };
+
+/**
+ * The steward's side, naming what it answers (bar round 2): "I'm sorry I took away the old oak",
+ * "Let me explain why I said no to your idea", "That's fair, about the well". `subject` turns a
+ * subject id into words; without one, agree and disagree stay plain.
+ */
+export function replySaid(offer: ReplyOffer, subject?: (id: string) => string): string {
+  const about = offer.about;
+  switch (offer.kind) {
+    case 'sorry':
+      return about ? `I'm sorry ${ownNote(about)}.` : REPLY_SAID.sorry;
+    case 'explain':
+      return about ? `Let me explain why ${ownNote(about)}.` : REPLY_SAID.explain;
+    case 'agree':
+      return about && subject ? `That's fair, about ${subject(about)}.` : REPLY_SAID.agree;
+    case 'disagree':
+      return about && subject ? `I don't see ${subject(about)} that way.` : REPLY_SAID.disagree;
+  }
+}
 
 export const REPLY_LINES: Record<ReplyStance, Lines> = {
   warm: {

@@ -166,6 +166,13 @@ export const MIND_LINES: Record<string, Lines> = {
     chatty: ['Best steward we ever had!', 'The steward? Marvellous!', 'Say what you like, the steward gets things done!'],
     dreamy: ['Someone is keeping watch over us.', 'The town is in kind hands.'],
   },
+  'steward:fresh': {
+    plain: ['The steward {x}. Not forgotten.', 'Steward {x}. Hm.', 'The steward {x}, and I noticed.'],
+    formal: ['The steward {x}. I have not forgotten it.', 'I am still turning over the fact that the steward {x}.', 'The steward {x}. I say no more than that.'],
+    warm: ['The steward {x}, and it stung a little.', "I keep thinking about how the steward {x}.", 'The steward {x}. I wish that had gone differently.'],
+    chatty: ['The steward {x}! Can you believe it?', 'Still thinking about it: the steward {x}!', 'The steward {x}. Honestly!'],
+    dreamy: ['The steward {x}. It sits in me like a stone.', 'The steward {x}; the day still has that shape.', 'Something the steward did: {x}. It has not settled yet.'],
+  },
   'steward:-': {
     plain: ["Steward doesn't listen.", 'Might as well talk to the well.'],
     formal: ['I have my doubts about the steward.', 'The steward has not earned my confidence.'],
@@ -219,6 +226,13 @@ export const MIND_LINES: Record<string, Lines> = {
 
 /** The same feelings said to the steward's face in talk, where "the steward" would be "you" and the lines above would not bend. */
 export const TO_STEWARD_LINES: Record<string, Lines> = {
+  'steward:fresh': {
+    plain: ['You {x}. Not forgotten.', 'You {x}. Hm.', 'You {x}, and I noticed.'],
+    formal: ['You {x}. I have not forgotten it.', 'I am still turning over the fact that you {x}.', 'You {x}. I say no more than that.'],
+    warm: ['You {x}, and it stung a little.', 'I keep thinking about how you {x}.', 'You {x}. I wish that had gone differently.'],
+    chatty: ['You {x}! Can you believe it?', 'Still thinking about it: you {x}!', 'You {x}. Honestly!'],
+    dreamy: ['You {x}. It sits in me like a stone.', 'You {x}; the day still has that shape.', 'Something you did: {x}. It has not settled yet.'],
+  },
   'feel:gratitude': {
     plain: ['You did right by me.', 'I owe you one.'],
     formal: ['I am grateful to you. I should have said so sooner.'],
@@ -260,6 +274,7 @@ export const TOPIC_LABELS: Record<string, string> = {
   miss_friend: 'Missing {x}',
   grudge: 'Things with {x}',
   'steward:+': 'You: feels looked after',
+  'steward:fresh': 'You: something you did lately',
   'steward:-': "You: doesn't trust you",
   'belief:+': 'Has taken to {x}',
   'belief_person:+': 'Has warmed to {x}',

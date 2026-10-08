@@ -100,6 +100,11 @@ export function mindTopics(state: SimState, r: ResidentState): MindTopic[] {
     topics.push({ key: standing > 0 ? 'steward:+' : 'steward:-', about: STEWARD, weight: 0.12 + 0.12 * Math.abs(standing) + 1.2 * Math.abs(moved), vars: {}, reason: standing > 0 ? 'how the steward has treated them' : 'how the steward has let them down' });
   }
 
+  // Something you did to them in the last two days is on their mind whatever they think of you
+  // overall (bar round 2): the day after you felled their oak, that is what they bring up.
+  const fresh = freshGrievance(r, tick);
+  if (fresh) topics.push({ key: 'steward:fresh', about: STEWARD, weight: 0.6 + 0.4 * fresh.weight, vars: { x: fresh.note, aspect: fresh.aspect }, reason: `what the steward did: ${fresh.note}` });
+
   // A belief formed in the last two days is still news to them.
   for (const b of Object.values(r.beliefs)) {
     // Their view of the steward has its own topic.
@@ -142,4 +147,22 @@ export function voiceTopic(state: SimState, r: ResidentState, listener?: string,
 
 function topicId(t: MindTopic): string {
   return t.about ? `${t.key}|${t.about}` : t.key;
+}
+
+/** The freshest bad turn the steward did them in the last two days: its note in their words, if any. */
+export function freshGrievance(r: ResidentState, tick: number): { aspect: string; note: string; weight: number } | null {
+  let best: { aspect: string; note: string; weight: number; tick: number } | null = null;
+  const consider = (aspect: string, valence: number, sources: Array<{ tick: number; note: string; weight: number }>, size: number) => {
+    if (valence >= 0) return;
+    for (const src of sources) {
+      if (tick - src.tick >= 2 * TICKS_PER_DAY) continue;
+      // The one that weighs most, not merely the latest: a felled oak outweighs this morning's small pang.
+      // A source's weight is signed (feeling times intensity); its size is what counts here.
+      const weight = Math.min(1, size * Math.abs(src.weight));
+      if (!best || weight > best.weight || (weight === best.weight && src.tick > best.tick)) best = { aspect, note: src.note, weight, tick: src.tick };
+    }
+  };
+  for (const b of Object.values(r.beliefs)) if (b.subject === STEWARD) consider(b.aspect, b.valence, b.sources, b.strength);
+  for (const t of Object.values(r.traces)) if (t.subject === STEWARD) consider(t.aspect, t.evidence, t.sources, Math.abs(t.evidence));
+  return best;
 }

@@ -18,6 +18,8 @@ export interface ReplyOffer {
   kind: ReplyKind;
   /** For sorry and explain: the grievance it answers (a belief or trace key about the steward). */
   aspect?: string;
+  /** What the reply names (bar round 2): the grievance's note in their words ("took away the old oak"), or a subject id for agree and disagree. */
+  about?: string;
 }
 
 /** Grievances about a decision, which an explanation can answer. */
@@ -36,18 +38,58 @@ export function grievances(r: ResidentState, now = 0): Array<{ aspect: string; w
   return out.sort((a, b) => fresh(b) - fresh(a) || b.weight - a.weight);
 }
 
-/** The replies open after this answer. Agree is always open; the rest only when there is something to answer. */
+/** The latest note behind a grievance about the steward: what they would say it was. */
+function grievanceNote(r: ResidentState, aspect: string): string {
+  const k = beliefKey(STEWARD, aspect);
+  const sources = [...(r.beliefs[k]?.sources ?? []), ...(r.traces[k]?.sources ?? [])].sort((a, b) => b.tick - a.tick);
+  return sources[0]?.note ?? '';
+}
+
+const DARK_BANDS = new Set(['low', 'bad', 'dislike', 'hate']);
+
+/**
+ * The grievance an answer carries, if any (bar round 2): a bad memory about the steward it brought
+ * up, the reason given for thinking ill of the steward, or a let-down voiced in "how" or "mind".
+ * A sorry or an explanation is offered only for that, so it answers the sentence before it.
+ */
+export function carriedGrievance(r: ResidentState, answer: TalkAnswer, now = 0): { aspect: string; note: string } | null {
+  if (answer.memory && answer.memory.subject === STEWARD && answer.memory.valence < 0) return { aspect: answer.memory.aspect, note: answer.memory.note };
+  if (answer.but) return answer.but;
+  const fresh = answer.topics?.find((t) => t.key === 'steward:fresh');
+  if (fresh) return { aspect: fresh.vars.aspect ?? '', note: fresh.vars.x ?? '' };
+  if (answer.question === 'me' && DARK_BANDS.has(answer.band ?? '') && answer.because && answer.because.subject === STEWARD) {
+    return { aspect: answer.because.aspect, note: grievanceNote(r, answer.because.aspect) };
+  }
+  const letDown = answer.topics?.some((t) => t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)));
+  if (letDown) {
+    const g = grievances(r, now)[0];
+    if (g) return { aspect: g.aspect, note: grievanceNote(r, g.aspect) };
+  }
+  return null;
+}
+
+/** The replies open after this answer. Agree is always open; the rest only when the answer itself gives something to answer. */
 export function offersFor(r: ResidentState, answer: TalkAnswer, now = 0): ReplyOffer[] {
-  const offers: ReplyOffer[] = [{ kind: 'agree' }];
+  const subject = answer.question === 'opinion' && answer.about && answer.about !== STEWARD ? answer.about : answer.memory?.subject && answer.memory.subject !== STEWARD ? answer.memory.subject : undefined;
+  const offers: ReplyOffer[] = [{ kind: 'agree', ...(subject ? { about: subject } : {}) }];
   const voiced = (answer.question === 'opinion' || answer.question === 'me') && answer.band !== 'neutral';
   const aboutYou = answer.topics?.some((t) => t.about === STEWARD) || answer.memory?.subject === STEWARD;
-  if (voiced || aboutYou) offers.push({ kind: 'disagree' });
-  const held = grievances(r, now);
-  const sorry = held[0];
-  if (sorry) offers.push({ kind: 'sorry', aspect: sorry.aspect });
-  const decision = held.find((g) => DECISION_GRIEVANCES.has(g.aspect));
-  if (decision) offers.push({ kind: 'explain', aspect: decision.aspect });
+  if (voiced || aboutYou) offers.push({ kind: 'disagree', ...(subject ? { about: subject } : {}) });
+  const g = carriedGrievance(r, answer, now);
+  if (g) {
+    offers.push({ kind: 'sorry', aspect: g.aspect, about: g.note });
+    if (DECISION_GRIEVANCES.has(g.aspect)) offers.push({ kind: 'explain', aspect: g.aspect, about: g.note });
+  }
   return offers;
+}
+
+/** A grievance note in the steward's mouth: "kept me waiting" becomes "I kept you waiting". */
+export function ownNote(note: string): string {
+  const swapped = note
+    .replace(/\bmy\b/g, 'your')
+    .replace(/\bme\b/g, 'you')
+    .replace(/\bmyself\b/g, 'yourself');
+  return /^(nothing|our|the|a|an|everyone|nobody)\b/i.test(swapped) ? swapped : `I ${swapped}`;
 }
 
 export interface ReplyResult {

@@ -268,8 +268,11 @@ describe('round 1, criterion 3: talking back', () => {
       const strength = () => r.beliefs[k]?.strength ?? Math.abs(r.traces[k]?.evidence ?? 0);
       const before = strength();
       const trusts = r.rel[STEWARD]!.trust > 0.4;
-      const answer = sim.talk(id, 'me') as TalkAnswer;
-      expect(answer.replies).toContain('explain');
+      // Bar round 2: explain is offered only by an answer that brings the decision up, so ask
+      // until one does (what they think of you, then what is on their mind, then how they are).
+      let answer = sim.talk(id, 'me') as TalkAnswer;
+      for (const q of ['mind', 'how'] as const) if (!answer.replies?.includes('explain')) answer = sim.talk(id, q) as TalkAnswer;
+      if (!answer.replies?.includes('explain')) continue;
       const res = sim.reply(id, 'explain');
       if (trusts) {
         expect(res?.stance).toBe('convinced');

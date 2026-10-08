@@ -20,7 +20,7 @@ import { SPEEDS, type Game } from '../game.js';
 import type { AdResult, RewardedAds } from '../ads.js';
 import { TRADER_GIFT } from '../../../src/sim/sim.js';
 import type { ReplyKind } from '../../../src/sim/replies.js';
-import { REPLY_SAID } from '../../../src/content/replies.js';
+import { replySaid } from '../../../src/content/replies.js';
 import { vividMemories } from '../../../src/sim/recall.js';
 import { residentColor } from '../view/meshes.js';
 import { ICONS } from './icons.js';
@@ -55,7 +55,6 @@ interface TalkPanel {
 }
 
 /** Talking back: the chips under an answer. */
-const REPLY_LABELS: Record<ReplyKind, string> = { agree: "That's fair", disagree: "I don't see it that way", sorry: "I'm sorry", explain: 'Let me explain' };
 
 const QUESTIONS: Array<[TalkQuestion, string]> = [
   ['how', 'How are you?'],
@@ -1308,11 +1307,14 @@ export class Ui {
       if (atBottom) this.logEl.scrollTop = this.logEl.scrollHeight;
     }
 
-    // A quoted line becomes a bubble over whoever speaks first in it.
-    const quote = /"([^"]+)"/.exec(e.text);
-    if (quote && (e.kind === 'live' || e.kind === 'aside' || e.kind === 'thought') && e.who.length > 0) {
+    // A quoted line becomes a bubble over whoever speaks first in it: the quote after their name,
+    // so a reply's bubble holds their half and not the steward's (bar round 2).
+    const quotes = [...e.text.matchAll(/"([^"]+)"/g)];
+    if (quotes.length > 0 && (e.kind === 'live' || e.kind === 'aside' || e.kind === 'thought') && e.who.length > 0) {
       const speaker = [...e.who].sort((a, b) => e.text.indexOf(residentDef(a).name) - e.text.indexOf(residentDef(b).name))[0] as string;
-      this.bubble(speaker, quote[1] as string, e.kind === 'thought' ? 'thought' : e.importance === 'major' ? 'major' : '');
+      const named = e.text.lastIndexOf(residentDef(speaker).name);
+      const theirs = quotes.find((q) => (q.index ?? 0) > named) ?? quotes[0];
+      this.bubble(speaker, theirs![1] as string, e.kind === 'thought' ? 'thought' : e.importance === 'major' ? 'major' : '');
     }
     this.lastBoardKey = '';
   }
@@ -1628,7 +1630,7 @@ export class Ui {
       const chip = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-reply]');
       if (!chip) return;
       const kind = chip.dataset.reply as ReplyKind;
-      say(REPLY_SAID[kind]);
+      say(chip.textContent ?? '');
       this.game.command({ kind: 'reply', who: id, reply: kind });
       this.renderJournal(true);
     });
@@ -1697,7 +1699,7 @@ export class Ui {
     const rkey = open.map((o) => o.kind).join('|');
     if (p.replies.dataset.key !== rkey) {
       p.replies.dataset.key = rkey;
-      p.replies.replaceChildren(...open.map((o) => el('button', { class: 'chip reply', 'data-reply': o.kind, 'data-testid': `reply-${o.kind}` }, REPLY_LABELS[o.kind])));
+      p.replies.replaceChildren(...open.map((o) => el('button', { class: 'chip reply', 'data-reply': o.kind, 'data-testid': `reply-${o.kind}` }, replySaid(o, (sid) => this.game.narrator.subjectName(sid)))));
     }
     p.replies.hidden = open.length === 0;
     const answered = p.reply.textContent !== '';

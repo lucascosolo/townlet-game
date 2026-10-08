@@ -343,6 +343,8 @@ export interface TalkAnswer {
   about?: SubjectId;
   /** opinion/me: the belief behind it, if any. */
   because?: { subject: SubjectId; aspect: string };
+  /** me: a fresh grievance conceded after a kind view (bar round 2), in their words. */
+  but?: { aspect: string; note: string };
   /** A memory they bring up, if any (memories in conversation, 2026-10-08). */
   memory?: import('./recall.js').Recollection;
   /** The replies the steward can make to this answer (talking back, bar round 1). */

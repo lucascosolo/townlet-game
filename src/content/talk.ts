@@ -99,6 +99,15 @@ export const TALK_REASON: Lines = {
   dreamy: ['Somehow, {statement}.'],
 };
 
+/** A concession after a kind view (bar round 2): "though you took away the old oak". {x} is the grievance in their words. */
+export const TALK_BUT: Lines = {
+  plain: ['Though you {x}. I keep count.', 'Mind, you {x}.'],
+  formal: ['Though I have not forgotten that you {x}.', 'That said, you {x}, and I noticed.'],
+  warm: ['Though you {x}, and that stung a little.', 'Even so, you {x}. I wish you had not.'],
+  chatty: ['Though you {x}! I have not forgotten!', 'Mind you, you {x}. Hmph!'],
+  dreamy: ['Though you {x}. It has not settled yet.', 'And yet you {x}; that sits in me still.'],
+};
+
 export const TALK_ME: Record<string, Lines> = {
   love: {
     plain: ['You do right by us. I mean that.', 'No complaints. Not one.', 'You keep your word. That counts.'],

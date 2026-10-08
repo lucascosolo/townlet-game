@@ -9,9 +9,9 @@ import { ASPIRATION_LINES, DILEMMA_NAMES, DREAM_DONE_LINES, GATHERING_START, PRE
 import { MIND_LINES, TO_STEWARD_LINES } from '../content/thoughts.js';
 import { DAY_WORDS, RECALL_LINES } from '../content/recall.js';
 import { FESTIVALS } from '../sim/story/director.js';
-import { REPLY_LINES, REPLY_SAID } from '../content/replies.js';
+import { REPLY_LINES, replySaid } from '../content/replies.js';
 import { FAVOUR_DONE, FAVOUR_NO, FAVOUR_YES, TALK_HOPE,
-  TALK_HOPE_ONE, TALK_HOPE_DONE, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON } from '../content/talk.js';
+  TALK_HOPE_ONE, TALK_HOPE_DONE, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON, TALK_BUT } from '../content/talk.js';
 import { firstPerson } from '../sim/mind/thoughts.js';
 import { opinion } from '../sim/mind/memory.js';
 import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
@@ -550,7 +550,9 @@ export class Narrator {
       case 'reply': {
         const words = this.utter(e.who, REPLY_LINES[e.stance]);
         this.lastReply = { who: e.who, t: e.t, text: words };
-        this.live(e.t, `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${REPLY_SAID[e.reply]}" "${words}"`);
+        const offer = this.state.residents[e.who]?.lastAnswer?.offers.find((o) => o.kind === e.reply) ?? { kind: e.reply };
+        this.lastSaid = { who: e.who, t: e.t, text: replySaid(offer, (id) => this.subjectName(id)) };
+        this.live(e.t, `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)}: "${words}"`);
         break;
       }
       case 'gift':
@@ -887,6 +889,8 @@ export class Narrator {
 
   /** The last thing a resident said to the steward, for the talk panel. */
   lastReply: { who: string; t: number; text: string } | null = null;
+  /** What the steward last said in reply, in words (bar round 2: the chips and the chat show the same). */
+  lastSaid: { who: string; t: number; text: string } | null = null;
 
   /** An answer to the steward, in the resident's voice (the words only). */
   answer(who: string, a: TalkAnswer): string {
@@ -910,7 +914,8 @@ export class Narrator {
         const lines = a.question === 'me' ? TALK_ME[a.band ?? 'neutral'] : (person ? TALK_OPINION_PERSON : TALK_OPINION)[a.band ?? 'neutral'];
         const head = this.utter(who, lines, { s: a.about ? this.subjectName(a.about) : 'that' });
         const why = a.because && a.band !== 'neutral' ? this.utter(who, TALK_REASON, { statement: this.spoken(who, a.because) }) : '';
-        return [head, why].filter(Boolean).join(' ');
+        const but = a.but ? this.utter(who, TALK_BUT, { x: a.but.note }) : '';
+        return [head, why, but].filter(Boolean).join(' ');
       }
     }
   }

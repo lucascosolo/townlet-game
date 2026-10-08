@@ -217,7 +217,7 @@ button svg { display: block; }
 @keyframes floatUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-20px); opacity: 0; } }
 
 /* Bubbles: solid border in the speaker's colour, a tail pointing at them, a gentle entrance. */
-.bubble { border-width: 1.5px; border-radius: 12px; padding: 6px 10px; font-size: 14px; max-width: 220px; transform: translate(-50%, calc(-100% - 10px)); animation: bubbleIn 180ms ease-out; }
+.bubble { border-width: 1.5px; border-radius: 12px; padding: 6px 10px; font-size: 14px; width: max-content; max-width: 240px; transform: translate(-50%, calc(-100% - 10px)); animation: bubbleIn 180ms ease-out; }
 .bubble::after { content: ''; position: absolute; left: var(--tail, 50%); bottom: -7px; width: 12px; height: 12px; margin-left: -6px; background: inherit; border-right: inherit; border-bottom: inherit; transform: rotate(45deg); border-color: inherit; border-style: inherit; border-width: 0 1.5px 1.5px 0; }
 .bubble.thought { border-style: dashed; }
 @keyframes bubbleIn { from { opacity: 0; margin-top: 6px; } to { opacity: 1; margin-top: 0; } }
@@ -264,7 +264,7 @@ button.primary:hover { background: #a3572f; }
   .dock { bottom: calc(46vh + 70px); left: 8px; right: auto; padding: 6px; }
   .scroll.rolled ~ .dock { bottom: 70px; }
   .dock .status { display: none; }
-  .bubble { max-width: 170px; font-size: 13px; }
+  .bubble { max-width: 200px; min-width: 120px; font-size: 13px; }
 }
 
 /* Build menu cards with pictures; unaffordable shows a red cost, not a greyed card. */
@@ -571,3 +571,13 @@ body.phone .tray-jumps { display: none; }
 .memories .memory.bad { border-left-color: var(--warn); }
 .memories .memory .day { font-size: 11.5px; font-weight: 700; color: var(--ink-soft); padding-top: 2px; white-space: nowrap; }
 .memories .memory q { quotes: '\201C' '\201D'; font-style: italic; }
+/* Talking back (bar round 1): reply chips under an answer. */
+.replies { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px 44px; }
+.replies .chip.reply { padding: 4px 12px; font-size: 13px; background: #fffaf0; border: 1px solid var(--paper-edge); }
+.replies .chip.reply:hover { background: #fff; }
+body.phone .replies { margin-left: 0; }
+body.phone .replies .chip.reply { min-height: 40px; }
+
+/* Widgets with more below fade at the foot (bar round 1). */
+.widget-body { scrollbar-width: thin; }
+.widget-body.more-below { -webkit-mask-image: linear-gradient(#000 calc(100% - 28px), transparent); mask-image: linear-gradient(#000 calc(100% - 28px), transparent); }

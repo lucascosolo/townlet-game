@@ -146,7 +146,15 @@ export function storyStep(host: StoryHost): void {
   const m = minuteOf(t);
 
   for (const g of story.gatherings) {
-    if (t === g.from) host.emitEvent({ t, type: 'gathering', phase: 'start', gathering: structuredClone(g) });
+    if (t === g.from) {
+      // A place felled since the gathering was planned: it moves (bar round 1: "lanterns go up under the old oak" the day the oak came down).
+      const venue = state.buildings.find((b) => b.id === g.placeId);
+      if (g.placeId !== null && (!venue || venue.removed)) {
+        const moved = placeFor(state, g.kind === 'festival' ? FESTIVAL_VENUES[seasonOf(t)] : ['commons', 'teahouse', 'oak']);
+        if (moved !== null) g.placeId = moved;
+      }
+      host.emitEvent({ t, type: 'gathering', phase: 'start', gathering: structuredClone(g) });
+    }
     if (t >= g.from && t < g.until) {
       for (const r of active(state)) if (r.at === g.placeId && !g.attendees.includes(r.id)) g.attendees.push(r.id);
     }

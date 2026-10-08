@@ -4,7 +4,7 @@
 // town through the spec's tiers. Talking to residents reveals facts about them for the album.
 // Everything here follows from sim events and steward commands, so a replay reaches the same place.
 
-import { buildingDef } from '../content/buildings.js';
+import { buildingDef, singularName } from '../content/buildings.js';
 import { residentDef } from '../content/residents.js';
 import { ambientPrefs } from './needs.js';
 import { deriveSeed, weighted, type RngHolder } from './rng.js';
@@ -74,9 +74,9 @@ export function unlocked(state: SimState, type: string): boolean {
 /** The facts there are to learn about anyone, and which question reveals each (one per question per day). */
 export const FACTS: Record<TalkQuestion, string[]> = {
   how: ['job', 'lifts'],
-  mind: ['quirk', 'needs'],
+  mind: ['needs', 'quirk', 'dislikes'],
   hope: ['dream', 'values'],
-  me: ['dislikes', 'background'],
+  me: ['background'],
   opinion: ['friend', 'favourite'],
 };
 export const ALL_FACTS = Object.values(FACTS).flat();
@@ -113,7 +113,12 @@ export function factValue(state: SimState, r: ResidentState, key: string): strin
   switch (key) {
     case 'job': {
       const job = r.jobId !== null ? state.buildings.find((b) => b.id === r.jobId) : undefined;
-      return job ? `Works at the ${buildingDef(job.type).name.toLowerCase()}` : def.job ? `Wants to work at a ${buildingDef(def.job).name.toLowerCase()}` : 'Keeps house and helps where needed';
+      if (job) return `Works at the ${buildingDef(job.type).name.toLowerCase()}`;
+      if (def.job) {
+        const one = singularName(def.job);
+        return `Wants to work at ${/^[aeiou]/i.test(one) ? 'an' : 'a'} ${one}`;
+      }
+      return 'Keeps house and helps where needed';
     }
     case 'lifts': {
       const top = ranked[0] as { q: Quality; v: number };
@@ -234,7 +239,7 @@ export function progressEvent(h: ProgressHost, e: SimEvent): void {
       if (e.phase === 'agreed') bump(h, 'favour');
       break;
     case 'talk':
-      onTalk(h, e.who, e.answer.question, e.counted);
+      onTalk(h, e.who, e.answer.question, e.counted, e.answer.about);
       break;
     default:
   }
@@ -266,7 +271,12 @@ export function factSaid(state: SimState, r: ResidentState, key: string): string
   switch (key) {
     case 'job': {
       const job = r.jobId !== null ? state.buildings.find((b) => b.id === r.jobId) : undefined;
-      return job ? `I work at the ${buildingDef(job.type).name.toLowerCase()}.` : def.job ? `I'd love to work at a ${buildingDef(def.job).name.toLowerCase()}.` : 'I keep house and help where I can.';
+      if (job) return `I work at the ${buildingDef(job.type).name.toLowerCase()}.`;
+      if (def.job) {
+        const one = singularName(def.job);
+        return `I'd love to work at ${/^[aeiou]/i.test(one) ? 'an' : 'a'} ${one}.`;
+      }
+      return 'I keep house and help where I can.';
     }
     case 'lifts':
       return `Nothing lifts me like ${lowerFirst(value.replace(/^Loves /, ''))}.`;
@@ -278,14 +288,14 @@ export function factSaid(state: SimState, r: ResidentState, key: string): string
       const most = (Object.entries(r.setpoints) as Array<[string, number]>).sort((a, b) => b[1] - a[1])[0];
       return most ? `I need ${NEED_SAID[most[0]] ?? most[0]}, more than most.` : 'I am easy to please.';
     }
-    case 'dream': {
-      const d = dreamTitle(state, r);
-      return d ? `What I want most is to ${lowerFirst(d).replace(/\b(his|her|their)\b/g, 'my')}.` : 'I am still working out what I want.';
-    }
+    case 'dream':
+      // The dream is the answer to "what are you hoping for" itself; it is learned, not said twice (bar round 1).
+      return '';
     case 'values':
       return `What matters to me is ${value.replace(/^Cares about /, '')}.`;
     case 'background':
-      return 'Since you ask, let me tell you a little about myself.';
+      // In their own words (bar round 1: a bare lead-in with nothing after it).
+      return def.bio ?? `I came to the valley for my own reasons. Ask me again some time.`;
     case 'friend':
       return value.startsWith('Closest to ') ? `${value.replace(/^Closest to /, '')} is my closest friend here.` : "I haven't a close friend here yet.";
     case 'favourite':
@@ -297,14 +307,17 @@ export function factSaid(state: SimState, r: ResidentState, key: string): string
 const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 /** The fact a question would reveal now, if any: one per question per resident per day, the next not yet known. */
-export function nextFact(state: SimState, who: string, question: TalkQuestion): string | null {
+export function nextFact(state: SimState, who: string, question: TalkQuestion, about?: string): string | null {
   const p = progressOf(state);
   if (p.asked[`${who}|${question}`] === dayOf(state.tick)) return null;
   const known = p.known[who] ?? [];
-  return (FACTS[question] ?? []).find((f) => !known.includes(f)) ?? null;
+  // "What do you think of…" reveals the closest friend only when asked about a person, and the
+  // favourite spot only when asked about a place (bar round 1: a friend bolted onto any opinion).
+  const pool = question === 'opinion' ? (about?.startsWith('r:') ? ['friend'] : about?.startsWith('b:') ? ['favourite'] : []) : (FACTS[question] ?? []);
+  return pool.find((f) => !known.includes(f)) ?? null;
 }
 
-function onTalk(h: ProgressHost, who: string, question: TalkQuestion, counted: boolean): void {
+function onTalk(h: ProgressHost, who: string, question: TalkQuestion, counted: boolean, about?: string): void {
   const state = h.state;
   const p = progressOf(state);
   const day = dayOf(state.tick);
@@ -312,7 +325,7 @@ function onTalk(h: ProgressHost, who: string, question: TalkQuestion, counted: b
     p.talkedToday.push(who);
     bump(h, 'talk');
   }
-  const fact = nextFact(state, who, question);
+  const fact = nextFact(state, who, question, about);
   p.asked[`${who}|${question}`] = day;
   if (!fact) return;
   const known = (p.known[who] ??= []);

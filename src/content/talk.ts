@@ -184,6 +184,15 @@ export const TALK_HOPE: Lines = {
   dreamy: ['I dream of it: {title}. Next, I {next}.'],
 };
 
+/** The hope when its next step is the hope itself: said once. */
+export const TALK_HOPE_ONE: Lines = {
+  plain: ['{title}. That is the plan.'],
+  formal: ['I hope to {title}.'],
+  warm: ["I'd love to {title}."],
+  chatty: ['Big plan! {title}!'],
+  dreamy: ['I dream of it: {title}.'],
+};
+
 export const TALK_HOPE_DONE: Lines = {
   plain: ['Did what I set out to do. Thinking about what\'s next.'],
   formal: ['I have done what I hoped to. Something new will come.'],

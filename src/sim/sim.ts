@@ -1,6 +1,7 @@
 // The simulation loop. Owns the body and the world; delegates cognition to a Mind.
 
 import { recallFor, storyKey } from './recall.js';
+import { applyReply, offersFor, type ReplyKind, type ReplyResult } from './replies.js';
 import { buildingDef } from '../content/buildings.js';
 import { generateNewcomer } from '../content/newcomers.js';
 import { registerResident, residentDef } from '../content/residents.js';
@@ -23,7 +24,7 @@ import { StructuredMind } from './mind/structured.js';
 import { ASK_KINDS, ASK_LAPSE_DAYS, assess } from './asks.js';
 import { voiceTopic } from './mind/thoughts.js';
 import { runExchange } from './social.js';
-import { talkAnswer } from './talk.js';
+import { memoryFits, reconcile, talkAnswer } from './talk.js';
 import {
   ASKS_BEFORE_GRATING,
   CLEAR_MINUTES,
@@ -66,7 +67,7 @@ import {
   type SimEvent,
   type SimState,
 } from './types.js';
-import { ambientAt, canPlace, distanceTo, emptyQualities, footprint, getBuilding, liveBuildings, mainSource, placeTile, route, seedWear, sizeOf, wearDawn, wearStep } from './world.js';
+import { ambientAt, canPlace, distanceTo, emptyQualities, footprint, getBuilding, liveBuildings, mainSource, nearestOpen, placeTile, route, seedWear, sizeOf, wearDawn, wearStep } from './world.js';
 
 export type Command =
   | { at: number; kind: 'build'; type: string; x: number; y: number; rot?: number }
@@ -78,7 +79,9 @@ export type Command =
   /** Ask a resident a favour (M3c). */
   | { at: number; kind: 'favour'; who: string; favour: FavourKind; other?: string; plot?: number }
   /** A trader's cart stops by with a gift: the reward for a watched ad, at most once a day (2026-10-08). */
-  | { at: number; kind: 'gift'; from: 'trader' };
+  | { at: number; kind: 'gift'; from: 'trader' }
+  /** Talk back after an answer: agree, push back, say sorry or explain (bar round 1). */
+  | { at: number; kind: 'reply'; who: string; reply: ReplyKind };
 
 export interface Scenario {
   name: string;
@@ -114,6 +117,8 @@ export const MEAL = 0.5;
 /** Meals take this much more in winter. */
 export const WINTER_APPETITE = 2;
 export const STOCK_CAP: Record<Resource, number> = { food: LARDER_CAP, timber: 100 };
+/** What mood is made of (bar round 1): the day's needs, feelings, the home, a place to be fond of, and standing with the steward. */
+export const MOOD_MIX = { needs: 0.5, feelings: 0.15, home: 0.12, fond: 0.03, standing: 0.2 } as const;
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
 /** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */
 /** How much telling a memory rehearses it: about as much as reminiscing with a friend. */
@@ -183,7 +188,7 @@ export const DETAIL_NOTES: Record<string, string> = {
   work: 'good, honest work for the town',
 };
 /** Disposition below this for three mornings running starts thoughts of leaving; above the second ends them. */
-export const LEAVING_BELOW = 0.48;
+export const LEAVING_BELOW = 0.5;
 export const STAYING_ABOVE = 0.55;
 
 /** A resident's starting state, in their home; at tick 0 for the founding cast, later for newcomers. */
@@ -444,6 +449,8 @@ export class Simulation implements AspirationHost {
       if (this.state.residents[c.who]) this.askFavour(c.who, c.favour, c.other, c.plot);
     } else if (c.kind === 'gift') {
       this.traderGift();
+    } else if (c.kind === 'reply') {
+      if (this.state.residents[c.who]) this.reply(c.who, c.reply);
     } else {
       const d = this.state.story.dilemmas.find((x) => x.type === c.dilemma && x.status === 'open');
       if (d) this.decide(d.id, c.option);
@@ -467,17 +474,42 @@ export class Simulation implements AspirationHost {
       r.needs.company = clamp(r.needs.company + 0.06);
       adjust(r, STEWARD, { familiarity: 0.03 }, state.tick);
     }
-    const answer = talkAnswer(state, r, question, about);
+    const answer = reconcile(talkAnswer(state, r, question, about));
+    // The reason behind "what do you think of me" rotates: a belief cited in the last three days
+    // gives way to the next strongest, so the answer is not "you listen" every day (bar round 1).
+    if (answer.because && question === 'me') {
+      (r.cited ??= {});
+      for (const [k, t] of Object.entries(r.cited)) if (state.tick - t > 3 * TICKS_PER_DAY) delete r.cited[k];
+      r.cited[answer.because.aspect] = state.tick;
+    }
     // A memory they bring up (2026-10-08): told once in three days, and telling it keeps it alive.
-    const memory = recallFor(r, state.tick, question, about);
+    // One that would contradict the answer's band is kept for another day (bar round 1).
+    const found = recallFor(r, state.tick, question, about);
+    const memory = found && memoryFits(answer, found) ? found : null;
     if (memory) {
       answer.memory = memory;
       (r.recalled ??= {})[storyKey(memory)] = state.tick;
       for (const [id, t] of Object.entries(r.recalled)) if (state.tick - t > 7 * TICKS_PER_DAY) delete r.recalled[id];
       this.mind.perceive(this.ctx(), r, { subject: memory.subject, aspect: memory.aspect, valence: memory.valence, base: RECALL_REHEARSAL, source: 'recalled', note: 'told the steward about it' });
     }
+    // What the steward can say back (bar round 1): kept with the resident, so a replay lands the same.
+    const offers = offersFor(r, answer, state.tick);
+    answer.replies = offers.map((o) => o.kind);
+    r.lastAnswer = { tick: state.tick, offers, replied: false };
     this.emit({ t: state.tick, type: 'talk', who, answer, counted });
     return answer;
+  }
+
+  /** The steward talks back to the last answer. One reply per answer; a reply not on offer does nothing. */
+  reply(who: string, kind: ReplyKind): ReplyResult | null {
+    const r = this.resident(who);
+    const last = r.lastAnswer;
+    if (!last || last.replied || r.departed) return null;
+    const result = applyReply(this.state, r, kind, last.offers, (p) => this.mind.perceive(this.ctx(), r, { subject: STEWARD, source: 'witnessed', ...p }));
+    if (!result) return null;
+    last.replied = true;
+    this.emit({ t: this.state.tick, type: 'reply', who, reply: kind, stance: result.stance, ...(result.aspect ? { aspect: result.aspect } : {}) });
+    return result;
   }
 
   /**
@@ -597,7 +629,7 @@ export class Simulation implements AspirationHost {
     const stewardActed = q.kind === 'quieter_home' || state.buildings.some((b) => b.placedBy === 'steward' && b.placedTick >= q.postedTick);
     q.status = stewardActed ? 'fulfilled' : 'resolved';
     q.closedTick = state.tick;
-    if (stewardActed) this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'listens_to_me', valence: 1, base: 1.3, source: 'witnessed', note: ASK_THANKS[q.kind] });
+    if (stewardActed) this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'listens_to_me', valence: 1, base: 0.9, source: 'witnessed', note: ASK_THANKS[q.kind] });
     this.emit({ t: state.tick, type: 'request_closed', request: { ...q } });
     return true;
   }
@@ -689,6 +721,11 @@ export class Simulation implements AspirationHost {
     if (type !== 'path') {
       const [w, h] = footprint(type, rot);
       for (const r of this.activeResidents()) {
+        // Someone standing where it went up steps out to the nearest open ground first.
+        if (r.at === null && r.x >= x && r.x < x + w && r.y >= y && r.y < y + h) {
+          const out = nearestOpen(state, r.x, r.y);
+          if (out) [r.x, r.y] = out;
+        }
         if (r.path.length === 0 || !r.pending) continue;
         const dest = r.path[r.path.length - 1] as [number, number];
         const crosses = r.path.slice(0, -1).some(([px, py]) => px >= x && px < x + w && py >= y && py < y + h);
@@ -818,6 +855,26 @@ export class Simulation implements AspirationHost {
     r.unseen = keep;
   }
 
+  /** How the ground round someone's home suits them, roughly [-1, 1]: green, water, scent for those who like them, against noise and bustle. */
+  homeScore(r: ResidentState): number {
+    const home = getBuilding(this.state, r.homeId);
+    const [hx, hy] = placeTile(home);
+    const amb = ambientAt(this.state, hx, hy, this.worked, { weather: false });
+    return clamp(prefScore(ambientPrefs(residentDef(r.id)), amb), -1, 1);
+  }
+
+  /** Whether there is a place in town, other than home, they are fond of and that still stands. */
+  hasFondPlace(r: ResidentState): boolean {
+    for (const b of Object.values(r.beliefs)) {
+      if (!b.subject.startsWith('b:') || b.valence <= 0.15) continue;
+      const id = Number(b.subject.slice(2));
+      if (id === r.homeId) continue;
+      const bld = this.state.buildings.find((x) => x.id === id);
+      if (bld && !bld.removed) return true;
+    }
+    return false;
+  }
+
   /** Start a meal: it draws on the town's food, and a bare larder makes it meagre. */
   private serveMeal(r: ResidentState, act: ActivityState): void {
     const state = this.state;
@@ -834,6 +891,11 @@ export class Simulation implements AspirationHost {
     }
     act.meagre = true;
     const day = dayOf(state.tick);
+    // A meagre meal is held against whoever keeps the town fed (bar round 1): once a day each.
+    if (r.lastHungryDay !== day) {
+      r.lastHungryDay = day;
+      this.mind.perceive(this.ctx(), r, { subject: STEWARD, aspect: 'went_hungry', valence: -0.6, base: 0.4, source: 'witnessed', note: 'let the larder run bare' });
+    }
     if (state.lastShortageDay !== day) {
       state.lastShortageDay = day;
       this.emit({ t: state.tick, type: 'shortage', resource: 'food', who: r.id });
@@ -934,6 +996,9 @@ export class Simulation implements AspirationHost {
     } else if (doing) {
       delta.comfort += (0.06 * prefScore(ambientPrefs(def), amb)) / 60;
     }
+    // Home counts (bar round 1): asleep or resting at home, comfort follows what is round the house,
+    // green and water for those who like them, noise and bare ground against.
+    if (r.at === r.homeId && (sleeping || doing === 'rest')) delta.comfort += (0.08 * this.homeScore(r)) / 60;
     if (r.coldUntil > tick) {
       delta.comfort -= 0.03 / 60;
       delta.rest -= 0.02 / 60;
@@ -1085,6 +1150,13 @@ export class Simulation implements AspirationHost {
     for (const q of state.requests) {
       if (q.by !== r.id || q.status !== 'open') continue;
       if (this.closeIfMet(ctx, r, q)) continue;
+      // An ask left open weighs on them a little each morning it stays open (bar round 1): being
+      // kept waiting used to cost nothing until the day it lapsed.
+      const waited = (tick - q.postedTick) / TICKS_PER_DAY;
+      if (waited > 1) {
+        // The longer it sits, the more it rankles.
+        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'still_waiting', valence: -0.5, base: Math.min(0.28, 0.07 + 0.035 * waited), source: 'witnessed', note: 'kept me waiting' });
+      }
       if (tick - q.postedTick > ASK_LAPSE_DAYS[q.kind] * TICKS_PER_DAY) {
         // Being ignored hurts most the first time; after that it is disappointment, not news.
         const before = lapsesOf(state, r.id, q.kind, tick);
@@ -1126,7 +1198,7 @@ export class Simulation implements AspirationHost {
     if (r.dayMoodN > 0) {
       const dayMood = r.dayMoodSum / r.dayMoodN;
       // How the days feel, and how the steward is treating them.
-      r.disposition = 0.75 * r.disposition + 0.25 * (0.5 * dayMood + 0.5 * (0.5 + 0.5 * rel(r, STEWARD).affinity));
+      r.disposition = 0.65 * r.disposition + 0.35 * (0.5 * dayMood + 0.5 * (0.5 + 0.5 * rel(r, STEWARD).affinity));
     }
     r.dayMoodSum = 0;
     r.dayMoodN = 0;
@@ -1183,7 +1255,12 @@ export class Simulation implements AspirationHost {
     for (const r of this.activeResidents()) {
       const def = residentDef(r.id);
       decayEmotions(r);
-      r.mood = clamp(0.75 * needsWellbeing(r.needs, r.setpoints, def) + 0.25 * (0.5 + 0.5 * emotionBalance(r)));
+      // Bar round 1: the town and the steward move mood, not only the day's routine.
+      const home = clamp(0.5 + 1.5 * this.homeScore(r));
+      const standing = 0.5 + 0.5 * (r.rel[STEWARD]?.affinity ?? 0);
+      // Something to look forward to: a place in town they are fond of, that still stands.
+      const fond = this.hasFondPlace(r) ? 1 : 0.4;
+      r.mood = clamp(MOOD_MIX.needs * needsWellbeing(r.needs, r.setpoints, def) + MOOD_MIX.feelings * (0.5 + 0.5 * emotionBalance(r)) + MOOD_MIX.home * home + MOOD_MIX.fond * fond + MOOD_MIX.standing * standing);
       r.dayMoodSum += r.mood;
       r.dayMoodN++;
     }

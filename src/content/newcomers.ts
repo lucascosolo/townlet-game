@@ -258,7 +258,11 @@ export function generateNewcomer(seed: number, n: number, welcome: Welcome, take
   const [lo, hi] = trade.ages;
   const age = lo + Math.floor(rand(h) * (hi - lo + 1));
   const pron = PRONOUNS[p];
-  const background = `${pick(h, trade.past)}, ${name} ${reasonFor(values, traits)}.`;
+  const past = pick(h, trade.past);
+  const reason = reasonFor(values, traits);
+  const background = `${past}, ${name} ${reason}.`;
+  // The same in the first person, for when they tell it (bar round 1).
+  const bio = `${/^an? /i.test(past) ? `I was ${past.charAt(0).toLowerCase()}${past.slice(1)}` : `I ${past.charAt(0).toLowerCase()}${past.slice(1)}`}. I ${reason}.`;
   const tics = [...TICS[register]].sort(() => rand(h) - 0.5).slice(0, 2);
   return {
     // The id carries what made them, so two towns can never register different people under one id.
@@ -267,6 +271,7 @@ export function generateNewcomer(seed: number, n: number, welcome: Welcome, take
     pronouns: { ...pron },
     age,
     background,
+    bio,
     traits,
     values,
     quirks,

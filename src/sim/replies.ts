@@ -102,7 +102,8 @@ export function applyReply(
       const last = r.sorryFor?.[aspect];
       if (last !== undefined && tick - last < SORRY_GAP) return { stance: 'enough', aspect };
       (r.sorryFor ??= {})[aspect] = tick;
-      soften(r, aspect, 0.6);
+      // An apology clears the air: everything fresh softens most, older grievances a little.
+      for (const g of grievances(r, tick)) soften(r, g.aspect, tick - g.last < 3 * TICKS_PER_DAY ? 0.6 : 0.85);
       adjust(r, STEWARD, { affinity: 0.06, trust: 0.03 }, tick);
       perceive({ aspect: 'made_amends', valence: 0.6, base: 0.5, note: 'said sorry' });
       return { stance: 'forgiven', aspect };

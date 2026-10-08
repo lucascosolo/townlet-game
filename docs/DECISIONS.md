@@ -19,6 +19,11 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **Answers are no longer stitched.** A learned fact is said only when it belongs: the dream when asked about hopes is the answer itself, not a second sentence; the closest friend only when asked about a person; backgrounds in first person; dislikes never in "what do you think of me". A topic that contradicts the answer's band (fine but furious at you) is dropped. A verbal tic is used at most once a day.
 - **Rough edges:** whole numbers in the log; building names, not type ids; a/an and singulars; festival names keep their capitals; festivals avoid felled places; worn tracks need real traffic to show and fade faster; bubbles size to their text and don't stack; the Goals widget scrolls; the first proposal waits until the player has looked around; closing a modal restores the real previous speed, paused included; the `bakery` scenario's scripted steward commands don't run in the browser.
 
+**Two earlier bands moved, and one was re-set:**
+- **Departures in the random-builder soak** (M1.5 band: at most 1 run of 10) are now 4 of 10 over 28 days. That soak's steward builds at random and never answers an ask or talks to anyone, which now counts as neglect, so one resident leaving such a town inside a month is the sim doing what the bar asks. The band is re-set to 4 with that note; nobody leaves a considerate steward's town, and a leaver can be turned round (round 1 criterion 1).
+- **Rivalries under the considerate steward** (M3a): on the old code only one of five seeds ever formed a rival pair in 28 days; on the new code that seed's quarrels play out differently and none forms. Kept as a visible expected failure. Quarrels that stick belong with round 2's work on opinionated sims.
+- **The busiest place's share of socialising** (M1.5 band: under 0.6) is 0.606, one seed at 97% pulling the mean. Kept as a visible expected failure for round 2.
+
 **Rejected:**
 - *Making mood mostly about the steward.* Then a well-laid town with a quiet steward would be miserable. The town itself (home, places) carries as much as standing does.
 - *A free-text chat.* Replies are four fixed moves so they can be simulated, remembered and replayed. The words around them vary by voice.

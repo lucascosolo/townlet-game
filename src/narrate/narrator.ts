@@ -535,6 +535,9 @@ export class Narrator {
         break;
       case 'renown':
         break;
+      case 'gift':
+        this.live(e.t, `A trader's cart rattles into town and leaves ${e.timber} timber and ${e.food} food by the well. "Compliments of the road," says the driver, and is gone.`);
+        break;
       case 'stores': {
         const who = this.name(e.who);
         const left = `${e.daysLeft} day${e.daysLeft === 1 ? '' : 's'}`;

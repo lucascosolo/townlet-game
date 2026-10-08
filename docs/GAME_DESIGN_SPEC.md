@@ -934,6 +934,49 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - The one-year soak with newcomers (bakery, 10 seeds × 112 days) finds no degenerate state: an argument in every run, no departures, and the busiest place takes 48% of socialising.
    - One measure moved: rival pairs fell from 1.5 to 1.0 a run. The soak's random builder can no longer place jetties away from the brook, so its towns grow differently.
 
+
+**Quick wins criteria (predeclared 2026-10-08, before code).** A failure is reported as a failure, not redefined.
+
+1. **Installable.** The page links a manifest giving name, short name, start URL, standalone display, theme and background colours, and icons at 192 and 512 px, including a maskable one. An Apple touch icon is linked too. Every icon the manifest names loads and is the size it claims.
+2. **Faster to load.**
+   - With scripts blocked, the page shows a loading screen with the game's name, so something appears before any script runs.
+   - Once the game is ready, the loading screen is gone.
+   - three.js is in its own file, and the game's own code file is under 400 kB before compression (the single file is 873 kB today).
+3. **The rewarded bonus.**
+   - With no ad provider, there is no bonus button anywhere.
+   - With the test provider, the button shows. Pressing it and finishing the ad adds exactly 8 timber and 6 food (within the stock caps), as a logged command, and the log says a trader's cart came by. A save replays it.
+   - An ad cut short adds nothing and says so. The offer stays open.
+   - The offer comes back once a day of town time, not more often, and no ad ever starts without a press.
+   - The simulation is paused while an ad plays.
+4. **No regressions.** Earlier unit and browser tests pass, determinism holds, and stepping at 10× stays under 2 ms a frame.
+
+
+**Quick wins status (2026-10-08): all four met.** The tests are in `test/quickwins.test.ts` and `e2e/quickwins.spec.ts`.
+
+1. **Installable: met.**
+   - The manifest names Townlet, starts at the page, and displays standalone, with theme and background colours.
+   - Its 192 px, 512 px and maskable 512 px icons load at those sizes.
+   - An Apple touch icon (180 px) is linked.
+   - No service worker, as decided, so Chrome's automatic install prompt won't appear yet. Installing from the browser menu works.
+2. **Faster to load: met.**
+   - With scripts blocked, the page shows "Townlet · Lighting the lamps…".
+   - The loading screen is removed after the first frame.
+   - three.js is its own 565 kB file. The game's code is 312 kB (was 873 kB in one file).
+3. **The rewarded bonus: met.**
+   - With no provider there is no offer.
+   - With the test provider:
+     - a finished ad adds exactly 8 timber and 6 food, measured against a twin town without it;
+     - the log tells of the cart;
+     - the offer is spent until the next day, and comes back then;
+     - a save replays it.
+   - An ad cut short adds nothing, says so and keeps the offer. "No ad to show" gives nothing.
+   - While the ad plays the town is paused: no ticks pass, and the speed comes back as it was.
+   - A bug was found on the way and fixed. A save made in the same minute as a talk, favour or gift lost that command on reload; it predates this work.
+4. **No regressions: met.**
+   - Unit tests: 89 pass, plus the same 3 expected failures.
+   - Browser tests: all 37 pass, including the M2 journal test that had failed in this container before.
+   - Stepping at 10× costs 1.03 ms a frame.
+
 ---
 
 ## 10. Risks

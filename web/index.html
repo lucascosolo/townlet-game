@@ -7,6 +7,13 @@
     <meta name="description" content="Build a little town for people who remember what you do. They make friends, hold grudges and chase their dreams. Free to play in your browser." />
     <link rel="canonical" href="https://townlet.app/" />
     <meta name="theme-color" content="#2b3a4a" />
+    <!-- Installable: "Add to Home Screen" opens it full-screen, like an app. -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Townlet" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <!-- Share cards: what a link to the game shows in chats and feeds. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Townlet" />
@@ -43,6 +50,21 @@
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
+    <!-- Drawn by the page itself, before any script arrives (quick wins, 2026-10-08); main.ts removes it. -->
+    <div id="loader" role="status" aria-live="polite">
+      <style>
+        #loader { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: linear-gradient(#3b4a72, #1b2238); color: #fbf5e6; font-family: Fraunces, Georgia, serif; transition: opacity 0.4s ease; }
+        #loader.done { opacity: 0; pointer-events: none; }
+        #loader .name { font-size: 44px; font-weight: 600; letter-spacing: 0.01em; }
+        #loader .line { font: 600 16px Nunito, system-ui, sans-serif; opacity: 0.85; }
+        #loader .lamp { width: 14px; height: 14px; border-radius: 50%; background: #ffd27a; box-shadow: 0 0 24px 8px rgba(255, 207, 122, 0.55); animation: lamp 1.6s ease-in-out infinite; }
+        @keyframes lamp { 50% { opacity: 0.45; transform: scale(0.85); } }
+        @media (prefers-reduced-motion: reduce) { #loader .lamp { animation: none; } }
+      </style>
+      <div class="lamp"></div>
+      <div class="name">Townlet</div>
+      <div class="line">Lighting the lamps…</div>
+    </div>
     <noscript>
       <h1>Townlet</h1>
       <p>A cozy town-building sim where everyone remembers. Lay out a small valley town for its residents. Each has needs, opinions, friends, rivals and a dream of their own, and they remember what you build, what you take down and what you say to them. Townlet needs JavaScript and WebGL to run.</p>

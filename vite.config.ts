@@ -5,7 +5,14 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   root: 'web',
   base: './',
-  build: { outDir: '../dist', emptyOutDir: true, target: 'es2022', chunkSizeWarningLimit: 900 },
+  // three.js goes in its own file: it rarely changes, so returning players keep it cached across deploys.
+  build: {
+    outDir: '../dist',
+    emptyOutDir: true,
+    target: 'es2022',
+    chunkSizeWarningLimit: 900,
+    rollupOptions: { output: { manualChunks: (id) => (id.includes('node_modules/three/') ? 'three' : undefined) } },
+  },
   server: { port: 5173 },
   preview: { port: 4173 },
 });

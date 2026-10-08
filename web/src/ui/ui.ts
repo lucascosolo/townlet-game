@@ -17,6 +17,8 @@ import { daysToWinter, granaryRoom, hasGranary } from '../../../src/sim/stores.j
 import { ALL_FACTS, FACTS, TIERS, factValue, goalLabel, knownFacts, nextTier, progressOf, todaysGoals, unlocked, RENOWN } from '../../../src/sim/progress.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
+import type { AdResult, RewardedAds } from '../ads.js';
+import { TRADER_GIFT } from '../../../src/sim/sim.js';
 import { residentColor } from '../view/meshes.js';
 import { ICONS } from './icons.js';
 import { thumbnail } from '../view/thumbs.js';
@@ -643,11 +645,65 @@ export class Ui {
   // ---------------------------------------------------------------- goals and the Folk album (M4)
 
   /** Today's goals, the town's tier and the winter stores. */
+  /** The rewarded-ad provider, once known; null means no offer is ever shown. */
+  private ads: RewardedAds | null = null;
+  /** What the last offer came to, shown on the card until the next one. */
+  private adNote = '';
+  private adBusy = false;
+
+  setAds(ads: RewardedAds | null): void {
+    this.ads = ads;
+    this.renderGoals(true);
+  }
+
+  /** The trader's cart (quick wins, 2026-10-08): watch a short ad, by choice, for a small gift once a day. */
+  private traderCard(): HTMLElement | null {
+    const sim = this.game.sim;
+    if (!this.ads) return null;
+    const card = el('div', { class: 'trader-card', 'data-testid': 'trader-card' });
+    card.appendChild(el('div', { class: 'trader-title' }, "The trader's cart"));
+    if (!sim.giftAvailable()) {
+      card.appendChild(el('p', { class: 'quiet' }, this.adNote || "The cart has been by today. It'll be back on the road tomorrow."));
+      return card;
+    }
+    card.appendChild(el('p', {}, `Watch a short ad and a trader's cart will stop by with ${TRADER_GIFT.timber} timber and ${TRADER_GIFT.food} food.`));
+    if (this.adNote) card.appendChild(el('p', { class: 'quiet small', 'data-testid': 'ad-note' }, this.adNote));
+    const go = el('button', { 'data-testid': 'ad-offer' }, this.adBusy ? 'Waiting for the ad…' : 'Watch an ad') as HTMLButtonElement;
+    go.disabled = this.adBusy;
+    go.addEventListener('click', () => void this.watchAd());
+    card.appendChild(go);
+    return card;
+  }
+
+  private async watchAd(): Promise<void> {
+    if (!this.ads || this.adBusy || !this.game.sim.giftAvailable()) return;
+    this.adBusy = true;
+    this.renderGoals(true);
+    let before = this.game.speedIndex;
+    const result: AdResult = await this.ads.show({
+      pause: () => {
+        before = this.game.speedIndex;
+        this.game.speedIndex = 0;
+      },
+      resume: () => {
+        this.game.speedIndex = before;
+      },
+    });
+    this.adBusy = false;
+    if (result === 'watched') {
+      this.game.command({ kind: 'gift', from: 'trader' });
+      this.adNote = "The cart came by today. It'll be back on the road tomorrow.";
+      this.toast(`<span>A trader's cart: +${TRADER_GIFT.timber} timber, +${TRADER_GIFT.food} food</span>`, 'goal');
+    } else if (result === 'dismissed') this.adNote = "The ad didn't play to the end, so the cart didn't stop. The offer's still open.";
+    else this.adNote = 'No ad to show just now. Try again in a little while.';
+    this.renderGoals(true);
+  }
+
   private renderGoals(force = false): void {
     const state = this.game.sim.state;
     const p = progressOf(state);
     const goals = todaysGoals(state);
-    const key = JSON.stringify([goals, p.renown, p.tier, p.goals.bonus, state.stores, Math.floor(state.granary ?? 0), dayOf(state.tick)]);
+    const key = JSON.stringify([goals, p.renown, p.tier, p.goals.bonus, state.stores, Math.floor(state.granary ?? 0), dayOf(state.tick), state.lastGiftDay, this.adNote, this.adBusy, !!this.ads]);
     if (!force && key === this.lastGoalsKey) return;
     this.lastGoalsKey = key;
     const pane = this.goalsEl;
@@ -680,6 +736,8 @@ export class Ui {
     tier.appendChild(el('p', { class: 'quiet small' }, 'Renown comes from goals, granted asks and wishes, dreams come true, the winter stores, newcomers, and getting to know people.'));
     pane.appendChild(tier);
     if (state.stores?.asked) pane.appendChild(this.storesCard());
+    const trader = this.traderCard();
+    if (trader) pane.appendChild(trader);
     const you = el('button', { class: 'link', 'data-testid': 'open-you' }, 'How the town sees you →');
     you.addEventListener('click', () => this.showTab('you'));
     pane.appendChild(you);

@@ -75,7 +75,9 @@ export type Command =
   /** Talk with a resident: ask one of the fixed questions (M3b). */
   | { at: number; kind: 'talk'; who: string; question: TalkQuestion; about?: SubjectId }
   /** Ask a resident a favour (M3c). */
-  | { at: number; kind: 'favour'; who: string; favour: FavourKind; other?: string; plot?: number };
+  | { at: number; kind: 'favour'; who: string; favour: FavourKind; other?: string; plot?: number }
+  /** A trader's cart stops by with a gift: the reward for a watched ad, at most once a day (2026-10-08). */
+  | { at: number; kind: 'gift'; from: 'trader' };
 
 export interface Scenario {
   name: string;
@@ -112,6 +114,8 @@ export const MEAL = 0.5;
 export const WINTER_APPETITE = 2;
 export const STOCK_CAP: Record<Resource, number> = { food: LARDER_CAP, timber: 100 };
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
+/** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */
+export const TRADER_GIFT: Record<Resource, number> = { timber: 8, food: 6 };
 /** Seasonal yield of buildings that grow food on their own. */
 const PASSIVE_SEASON: Record<string, Record<ReturnType<typeof seasonOf>, number>> = {
   orchard: { spring: 0.2, summer: 0.6, autumn: 2, winter: 0 },
@@ -435,6 +439,8 @@ export class Simulation implements AspirationHost {
       if (this.state.residents[c.who]) this.talk(c.who, c.question, c.about);
     } else if (c.kind === 'favour') {
       if (this.state.residents[c.who]) this.askFavour(c.who, c.favour, c.other, c.plot);
+    } else if (c.kind === 'gift') {
+      this.traderGift();
     } else {
       const d = this.state.story.dilemmas.find((x) => x.type === c.dilemma && x.status === 'open');
       if (d) this.decide(d.id, c.option);
@@ -540,6 +546,22 @@ export class Simulation implements AspirationHost {
     }
     r.favour = null;
     this.emit({ t: state.tick, type: 'favour', who: r.id, phase: 'done', kind: f.kind, yield: got, placeId: f.placeId, ...(f.other ? { other: f.other } : {}) });
+  }
+
+  /** The trader's cart: a small gift of materials, once a day of town time; a second one that day is ignored. */
+  traderGift(): boolean {
+    const state = this.state;
+    const day = dayOf(state.tick);
+    if (!this.giftAvailable()) return false;
+    state.lastGiftDay = day;
+    for (const [res, v] of Object.entries(TRADER_GIFT) as Array<[Resource, number]>) this.addStock(res, v);
+    this.emit({ t: state.tick, type: 'gift', from: 'trader', ...TRADER_GIFT });
+    return true;
+  }
+
+  /** Whether the trader's cart could come today. */
+  giftAvailable(): boolean {
+    return (this.state.lastGiftDay ?? 0) !== dayOf(this.state.tick);
   }
 
   /** Into the town's stores: food over the larder's cap goes to the granary, if there is one. */

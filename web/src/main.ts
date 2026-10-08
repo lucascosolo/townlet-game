@@ -1,6 +1,7 @@
 // Townlet greybox: wires the game, the 3D view and the paper UI, and handles input.
 // URL parameters: ?scenario=quiet|bakery|neglect|caring&seed=1&steward=none|considerate|...&speed=0..4
 
+import { pickAds } from './ads.js';
 import { buildingDef } from '../../src/content/buildings.js';
 import { STEWARD_POLICIES, type StewardPolicy } from '../../src/scenarios/steward.js';
 import { canPlace, footprint } from '../../src/sim/world.js';
@@ -41,6 +42,8 @@ if (params.get('fx') === 'low') view.setLowQuality();
 const intro = params.get('intro') !== '0' && !saved;
 if (intro && game.sim.tick === 0) game.runTicks(7 * 60 + 30);
 const ui = new Ui(app, game, view, { intro });
+// A rewarded-ad provider, if this build or page has one; the offer appears only then (2026-10-08).
+void pickAds(params).then((ads) => ui.setAds(ads));
 game.onEvent((e) => {
   if (e.type === 'exchange') view.facePair(e.a, e.b);
 });
@@ -339,6 +342,13 @@ function loop(now: number): void {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+// The page's own loading screen (index.html) fades once the first frame is drawn.
+requestAnimationFrame(() => {
+  const loader = document.getElementById('loader');
+  if (!loader) return;
+  loader.classList.add('done');
+  setTimeout(() => loader.remove(), 400);
+});
 
 // ------------------------------------------------------------------ test and debug handle
 

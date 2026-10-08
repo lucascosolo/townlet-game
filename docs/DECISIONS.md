@@ -2,6 +2,28 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-08: Bar round 1: consequence, talking back, the fan club, and rough edges
+
+**The review** (`docs/reviews/2026-10-08-bar-review-1.md`) scored the game 5, 6, 7, 5, 5 against a pass mark of 8. Round 1 takes the problems it ranked 1, 3, 4, 5, 8 and 9. Density, newcomers, the economy and the log (2, 6, 7, 10) go in round 2.
+
+**Chosen:**
+- **The town moves how people feel.** Mood was three parts needs, one part feelings, and every need was met by the day's routine whatever the town was like, so mood sat at 0.8 in a neglected town and an engaged one alike. Now:
+  - **Home counts.** Comfort while at home follows what is around the home: green and water for those who like them lift it, noise and bare ground lower it. A cottage with nothing round it is no longer as good as one by a flower bed.
+  - **Something to look forward to counts.** Delight fades faster for someone with no place in town they are fond of.
+  - **How you treat them counts.** Mood is now 0.55 needs, 0.15 feelings, 0.15 home, 0.15 standing with you. A resident you keep ignoring is lower than one you listen to, and it shows in how they are.
+  - **A bare larder costs you.** A meagre meal is remembered as you letting them go hungry, once a day.
+  - **Someone can leave.** With mood able to fall, the existing "thinking of leaving" rule can fire. It still takes three low mornings to start and seven days to go, and answering them and talking to them turns it round.
+- **Praise is slower, and costs are heavier.** One answered ask used to move standing by +0.78 in a night. Now a night's evidence is capped, with bad news weighing twice as much as good (+0.3, −0.6), and standing relaxes toward neutral faster when nothing happens. Felling a loved place costs more than a flower bed earns.
+- **A lapsed proposal relieves the people who opposed it** and disappoints those who backed it. Before, everyone minded.
+- **You can talk back.** Every answer offers replies: agree ("That's fair"), push back, say sorry, or explain. Each is a logged command, each moves how they feel in a way that depends on who they are (a steady resident respects pushback; a touchy one sulks), and each is remembered and retold like anything else. Sorry is offered only when they hold something against you, explain only after they complained about a decision.
+- **Answers are no longer stitched.** A learned fact is said only when it belongs: the dream when asked about hopes is the answer itself, not a second sentence; the closest friend only when asked about a person; backgrounds in first person; dislikes never in "what do you think of me". A topic that contradicts the answer's band (fine but furious at you) is dropped. A verbal tic is used at most once a day.
+- **Rough edges:** whole numbers in the log; building names, not type ids; a/an and singulars; festival names keep their capitals; festivals avoid felled places; worn tracks need real traffic to show and fade faster; bubbles size to their text and don't stack; the Goals widget scrolls; the first proposal waits until the player has looked around; closing a modal restores the real previous speed, paused included; the `bakery` scenario's scripted steward commands don't run in the browser.
+
+**Rejected:**
+- *Making mood mostly about the steward.* Then a well-laid town with a quiet steward would be miserable. The town itself (home, places) carries as much as standing does.
+- *A free-text chat.* Replies are four fixed moves so they can be simulated, remembered and replayed. The words around them vary by voice.
+- *Lowering the pass mark or the review's weight.* The bar is the bar.
+
 ## 2026-10-08: The bar, and working to it without asking each time
 
 **The ask (owner):** "Keep working until you and an independent reviewer can agree that Townlet is a fun, polished game like a Sims-style game but with thinking, opinionated sims that can express to the player what they think in a fun, interactive way."

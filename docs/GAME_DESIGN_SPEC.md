@@ -1022,6 +1022,45 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - The one-year soak with newcomers finds no degenerate state, with the same figures as before: 1.0 rival pairs a run, an argument in every run, no departures, and the busiest place takes 48% of socialising.
 
 
+
+**Bar round 1 criteria (predeclared 2026-10-08, before code).** Quiet town, seeds 1–5, unless stated. A failure is reported as a failure, not redefined.
+
+1. **Consequence.**
+   - On day 21, mean mood with a considerate steward exceeds mean mood with no steward by at least 0.15, averaged over the seeds.
+   - In a neglected town, someone is thinking of leaving by day 14 on at least 3 of 5 seeds, and no more than 2 residents have left by day 21 on any seed.
+   - Recoverable: once someone is thinking of leaving, a steward who then answers their open asks and talks to them daily turns them round within 5 days on at least 3 of 5 seeds.
+   - Home counts: twin towns, one with a hedge and a flower bed beside every home, differ in mean mood by at least 0.04 on day 7.
+2. **The fan club.**
+   - One flower bed on day 1 leaves every resident's standing below "thinks the world of you" (affinity under 0.7) on day 2.
+   - Felling the old oak on day 5 moves standing down by at least 1.5 times what a flower bed moved it up.
+   - A lapsed proposal: every opponent's reaction is zero or better, every supporter's is below zero.
+   - In a 20-day engaged run asking "What do you think of me?" daily, "you listen" (the listens_to_me belief) is the stated reason in at most half the answers.
+3. **Talking back.**
+   - Four replies exist (agree, push back, sorry, explain), each a logged command that replays the same.
+   - Sorry after felling a loved place: the resident's negative belief about you loses at least a third of its strength, and the apology is retold later ("you said sorry").
+   - Push back: a steady resident's trust rises; an unsteady one's affinity falls.
+   - Explain after a declined proposal: the proposer's grievance weakens when their trust in you is above 0.4, and not otherwise.
+   - Sorry is offered only when they hold a grievance against you; explain only after a decision they minded.
+4. **Answers that aren't stitched.** Over seeds 1–5 and 20 days of all five questions to everyone daily:
+   - no answer says the dream title twice;
+   - no "closest friend" sentence unless the question was about a person;
+   - no dislike ("can't abide") in a "think of me" answer;
+   - no answer pairs a great or good band with a grievance about you, or a low or bad band with joy;
+   - a background is said in the first person and never as a bare lead-in;
+   - no verbal tic appears twice in one resident's lines in one day.
+5. **Rough edges.**
+   - Every quantity in the narrated log is a whole number.
+   - No narrated line contains a raw building type id whose display name differs (flowerbed, teahouse, woodlot, glasshouse).
+   - "Wants to work at a garden plots" and its kind are gone: every "a/an" before a building name is right and the name is singular.
+   - Gathering labels keep their capitals after a tic.
+   - A festival is never placed at a removed building.
+   - Worn tracks: in an unbuilt quiet town on day 12, at most 30% of the settled tiles show wear.
+   - Closing a modal restores the speed from before it opened, paused included.
+   - The first proposal modal does not open before the player has opened a page or tab, or two game hours have passed since the game began, whichever comes first.
+   - In the browser, the bakery scenario runs no scripted steward commands.
+   - Bubbles: no two bubbles overlap, and none is narrower than 120 px on a phone.
+6. **No regressions.** Earlier unit and browser tests pass, determinism holds, stepping at 10× stays under 2 ms a frame, and the one-year soak finds no degenerate state. Measures that move are re-measured and reported.
+
 ### 9.4 The bar (set 2026-10-08)
 
 Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:

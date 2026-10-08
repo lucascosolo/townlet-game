@@ -304,6 +304,7 @@ export class Ui {
     const roll = el('button', { class: 'roll', title: 'Roll up or unroll', 'data-testid': 'roll' }, '▴');
     roll.addEventListener('click', () => this.toggleScroll());
     rodTop.append(tabBar, roll);
+    this.draggable(this.scroll, rodTop);
     const body = el('div', { class: 'scroll-body' });
     this.scroll.append(rodTop, body, el('div', { class: 'rod bottom' }));
     for (const [key, label] of [
@@ -541,6 +542,66 @@ export class Ui {
 
   // ---------------------------------------------------------------- layout (M4)
 
+  /** Where a dragged panel came from, so it can be docked back. */
+  private readonly homes = new Map<HTMLElement, { parent: HTMLElement; next: Element | null }>();
+
+  /**
+   * On desktop a panel can be dragged by its header (owner, 2026-10-08) and docked back with a
+   * double-click on it. Buttons in the header still work as buttons.
+   */
+  private draggable(box: HTMLElement, handle: HTMLElement): void {
+    let start: { x: number; y: number; left: number; top: number } | null = null;
+    handle.classList.add('grab');
+    handle.addEventListener('pointerdown', (e) => {
+      if (this.phone || e.button !== 0 || (e.target as HTMLElement).closest('button, a, input, select')) return;
+      const r = box.getBoundingClientRect();
+      const root = this.root.getBoundingClientRect();
+      if (!box.classList.contains('dragged')) {
+        // Lifted out of its column at its current place and size.
+        this.homes.set(box, { parent: box.parentElement as HTMLElement, next: box.nextElementSibling });
+        box.style.width = `${r.width}px`;
+        if (box.classList.contains('widget')) box.style.height = `${r.height}px`;
+        box.classList.add('dragged');
+        this.root.appendChild(box);
+      }
+      box.style.left = `${r.left - root.left}px`;
+      box.style.top = `${r.top - root.top}px`;
+      box.style.right = 'auto';
+      box.style.bottom = 'auto';
+      start = { x: e.clientX, y: e.clientY, left: r.left - root.left, top: r.top - root.top };
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add('grabbing');
+      e.preventDefault();
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!start) return;
+      const root = this.root.getBoundingClientRect();
+      box.style.left = `${Math.max(0, Math.min(root.width - 80, start.left + e.clientX - start.x))}px`;
+      box.style.top = `${Math.max(0, Math.min(root.height - 40, start.top + e.clientY - start.y))}px`;
+    });
+    const stop = () => {
+      start = null;
+      handle.classList.remove('grabbing');
+    };
+    handle.addEventListener('pointerup', stop);
+    handle.addEventListener('pointercancel', stop);
+    handle.addEventListener('dblclick', (e) => {
+      if ((e.target as HTMLElement).closest('button, a')) return;
+      this.dock(box);
+    });
+  }
+
+  /** Put a dragged panel back where it came from. */
+  private dock(box: HTMLElement): void {
+    const home = this.homes.get(box);
+    if (!home || !box.classList.contains('dragged')) return;
+    box.classList.remove('dragged');
+    for (const k of ['left', 'top', 'right', 'bottom', 'width', 'height'] as const) box.style[k] = '';
+    if (home.next && home.next.parentElement === home.parent) home.parent.insertBefore(box, home.next);
+    else home.parent.appendChild(box);
+    this.homes.delete(box);
+  }
+
   /** A docked dashboard widget with a title, fold and hide. */
   private widget(key: string, title: string, icon: string, body: HTMLElement): HTMLElement {
     const w = el('section', { class: 'widget paper', 'data-widget': key, 'data-testid': `widget-${key}` });
@@ -564,6 +625,7 @@ export class Ui {
     hide.innerHTML = ICONS.close;
     hide.addEventListener('click', () => this.setWidget(key, false));
     head.append(t, fold, hide);
+    this.draggable(w, head);
     const b = el('div', { class: 'widget-body' });
     b.appendChild(body);
     w.append(head, b);
@@ -581,6 +643,7 @@ export class Ui {
   /** Phone (portrait) or desktop: the goals and Folk panes move between the sheet and the widgets. */
   private applyLayout(phone: boolean): void {
     this.phone = phone;
+    if (phone) for (const box of [...this.homes.keys()]) this.dock(box);
     document.body.classList.toggle('phone', phone);
     const body = this.scroll.querySelector('.scroll-body') as HTMLElement;
     if (phone) {

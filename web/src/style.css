@@ -581,3 +581,10 @@ body.phone .replies .chip.reply { min-height: 40px; }
 /* Widgets with more below fade at the foot (bar round 1). */
 .widget-body { scrollbar-width: thin; }
 .widget-body.more-below { -webkit-mask-image: linear-gradient(#000 calc(100% - 28px), transparent); mask-image: linear-gradient(#000 calc(100% - 28px), transparent); }
+
+/* Panels dragged by their header (owner, 2026-10-08). */
+.grab { cursor: grab; user-select: none; }
+.grab.grabbing { cursor: grabbing; }
+.dragged { position: absolute !important; z-index: 8; margin: 0; max-height: none; }
+.dragged.widget { display: flex; }
+.dragged.scroll { bottom: auto; }

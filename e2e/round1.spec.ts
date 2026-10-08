@@ -100,3 +100,39 @@ test('bubbles: none narrower than 120px on a phone, and no two overlap', async (
   expect(seen).toBeGreaterThan(0);
   await ctx.close();
 });
+
+test('panels drag by their header on desktop and dock back on a double-click', async ({ page }) => {
+  await open(page, 'scenario=quiet&seed=1&speed=0', at(1, 9));
+  await putOff(page);
+  const widget = page.getByTestId('widget-goals');
+  const before = (await widget.boundingBox())!;
+  const head = widget.locator('.widget-head');
+  const h = (await head.boundingBox())!;
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(h.x + h.width / 2 + 300, h.y + h.height / 2 + 200, { steps: 8 });
+  await page.mouse.up();
+  const after = (await widget.boundingBox())!;
+  expect(after.x - before.x).toBeGreaterThan(250);
+  expect(after.y - before.y).toBeGreaterThan(150);
+  // The buttons in the header still work: fold it.
+  await page.getByTestId('collapse-goals').click();
+  await expect(widget).toHaveClass(/collapsed/);
+  await page.getByTestId('collapse-goals').click();
+  // Double-click the header to dock it back.
+  await head.dblclick({ position: { x: 40, y: 10 } });
+  const docked = (await widget.boundingBox())!;
+  expect(Math.abs(docked.x - before.x)).toBeLessThan(4);
+  expect(Math.abs(docked.y - before.y)).toBeLessThan(4);
+  // The scroll drags too.
+  const scroll = page.getByTestId('scroll');
+  const s0 = (await scroll.boundingBox())!;
+  const rod = scroll.locator('.rod.top');
+  const r = (await rod.boundingBox())!;
+  await page.mouse.move(r.x + r.width - 60, r.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(r.x + r.width - 60 - 400, r.y + 8 + 100, { steps: 8 });
+  await page.mouse.up();
+  const s1 = (await scroll.boundingBox())!;
+  expect(s0.x - s1.x).toBeGreaterThan(300);
+});

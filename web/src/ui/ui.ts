@@ -783,15 +783,23 @@ export class Ui {
     const ask = Object.fromEntries((Object.entries(FACTS) as Array<[TalkQuestion, string[]]>).flatMap(([q, keys]) => keys.map((k) => [k, q]))) as Record<string, TalkQuestion>;
     const label = (q: TalkQuestion) => (q === 'opinion' ? 'What do you think of…' : (QUESTIONS.find(([x]) => x === q)?.[1] ?? q));
     const ul = el('ul');
-    for (const k of ALL_FACTS) {
-      if (known.includes(k)) ul.appendChild(el('li', { 'data-fact': k }, factValue(state, r, k)));
-      else {
-        const q = ask[k] as TalkQuestion;
-        const askedToday = progressOf(state).asked[`${id}|${q}`] === dayOf(state.tick);
-        ul.appendChild(el('li', { class: 'unknown' }, `??? Ask "${label(q)}"${askedToday ? ' again another day' : ''}`));
-      }
-    }
+    for (const k of ALL_FACTS) if (known.includes(k)) ul.appendChild(el('li', { 'data-fact': k }, factValue(state, r, k)));
+    if (known.length === 0) ul.appendChild(el('li', { class: 'quiet' }, 'Nothing yet. Talk to them to find out.'));
     sec.appendChild(ul);
+    // What is left to learn, one line per question rather than one per fact (design pass, 2026-10-08).
+    const left = new Map<TalkQuestion, number>();
+    for (const k of ALL_FACTS) if (!known.includes(k)) left.set(ask[k] as TalkQuestion, (left.get(ask[k] as TalkQuestion) ?? 0) + 1);
+    if (left.size) {
+      const todo = el('div', { class: 'to-learn', 'data-testid': 'to-learn' });
+      todo.appendChild(el('div', { class: 'to-learn-head' }, 'Still to learn'));
+      for (const [q, n] of left) {
+        const askedToday = progressOf(state).asked[`${id}|${q}`] === dayOf(state.tick);
+        const row = el('div', { class: `ask-row${askedToday ? ' later' : ''}` });
+        row.append(el('span', { class: 'q' }, `"${label(q)}"`), el('span', { class: 'n' }, askedToday ? 'ask again tomorrow' : `${n} to learn`));
+        todo.appendChild(row);
+      }
+      sec.appendChild(todo);
+    }
     return sec;
   }
 
@@ -876,8 +884,15 @@ export class Ui {
     info.textContent = hint;
     menu.appendChild(info);
     const row = el('div', { class: 'cards' });
+    // Jump to a group (design pass, 2026-10-08: only a few cards showed, with no sign of the rest).
+    const jumps = el('div', { class: 'tray-jumps', 'data-testid': 'tray-jumps' });
+    menu.insertBefore(jumps, info);
     for (const group of BUILD_MENU) {
-      row.appendChild(el('div', { class: 'tray-group' }, group.category));
+      const label = el('div', { class: 'tray-group' }, group.category);
+      row.appendChild(label);
+      const jump = el('button', { class: 'chip', 'data-testid': `tray-jump-${group.types[0]}` }, group.category);
+      jump.addEventListener('click', () => row.scrollTo({ left: label.offsetLeft - row.offsetLeft, behavior: 'smooth' }));
+      jumps.appendChild(jump);
       for (const type of group.types) {
         const def = buildingDef(type);
         const card = el('button', { class: 'build-card', 'data-testid': `tool-build-${type}`, 'data-type': type });
@@ -921,6 +936,22 @@ export class Ui {
     }
     row.addEventListener('pointerleave', () => (info.textContent = hint));
     menu.appendChild(row);
+    // A mouse wheel scrolls the row sideways, and the far edge fades while there is more to see.
+    row.addEventListener(
+      'wheel',
+      (e) => {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || row.scrollWidth <= row.clientWidth) return;
+        row.scrollLeft += e.deltaY;
+        e.preventDefault();
+      },
+      { passive: false },
+    );
+    const edges = () => {
+      row.classList.toggle('more-right', row.scrollLeft + row.clientWidth < row.scrollWidth - 4);
+      row.classList.toggle('more-left', row.scrollLeft > 4);
+    };
+    row.addEventListener('scroll', edges, { passive: true });
+    new ResizeObserver(edges).observe(row);
     return menu;
   }
 
@@ -1229,7 +1260,16 @@ export class Ui {
       const card = el('div', { class: 'card wish', 'data-testid': `wish-${w.id}` });
       card.appendChild(el('div', { class: 'card-title' }, w.label));
       card.appendChild(el('p', { class: 'quiet' }, `${p.met} of ${p.of} who wished for it have it: ${w.supporters.map((id) => residentDef(id).name).join(', ')}.`));
-      if (w.kind === 'more_green') card.appendChild(el('p', { class: 'quiet', 'data-testid': 'green-progress' }, w.supporters.map((id) => this.greenLine(id)).join(' · ')));
+      if (w.kind === 'more_green') {
+        // Grouped by how green it is round each home: "Nothing green nearby yet: Ada, Fen and Wren."
+        const by = new Map<string, string[]>();
+        for (const id of w.supporters) {
+          const [, how] = this.greenLine(id).split(': ');
+          by.set(how as string, [...(by.get(how as string) ?? []), residentDef(id).name]);
+        }
+        const list = (names: string[]) => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : (names[0] ?? ''));
+        card.appendChild(el('p', { class: 'quiet', 'data-testid': 'green-progress' }, [...by].map(([how, names]) => `${cap(how)}: ${list(names)}.`).join(' ')));
+      }
       const track = el('div', { class: 'track' });
       const fill = el('div', { class: 'fill' });
       fill.style.width = pct(p.of ? p.met / p.of : 0);
@@ -1328,7 +1368,9 @@ export class Ui {
     const home = state.buildings.find((b) => b.id === this.game.sim.resident(id).homeId);
     if (!home) return '';
     const g = greenAroundHome(state, home);
-    return `${residentDef(id).name}: ${g >= GREEN_ENOUGH ? 'green enough ✓' : `${Math.round((g / GREEN_ENOUGH) * 100)}% green enough`}`;
+    // In words, not percentages (design pass, 2026-10-08).
+    const f = g / GREEN_ENOUGH;
+    return `${residentDef(id).name}: ${f >= 1 ? 'green enough ✓' : f >= 0.5 ? 'nearly green enough' : f > 0 ? 'wants more green nearby' : 'nothing green nearby yet'}`;
   }
 
   // ---------------------------------------------------------------- how the town sees you

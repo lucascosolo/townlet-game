@@ -2,6 +2,24 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-08: Design pass
+
+**The ask (owner):** "Do another design pass."
+
+The main screens were captured on desktop (1440×900) and phone (390×844) and read as a player would. Three things were worth fixing now.
+
+- **A resident's page listed what you don't know ten times over.** It showed "??? Ask 'How are you?'" twice, then each other question twice. Now what you know is listed first ("Nothing yet. Talk to them to find out." when it's nothing), and below it a short "Still to learn" box shows one line per question with how many facts it still holds. A question already asked today reads "ask again tomorrow".
+- **The notice board spoke in percentages.** "Fen: 0% green enough" became words: nothing green nearby yet, wants more green nearby, nearly green enough, green enough. The Town Wish card groups people by that ("Nothing green nearby yet: Ada, Fen and Wren.") instead of repeating it per person.
+- **On desktop the build tray showed 5 of about 20 cards, with no sign of the rest.** Now:
+  - the tray has a chip per group (Paths and green, Gathering, Work and food, Homes, Dreams) that jumps to it;
+  - the mouse wheel scrolls the row sideways;
+  - the edges fade while there is more to see;
+  - the row starts at its first group label instead of snapping past it.
+
+  On phones the chips are hidden, since swiping is natural there.
+
+**Looked at and left:** the log, night view, goals, Folk album and phone sheets read well. The desktop hint line is cut short with "…", but its full text is in the tooltip.
+
 ## 2026-10-08: Quick wins: installable, faster to load, and a rewarded bonus
 
 **The asks (owner):** "Do the quick wins. I like the idea of watching [an ad] for earning a bonus, that would be a good small revenue stream."

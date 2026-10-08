@@ -542,3 +542,11 @@ body.phone .hud button.icon { min-width: 40px; width: 40px; padding: 0; }
 .place-bar.laying [data-testid='place-ok'], .place-bar.laying [data-testid='place-rotate'] { display: none; }
 body:not(.phone) .place-bar.laying .quiet { display: inline; }
 body.phone .place-bar.laying .quiet { display: inline; font-size: 13px; }
+
+/* The trader's cart (quick wins, 2026-10-08): the rewarded-ad offer, in Goals. */
+.trader-card { margin: 10px 0; padding: 10px 12px; border-radius: 10px; background: #f3ead6; border: 1px dashed #c9a46a; }
+.trader-card .trader-title { font-family: var(--display); font-weight: 600; font-size: 17px; }
+.trader-card p { margin: 6px 0; font-size: 14px; }
+.trader-card button { margin-top: 4px; }
+.ad-test { position: fixed; z-index: 60; }
+.ad-test .ad-row { display: flex; gap: 8px; flex-wrap: wrap; }

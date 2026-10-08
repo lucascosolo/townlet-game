@@ -68,4 +68,7 @@ export function restore(game: Game, data: SaveData): void {
   for (const c of data.commands) game.commandLog.push(c);
   game.sim.schedule(data.commands.map((c) => ({ ...c })));
   game.runTicks(Math.max(0, data.tick - game.sim.tick));
+  // Commands given in the very minute the game was saved (a talk, a favour, the trader's cart)
+  // ran at once when given; run them now too, or the reload would lose them (found 2026-10-08).
+  game.sim.flushCommands();
 }

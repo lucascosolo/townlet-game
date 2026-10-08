@@ -480,12 +480,15 @@ export interface SimState {
   clearing?: Record<string, number>;
   /** How worn each tile is by feet off the laid paths, by "x,y": footsteps, fading each dawn (owner playtest 2026-10-05). */
   wear?: Record<string, number>;
+  /** The day the trader's cart last came (the rewarded bonus, 2026-10-08), or absent. */
+  lastGiftDay?: number;
 }
 
 // ---------------------------------------------------------------- events
 
 export type SimEvent =
   | { t: number; type: 'dawn'; day: number }
+  | { t: number; type: 'gift'; from: 'trader'; timber: number; food: number }
   | { t: number; type: 'renown'; amount: number; total: number; why: string }
   | { t: number; type: 'tier'; tier: number; name: string; unlocks: string[]; cap: number }
   | { t: number; type: 'goal'; phase: 'new' | 'done' | 'all'; goal?: import('./progress.js').Goal; goals?: import('./progress.js').Goal[] }

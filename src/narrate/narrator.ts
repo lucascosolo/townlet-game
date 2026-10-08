@@ -7,6 +7,7 @@ import { buildingDef, singularName } from '../content/buildings.js';
 import { residentDef } from '../content/residents.js';
 import { ASPIRATION_LINES, DILEMMA_NAMES, DREAM_DONE_LINES, GATHERING_START, PREPOSITIONS, PROPOSALS } from '../content/story.js';
 import { MIND_LINES, TO_STEWARD_LINES } from '../content/thoughts.js';
+import { DAY_WORDS, RECALL_LINES } from '../content/recall.js';
 import { FAVOUR_DONE, FAVOUR_NO, FAVOUR_YES, TALK_HOPE, TALK_HOPE_DONE, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON } from '../content/talk.js';
 import { firstPerson } from '../sim/mind/thoughts.js';
 import { opinion } from '../sim/mind/memory.js';
@@ -15,7 +16,7 @@ import { chance, deriveSeed, pick, type RngHolder } from '../sim/rng.js';
 import { subjectWords } from '../sim/story/aspirations.js';
 import { factSaid, factValue, goalLabel, nextFact, TIER_GIFT } from '../sim/progress.js';
 import type { Simulation } from '../sim/sim.js';
-import { DAWN_MINUTE, clock, dayOf, minuteOf, seasonOf } from '../sim/time.js';
+import { DAWN_MINUTE, DAYS_PER_SEASON, clock, dayOf, minuteOf, seasonOf } from '../sim/time.js';
 import type { Belief, FavourKind, MindMention, Resource, ResidentDef, SimEvent, SimState, SubjectId, TalkAnswer } from '../sim/types.js';
 import { distanceTo, sizeOf } from '../sim/world.js';
 
@@ -254,6 +255,8 @@ export class Narrator {
       .replace(/\{next\}/g, vars.next ?? '')
       .replace(/\{title\}/g, vars.title ?? '')
       .replace(/\{label\}/g, vars.label ?? '')
+      .replace(/\{clause\}/g, vars.clause ?? '')
+      .replace(/\{when\}/g, vars.when ?? '')
       .replace(/\{subj\}/g, person.subj)
       .replace(/\{obj\}/g, person.obj)
       .replace(/\{poss\}/g, person.poss);
@@ -777,6 +780,89 @@ export class Narrator {
     this.live(e.t, text);
   }
 
+  // ---------------------------------------------------------------- memories (2026-10-08)
+
+  /** When something happened, as a resident would say it: yesterday, three days ago, last week, back in the spring. */
+  whenSaid(tick: number, now = this.state.tick): string {
+    const days = dayOf(now) - dayOf(tick);
+    if (days <= 0) return 'earlier today';
+    if (days === 1) return 'yesterday';
+    if (days < 7) return `${DAY_WORDS[days]} days ago`;
+    if (days < 14) return 'last week';
+    const season = seasonOf(tick);
+    const year = (t: number) => Math.floor((dayOf(t) - 1) / (DAYS_PER_SEASON * 4));
+    return year(tick) === year(now) ? `back in the ${season}` : year(now) - year(tick) === 1 ? `last ${season}` : 'years ago';
+  }
+
+  /**
+   * A memory as a first-person clause: "you built the bakery for me". It is about `rec.subject`,
+   * named as the listener hears it ("you" for the steward in talk). Notes are written about the
+   * resident ("woke her"), so their own pronouns become "me".
+   */
+  memoryClause(who: string, rec: { subject: SubjectId; aspect: string; note: string }, youAreSteward = true): string {
+    const p = residentDef(who).pronouns;
+    const me = (t: string) =>
+      t.replace(new RegExp(`\\b${p.subj} (was|were)\\b`, 'g'), 'I was').replace(new RegExp(`\\b${p.obj}\\b`, 'g'), 'me');
+    const x = rec.subject === STEWARD_ID ? (youAreSteward ? 'you' : 'the steward') : this.subjectName(rec.subject);
+    const note = me(rec.note);
+    const verbFirst = /^(built|put|took|granted|planted|said|never|helped|remembered|looked|fed|taught|decided|wouldn't|asked|filled|shared|gave)\b/.test(note);
+    switch (rec.aspect) {
+      case 'argued_with_me':
+        return `${x} and I argued`;
+      case 'made_amends':
+        return `${x} and I made it up`;
+      case 'wonderful_time':
+        return `the whole valley turned out for ${x}`;
+      case 'lost_place':
+        return `we lost ${x}`;
+      case 'my_workplace':
+        return `I got ${x} to work in`;
+      case 'smells_lovely':
+        return `I ${note}`;
+      case 'ignores_me': {
+        if (note === 'nothing was done') return `I asked ${x} for something and nothing was done`;
+        const wish = /^our wish for (.+) came to nothing$/.exec(note);
+        if (wish) return `${x} let our wish for ${wish[1]} come to nothing`;
+        return verbFirst ? `${x} ${note}` : note;
+      }
+      case 'looks_out_for_me':
+        // "winter came with the granary short": something the steward let happen.
+        return verbFirst ? `${x} ${note}` : `${x} let ${note.replace(/^winter came\b/, 'winter come')}`;
+      case 'listens_to_me':
+        return verbFirst ? `${x} ${note}` : `${x} listened, and I got ${note}`;
+      case 'granted_wish':
+        return `${x} ${note.replace(/^granted the town's wish: /, "granted the town's wish for ")}`;
+      case 'decided_well':
+      case 'decided_badly': {
+        // "never answered Marlow's market day" reads as nonsense; say who went unanswered, about what.
+        const m = /^never answered (.+)'s (.+)$/.exec(note);
+        return m ? `${x} never gave ${m[1]} an answer about the ${m[2]}` : `${x} ${note}`;
+      }
+      case 'kind_to_me':
+        if (note.startsWith(x)) return note;
+        return verbFirst ? `${x} ${note}` : `${x} gave us ${note}`;
+      default:
+        // A clause already ("the storm kept me up", "Juniper's contraption went bang") or a deed by them.
+        return verbFirst ? `${x} ${note}` : note;
+    }
+  }
+
+  /** A memory for their page: the same words each time it is drawn (no tic, wording fixed by the memory). */
+  memoryQuote(who: string, ep: { id: number; subject: SubjectId; aspect: string; note: string; valence: number; tick: number }): string {
+    const lines = ep.valence >= 0 ? RECALL_LINES.good : RECALL_LINES.bad;
+    const options = lines[residentDef(who).voice.register] ?? lines.plain;
+    const t = options[ep.id % options.length] as string;
+    return sentenceCase(fixArticles(this.fill(t, FIRST_PERSON, { clause: this.memoryClause(who, ep, this.you), when: this.whenSaid(ep.tick) })));
+  }
+
+  /** A memory, in the resident's voice, with when it happened. */
+  memoryLine(who: string, rec: { subject: SubjectId; aspect: string; note: string; valence: number; tick: number }, youAreSteward = true): string {
+    // No verbal tic: it follows an answer that may have had one ("I must say ... I must say").
+    const lines = rec.valence >= 0 ? RECALL_LINES.good : RECALL_LINES.bad;
+    const options = lines[residentDef(who).voice.register] ?? lines.plain;
+    return sentenceCase(fixArticles(this.fill(this.freshest(who, options), FIRST_PERSON, { clause: this.memoryClause(who, rec, youAreSteward), when: this.whenSaid(rec.tick) })));
+  }
+
   /** The last thing a resident said to the steward, for the talk panel. */
   lastReply: { who: string; t: number; text: string } | null = null;
 
@@ -822,7 +908,9 @@ export class Narrator {
     // A fact this question reveals (M4 Folk album) is said in the reply, so the album learns what you were told.
     const fact = nextFact(this.state, e.who, a.question);
     const told = fact ? factSaid(this.state, this.state.residents[e.who]!, fact) : '';
-    const words = [this.toSteward(this.answer(e.who, a)), told].filter(Boolean).join(' ');
+    // A memory they bring up (2026-10-08), in their own words, after the answer itself.
+    const remembered = a.memory ? this.memoryLine(e.who, a.memory, this.you) : '';
+    const words = [this.toSteward(this.answer(e.who, a)), remembered, told].filter(Boolean).join(' ');
     this.lastReply = { who: e.who, t: e.t, text: words };
     this.live(e.t, `${this.you ? 'You ask' : 'The steward asks'} ${name} ${asking}. "${words}"`);
   }

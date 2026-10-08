@@ -19,6 +19,7 @@ import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent,
 import { SPEEDS, type Game } from '../game.js';
 import type { AdResult, RewardedAds } from '../ads.js';
 import { TRADER_GIFT } from '../../../src/sim/sim.js';
+import { vividMemories } from '../../../src/sim/recall.js';
 import { residentColor } from '../view/meshes.js';
 import { ICONS } from './icons.js';
 import { thumbnail } from '../view/thumbs.js';
@@ -771,6 +772,21 @@ export class Ui {
       grid.appendChild(card);
     }
     pane.appendChild(grid);
+  }
+
+  /** What a resident remembers most (2026-10-08): up to three dated memories, in their own words. */
+  private memoriesSection(id: string): HTMLElement | null {
+    const sim = this.game.sim;
+    const eps = vividMemories(sim.resident(id), sim.tick);
+    if (eps.length === 0) return null;
+    const sec = el('div', { class: 'memories', 'data-testid': 'memories' });
+    sec.appendChild(el('h3', {}, 'Remembers most'));
+    for (const ep of eps) {
+      const row = el('div', { class: `memory ${ep.valence >= 0 ? 'good' : 'bad'}`, 'data-episode': String(ep.id) });
+      row.append(el('span', { class: 'day' }, `Day ${dayOf(ep.tick)}`), el('q', {}, this.game.narrator.memoryQuote(id, ep)));
+      sec.appendChild(row);
+    }
+    return sec;
   }
 
   /** "What you know" on a resident's page: learned facts, and how to learn the rest. */
@@ -1782,6 +1798,10 @@ export class Ui {
     }
     j.appendChild(el('p', { class: 'quiet' }, rep.background));
     if (!rep.departed) j.appendChild(this.factsSection(rep.id));
+    if (!rep.departed) {
+      const mem = this.memoriesSection(rep.id);
+      if (mem) j.appendChild(mem);
+    }
     if (rep.hope) {
       const hope = el('div', { class: 'hope', 'data-testid': 'hope' });
       hope.appendChild(el('p', {}, `Hoping to: ${rep.hope.title.charAt(0).toLowerCase()}${rep.hope.title.slice(1)}`));

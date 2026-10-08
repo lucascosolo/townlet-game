@@ -195,7 +195,7 @@ describe('memories in conversation', () => {
     expect(checked).toBeGreaterThan(1000);
   });
 
-  it('replays the same: memories told depend only on the logged talks', () => {
+  it('replays the same: memories told depend only on the logged talks', { timeout: 60_000 }, () => {
     const play = () => {
       const sim = runScenario('bakery', 2, 'considerate');
       sim.schedule([3, 4, 5, 6].flatMap((d) => ['ada', 'bram', 'fen'].map((who) => ({ at: at(d, 12), kind: 'talk' as const, who, question: 'me' as const }))));

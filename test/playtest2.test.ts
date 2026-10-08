@@ -8,7 +8,7 @@ import { factSaid } from '../src/sim/progress.js';
 import type { Simulation } from '../src/sim/sim.js';
 import { at } from '../src/sim/time.js';
 import type { SimEvent } from '../src/sim/types.js';
-import { brookSide, canPlace, footprint, isPath, liveBuildings, placeTile, route, wearDawn } from '../src/sim/world.js';
+import { brookSide, canPlace, footprint, isPath, liveBuildings, placeTile, route, wearDawn, sizeOf } from '../src/sim/world.js';
 import { SEEDS } from './helpers.js';
 
 /** Every everyday walk in town: each home to work and to each gathering place. */
@@ -36,7 +36,11 @@ describe('playtest round 2', () => {
     const sim = runScenario('quiet', 1, 'none');
     const wear = sim.state.wear ?? {};
     const r = sim.resident('bram');
-    const walk = everydayRoutes(sim).get(`${placeTile(liveBuildings(sim.state).find((b) => b.id === r.homeId)!)}>${placeTile(liveBuildings(sim.state).find((b) => b.id === r.jobId)!)}`)!;
+    const route = everydayRoutes(sim).get(`${placeTile(liveBuildings(sim.state).find((b) => b.id === r.homeId)!)}>${placeTile(liveBuildings(sim.state).find((b) => b.id === r.jobId)!)}`)!;
+    // Bar round 2: nothing wears inside a footprint, so the doorstep tiles are left out of the count.
+    const live = liveBuildings(sim.state);
+    const inside = (x: number, y: number) => live.some((b) => b.type !== 'path' && b.type !== 'brook' && x >= b.x && y >= b.y && x < b.x + sizeOf(b)[0] && y < b.y + sizeOf(b)[1]);
+    const walk = route.filter(([x, y]) => !inside(x, y));
     const worn = walk.filter(([x, y]) => (wear[`${x},${y}`] ?? 0) > 0).length;
     expect(worn / walk.length).toBeGreaterThan(0.9);
   });

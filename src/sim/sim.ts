@@ -1250,7 +1250,7 @@ export class Simulation implements AspirationHost {
         r.leaving = { sinceDay: day };
         this.emit({ t: tick, type: 'thinking_of_leaving', who: r.id });
       }
-    } else if (r.disposition > STAYING_ABOVE) {
+    } else if (r.disposition > (r.leaving.dream ? 0.7 : STAYING_ABOVE)) {
       r.leaving = null;
       r.lowDays = 0;
       this.emit({ t: tick, type: 'decided_to_stay', who: r.id });

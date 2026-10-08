@@ -236,7 +236,8 @@ export interface ResidentState {
   dayMoodSum: number;
   dayMoodN: number;
   lowDays: number;
-  leaving: { sinceDay: number } | null;
+  /** Thinking of leaving since this day; `dream` when it came from a dream's decision (bar round 2), which only a very good week turns round. */
+  leaving: { sinceDay: number; dream?: boolean } | null;
   departed: boolean;
   /** Tick a newcomer moved in (M3c); absent for the founding cast. */
   arrivedTick?: number;

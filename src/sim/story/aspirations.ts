@@ -306,7 +306,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
           r.aspiration.outcome = score > 0 ? 'stay' : 'leave';
           // Going is said before it is done (bar round 2): the week's notice the town gets from anyone else.
           if (score <= 0 && !r.leaving) {
-            r.leaving = { sinceDay: dayOf(h.state.tick) };
+            r.leaving = { sinceDay: dayOf(h.state.tick), dream: true };
             h.emitEvent({ t: h.state.tick, type: 'thinking_of_leaving', who: r.id });
           }
           if (score > 0) {
@@ -397,7 +397,11 @@ export const LET_GO_DAYS = 8;
 function letGo(h: AspirationHost, r: ResidentState): boolean {
   const state = h.state;
   if (state.tick - r.aspiration.since < LET_GO_DAYS * TICKS_PER_DAY) return false;
-  const ask = state.requests.find((q) => q.by === r.id && q.kind === 'aspiration' && (q.status === 'open' || q.status === 'lapsed') && q.wants && !exists(state, q.wants) && q.postedTick >= r.aspiration.since - TICKS_PER_DAY);
+  // Only the building this step waits for counts: not, say, Juniper's granary for the winter stores.
+  const stage = currentStage(state, r);
+  const wants = stage?.until ?? (stage?.place && stage.place !== 'home' && !exists(state, stage.place) ? stage.place : undefined);
+  if (!wants || exists(state, wants)) return false;
+  const ask = state.requests.find((q) => q.by === r.id && q.kind === 'aspiration' && (q.status === 'open' || q.status === 'lapsed') && q.wants === wants);
   if (!ask || !ask.wants) return false;
   if (ask.status === 'open') {
     ask.status = 'resolved';

@@ -146,3 +146,24 @@ test('"Decide later" does not re-pose a proposal, and it lapses two days after p
   const status = await page.evaluate((d) => (window as unknown as { __townlet: Handle }).__townlet.game.sim.state.story.dilemmas.find((x: { id: number }) => x.id === d).status, id);
   expect(status).toBe('lapsed');
 });
+
+test('a link naming the town restores its save; only ?new=1 starts fresh', async ({ page }) => {
+  await open(page, 'scenario=bakery&seed=2&speed=0', at(4, 10));
+  await putOff(page);
+  await page.evaluate(() => (window as unknown as { __townlet: { save(): void } }).__townlet.save());
+  // The same link again: the saved town, not day 1.
+  await page.goto('/?intro=0&scenario=bakery&seed=2&speed=0');
+  await page.waitForFunction(() => (window as unknown as { __townlet?: unknown }).__townlet !== undefined);
+  const tick = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.sim.tick);
+  expect(tick).toBeGreaterThanOrEqual(at(4, 10));
+  // A different seed is a different town: fresh.
+  await page.goto('/?intro=0&scenario=bakery&seed=3&speed=0');
+  await page.waitForFunction(() => (window as unknown as { __townlet?: unknown }).__townlet !== undefined);
+  const other = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.sim.tick);
+  expect(other).toBeLessThan(at(2, 0));
+  // ?new=1 starts over even for the saved one.
+  await page.goto('/?intro=0&scenario=bakery&seed=2&speed=0&new=1');
+  await page.waitForFunction(() => (window as unknown as { __townlet?: unknown }).__townlet !== undefined);
+  const fresh = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.sim.tick);
+  expect(fresh).toBeLessThan(at(2, 0));
+});

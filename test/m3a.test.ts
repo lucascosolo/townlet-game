@@ -89,10 +89,17 @@ describe("criterion 2: Marlow's choice", () => {
           }
           m.disposition = 0.5;
         }
+        // Bar round 2: deciding to go gives the week's notice anyone else gets, and a good week can turn it round.
+        let stayed = false;
+        sim.on((e) => {
+          if (e.type === 'decided_to_stay' && e.who === 'marlow') stayed = true;
+        });
         sim.runUntil(at(24, 12));
         expect(firstDreamDone(sim, 'marlow'), `seed ${seed}`).toBe(true);
         expect(m.aspiration.outcome, `seed ${seed} isolated=${isolate}`).toBe(isolate ? 'leave' : 'stay');
-        expect(sim.resident('marlow').departed).toBe(isolate);
+        expect(m.leaving !== null, `seed ${seed} isolated=${isolate}: thinking of leaving`).toBe(isolate);
+        sim.runUntil(at(32, 12));
+        expect(sim.resident('marlow').departed, `seed ${seed} isolated=${isolate}`).toBe(isolate && !stayed);
       }
     }
   });
@@ -154,7 +161,8 @@ describe('criterion 3: relationships you can see', () => {
   // ever formed a rival pair in 28 days under the considerate steward; with mood now moved by the
   // town and the steward, that seed's quarrels play out differently and none forms. Quarrels that
   // stick into rivalries are part of round 2 (opinionated sims), where this is to be met properly.
-  it.fails('rivals keep apart (regressed in bar round 1; see the note above)', { timeout: 240_000 }, () => {
+  // Back after bar round 2 (rivalries form again under the considerate steward), so a plain test once more.
+  it('rivals keep apart', { timeout: 240_000 }, () => {
     const c = coLocation('considerate');
     expect(c.rivalMinutes).toBeGreaterThan(0);
     expect(c.rival).toBeLessThan(c.neutral);

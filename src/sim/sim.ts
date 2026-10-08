@@ -893,8 +893,11 @@ export class Simulation implements AspirationHost {
     const day = dayOf(state.tick);
     // A meagre meal is held against whoever keeps the town fed (bar round 1): once a day each.
     if (r.lastHungryDay !== day) {
+      // A run of hungry days hurts most at first; from the fourth day on it is resignation, not
+      // news, so a long shortage settles into a grudge rather than driving everyone out of town.
+      r.hungryRun = r.lastHungryDay === day - 1 ? (r.hungryRun ?? 0) + 1 : 1;
       r.lastHungryDay = day;
-      this.mind.perceive(this.ctx(), r, { subject: STEWARD, aspect: 'went_hungry', valence: -0.6, base: 0.4, source: 'witnessed', note: 'let the larder run bare' });
+      this.mind.perceive(this.ctx(), r, { subject: STEWARD, aspect: 'went_hungry', valence: -0.6, base: r.hungryRun <= 3 ? 0.4 : 0.12, source: 'witnessed', note: 'let the larder run bare' });
     }
     if (state.lastShortageDay !== day) {
       state.lastShortageDay = day;

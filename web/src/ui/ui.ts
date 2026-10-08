@@ -208,7 +208,9 @@ export class Ui {
   private speedBeforeModal = 1;
   /** Whether the player has opened a page or tab yet, and the tick the game began on. */
   private lookedAround = false;
-  private readonly firstTick: number;
+  /** Game minutes the player has watched go by: a jump (a loaded save, a test) counts as a moment, not hours. */
+  private watched = 0;
+  private watchedFrom: number;
   private lastBoardKey = '';
   private lastJournalRender = 0;
   private lastYouRender = 0;
@@ -243,7 +245,7 @@ export class Ui {
 
   constructor(root: HTMLElement, game: Game, view: TownView, opts: { intro: boolean }) {
     this.game = game;
-    this.firstTick = game.sim.tick;
+    this.watchedFrom = game.sim.tick;
     this.view = view;
     this.root = root;
 
@@ -415,6 +417,8 @@ export class Ui {
     this.applyLayout(media.matches);
     media.addEventListener('change', (m) => this.applyLayout(m.matches));
     this.showTab('board');
+    // Opening the board ourselves is not the player looking around (bar round 1).
+    this.lookedAround = false;
 
     game.narrator.onEntry((e) => this.onEntry(e));
     game.onEvent((e) => this.onEvent(e));
@@ -2073,7 +2077,9 @@ export class Ui {
     if (!this.tabs.get('you')!.pane.hidden) this.renderYou();
     // New proposals get a popup, but not before the player has looked around (bar round 1: on a
     // phone the first thing after the intro was a decision about people you had not met).
-    if (!this.modal && (this.lookedAround || state.tick - this.firstTick >= 120)) {
+    this.watched += Math.min(5, Math.max(0, state.tick - this.watchedFrom));
+    this.watchedFrom = state.tick;
+    if (!this.modal && (this.lookedAround || this.watched >= 120)) {
       const d = state.story.dilemmas.find((x) => x.status === 'open' && !this.shownDilemmas.has(x.id));
       if (d) this.showDilemma(d);
     }

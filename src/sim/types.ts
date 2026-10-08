@@ -255,6 +255,8 @@ export interface ResidentState {
   sorryFor?: Record<string, number>;
   /** Day a meagre meal was last held against the steward (bar round 1). */
   lastHungryDay?: number;
+  /** Consecutive days of meagre meals ending on lastHungryDay. */
+  hungryRun?: number;
   /** Day of the steward's last talk with them that counted (M3b: no farming). */
   lastTalkDay?: number;
   /** A favour they agreed to and are doing (M3c). */

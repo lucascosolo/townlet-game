@@ -30,6 +30,7 @@ async function putOff(page: Page): Promise<void> {
 
 test('talking back: an answer offers replies, a reply lands and is answered, and the chips go until the next question', async ({ page }) => {
   await open(page, 'scenario=quiet&seed=1&speed=0', at(2, 12));
+  await putOff(page);
   await page.getByTestId('tab-journal').click();
   await putOff(page);
   await page.getByTestId('roster-ada').click();

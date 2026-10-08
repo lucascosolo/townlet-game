@@ -192,7 +192,8 @@ test('criterion 2: the browser sim and the Node sim produce the same events from
   const stats = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.stats());
   expect(stats.commands.length).toBe(2);
 
-  const sim = runScenario('bakery', 3, 'none');
+  // The browser leaves the scenario's scripted steward commands out (bar round 1), so does this.
+  const sim = runScenario('bakery', 3, 'none', { scripted: false });
   let hash = 0x811c9dc5;
   let count = 0;
   sim.on((e) => {

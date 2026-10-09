@@ -49,11 +49,16 @@ function strongestBelief(r: ResidentState, subject: SubjectId, skip: Record<stri
 const reasonSign = (v: number) => (v > 0.05 ? 1 : v < -0.05 ? -1 : 0);
 
 /** How a resident feels about someone or something, for "what do you think of…": people by affinity and belief, places by belief. */
+/** Where a neighbour's affinity starts to mean liking them (bar round 4). */
+export const PERSON_BASELINE = 0.2;
+
 export function feelingAbout(r: ResidentState, subject: SubjectId, now: number, state?: SimState): number {
   if (subject === STEWARD) return rel(r, STEWARD).affinity;
   if (subject.startsWith('r:')) {
     const x = r.rel[subject.slice(2)];
-    const v = (x?.affinity ?? 0) * 0.7 + opinion(r, subject) * 0.3;
+    // Bar round 4: measured from where acquaintance starts (0.1 to 0.2), not from zero, so someone
+    // you merely tolerate does not read as "I like the way Rosa sees things".
+    const v = ((x?.affinity ?? 0) - PERSON_BASELINE) * 0.7 + opinion(r, subject) * 0.3;
     // A fresh argument colours the answer, whatever the long view (review: "something went sour
     // between me and Ada" one day, "I haven't felt anything about Ada yet" the next).
     return x && x.lastArgue >= 0 && now - x.lastArgue < 2 * TICKS_PER_DAY ? Math.min(v, -0.1) : v;
@@ -83,6 +88,21 @@ export function taste(state: SimState, r: ResidentState, subject: SubjectId): nu
   return Math.max(-0.25, Math.min(0.25, 0.4 * v));
 }
 
+/** What someone between dreams is enjoying meanwhile: a favourite place, else a friend, else the quiet (bar round 4). */
+export function meanwhile(state: SimState, r: ResidentState): string {
+  const fav = Object.values(r.beliefs)
+    .filter((b) => b.subject.startsWith('b:') && b.valence > 0)
+    .sort((a, b) => b.strength - a.strength)
+    .map((b) => state.buildings.find((x) => `b:${x.id}` === b.subject && !x.removed))
+    .find((b) => !!b);
+  if (fav) return `the ${buildingDef(fav.type).name.toLowerCase()}`;
+  const friend = Object.entries(r.rel)
+    .filter(([id, x]) => id !== STEWARD && x.tags.includes('friend') && !state.residents[id]?.departed)
+    .sort((a, b) => b[1].affinity - a[1].affinity)[0];
+  if (friend) return `time with ${residentDef(friend[0]).name}`;
+  return 'the quiet';
+}
+
 export function talkAnswer(state: SimState, r: ResidentState, question: TalkQuestion, about?: SubjectId): TalkAnswer {
   const top = topOfMind(state, r, 3).map((t, rank) => ({ key: t.key, ...(t.about ? { about: t.about } : {}), vars: t.vars, rank }));
   switch (question) {
@@ -110,12 +130,16 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
       // Two things at most (bar round 3: six- and ten-sentence answers).
       return { question, topics: top.slice(0, 2) };
     case 'hope':
-      return { question, hope: { title: dreamTitle(state, r) ?? '', next: nextStep(state, r), done: r.aspiration.done } };
+      // Between dreams they say what they are enjoying meanwhile (bar round 4: "I did it, you know!" eight times).
+      return { question, hope: { title: dreamTitle(state, r) ?? '', next: nextStep(state, r), done: r.aspiration.done, ...(r.aspiration.outcome ? { outcome: r.aspiration.outcome } : {}), ...(r.aspiration.done ? { meanwhile: meanwhile(state, r) } : {}) } };
     case 'opinion': {
       const subject = about ?? STEWARD;
       const v = feelingAbout(r, subject, state.tick, state);
       const b = strongestBelief(r, subject, {}, reasonSign(v), state.tick);
-      return { question, about: subject, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
+      // Someone known well and not liked is cool, not "no view" (bar round 4).
+      let band = feelingBand(v);
+      if (band === 'neutral' && subject.startsWith('r:') && (r.rel[subject.slice(2)]?.familiarity ?? 0) >= 0.5) band = 'cool';
+      return { question, about: subject, band, value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
     }
     case 'me': {
       const v = feelingAbout(r, STEWARD, state.tick);

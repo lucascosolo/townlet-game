@@ -319,6 +319,8 @@ export function canPlace(state: SimState, type: string, x: number, y: number, ro
 
 /** Each dawn a track keeps this much of its wear: unwalked for 7 days, about a fifth is left. */
 export const WEAR_KEEP = 0.8;
+/** Ground unwalked this many days is not drawn worn (bar round 4: a slab in a town nobody built in). */
+export const WEAR_FADE_DAYS = 4;
 /** Wear below this is not drawn: a track takes real, repeated traffic to show (bar round 1). */
 export const WEAR_SHOW = 6;
 
@@ -329,7 +331,10 @@ export const WEAR_SHOW = 6;
 export function shownWear(state: SimState): Map<string, number> {
   const settled = state.settled ?? { width: state.width, height: state.height };
   const cap = Math.floor((settled.width * settled.height) / 8);
-  const worn = Object.entries(state.wear ?? {}).filter(([, w]) => (w as number) >= WEAR_SHOW) as Array<[string, number]>;
+  // Bar round 4: ground nobody has walked for a few days greens over at once, whatever its count.
+  const today = Math.floor(state.tick / 1440) + 1;
+  const walked = state.wearDay ?? {};
+  const worn = Object.entries(state.wear ?? {}).filter(([k, w]) => (w as number) >= WEAR_SHOW && today - (walked[k] ?? today) < WEAR_FADE_DAYS) as Array<[string, number]>;
   worn.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
   return new Map(worn.slice(0, cap));
 }
@@ -343,17 +348,22 @@ export function wearStep(state: SimState, x: number, y: number): void {
   const wear = (state.wear ??= {});
   const k = `${x},${y}`;
   wear[k] = (wear[k] ?? 0) + 1;
+  (state.wearDay ??= {})[k] = Math.floor(state.tick / 1440) + 1;
 }
 
 /** At dawn, tracks nobody walks start to grow back. */
 export function wearDawn(state: SimState): void {
   const wear = state.wear;
   if (!wear) return;
+  const day = (state.wearDay ??= {});
   for (const k of Object.keys(wear)) {
     const w = (wear[k] as number) * WEAR_KEEP;
-    if (w < 0.5) delete wear[k];
-    else wear[k] = Math.round(w * 100) / 100;
+    if (w < 0.5) {
+      delete wear[k];
+      delete day[k];
+    } else wear[k] = Math.round(w * 100) / 100;
   }
+  for (const k of Object.keys(day)) if (!(k in wear)) delete day[k];
 }
 
 /**

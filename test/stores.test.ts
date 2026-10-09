@@ -73,10 +73,10 @@ describe('winter stores', () => {
     expect(sim.state.granary).toBe(GRANARY_CAP);
   });
 
-  // Moved in bar round 2 and kept visible: with the tier gift cut from 15 to 8 timber the
-  // considerate steward reaches Juniper's granary on day 20 on seed 5 (day 8 on seed 1), and the
-  // larder sits at its cap for five days meanwhile (band: at most two).
-  it.fails('the larder stops sitting at its cap once the granary is asked for (missed on seed 5; see the note)', () => {
+  // Moved in bar round 2 and kept visible as an expected failure (seed 5's larder sat at its cap for
+  // five days while the considerate steward saved for Juniper's granary). Met again in bar round 4,
+  // when the granary comes earlier, so it is a plain test once more.
+  it('the larder stops sitting at its cap once the granary is asked for', () => {
     for (const r of considerate) expect(r.capDays, `seed ${r.seed}: days at the larder cap`).toBeLessThanOrEqual(2);
   });
 

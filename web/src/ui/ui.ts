@@ -20,9 +20,9 @@ import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent,
 import { SPEEDS, type Game } from '../game.js';
 import type { AdResult, RewardedAds } from '../ads.js';
 import { TRADER_GIFT } from '../../../src/sim/sim.js';
-import type { ReplyKind } from '../../../src/sim/replies.js';
+import { offersForCut, type ReplyKind } from '../../../src/sim/replies.js';
 import { replySaid } from '../../../src/content/replies.js';
-import { addLedgerNote, groupAsks, ledgerLine, type LedgerNote } from '../../../src/narrate/board.js';
+import { addLedgerNote, groupAsks, ledgerLine, townWorries, type LedgerNote } from '../../../src/narrate/board.js';
 import { vividMemories } from '../../../src/sim/recall.js';
 import { residentColor } from '../view/meshes.js';
 import { ICONS } from './icons.js';
@@ -625,6 +625,16 @@ export class Ui {
       body.addEventListener('scroll', edges, { passive: true });
       new ResizeObserver(edges).observe(body);
       new MutationObserver(edges).observe(body, { childList: true, subtree: true });
+      if (key === 'folk') {
+        let last = -1;
+        new ResizeObserver(() => {
+          const h = Math.round(body.clientHeight);
+          if (h !== last) {
+            last = h;
+            this.fitAlbum();
+          }
+        }).observe(body);
+      }
     });
     const head = el('header', { class: 'widget-head' });
     const t = el('h2', {});
@@ -879,7 +889,7 @@ export class Ui {
       card.style.setProperty('--who', cssColor(residentColor(id)));
       card.appendChild(portrait(id, 52));
       card.appendChild(el('div', { class: 'folk-name' }, residentDef(id).name));
-      card.appendChild(el('div', { class: 'folk-line' }, known.includes('job') ? factValue(state, r, 'job') : known.length ? 'Getting to know them' : 'Not met yet: say hello'));
+      card.appendChild(el('div', { class: 'folk-line' }, known.includes('job') ? factValue(state, r, 'job') : known.length ? `Getting to know ${residentDef(id).pronouns.obj}` : 'Not met yet: say hello'));
       const pips = el('div', { class: 'pips', title: `${known.length} of ${ALL_FACTS.length} things known` });
       for (let i = 0; i < ALL_FACTS.length; i++) pips.appendChild(el('span', { class: i < known.length ? 'pip on' : 'pip' }));
       card.appendChild(pips);
@@ -887,6 +897,29 @@ export class Ui {
       grid.appendChild(card);
     }
     pane.appendChild(grid);
+    this.fitAlbum();
+  }
+
+  /**
+   * On a desktop the album shows whole rows of cards in the room it has and scrolls row by row
+   * (bar round 4: two cards cut in half at the foot of the widget at 1440x900).
+   */
+  private fitAlbum(): void {
+    if (this.phone) return;
+    const grid = this.folkEl.querySelector<HTMLElement>('.album');
+    const body = this.widgets.get('folk')?.querySelector<HTMLElement>('.widget-body');
+    if (!grid || !body || !body.contains(grid)) return;
+    grid.classList.add('fit');
+    // Keep the last fit when the album cannot be measured (hidden behind a modal, say): clearing
+    // first left it uncapped and cut by the widget.
+    const card = grid.firstElementChild as HTMLElement | null;
+    if (!card) return;
+    const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
+    const h = card.getBoundingClientRect().height;
+    const room = body.getBoundingClientRect().bottom - grid.getBoundingClientRect().top - 6;
+    if (h <= 0 || room <= 0) return;
+    const rows = Math.max(1, Math.floor((room + gap) / (h + gap)));
+    grid.style.maxHeight = `${rows * h + (rows - 1) * gap}px`;
   }
 
   /** What a resident remembers most (2026-10-08): up to three dated memories, in their own words. */
@@ -1442,7 +1475,8 @@ export class Ui {
       if (w.kind === 'more_green') {
         // Grouped by how green it is round each home: "Nothing green nearby yet: Ada, Fen and Wren."
         const by = new Map<string, string[]>();
-        for (const id of w.supporters) {
+        // Only those still in town (bar round 4: Rufus listed two days after he left).
+        for (const id of here) {
           const [, how] = this.greenLine(id).split(': ');
           by.set(how as string, [...(by.get(how as string) ?? []), residentDef(id).name]);
         }
@@ -1469,6 +1503,12 @@ export class Ui {
       }
     }
 
+    // Bar round 4: the town's worries come first, so a low larder is never "a quiet night".
+    const worries = townWorries(state);
+    if (worries.length) {
+      pane.appendChild(el('h3', {}, 'Worries'));
+      for (const w of worries) pane.appendChild(el('div', { class: 'card', 'data-testid': 'worry' }, w));
+    }
     pane.appendChild(el('h3', {}, 'Asked of you'));
     if (requests.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'Nobody is asking for anything just now.'));
     // One card per kind of ask, with everyone's names (bar round 3: ten identical food cards).
@@ -1484,7 +1524,7 @@ export class Ui {
       if (q.kind === 'more_green') card.appendChild(el('p', { 'data-testid': 'green-progress' }, this.greenLine(q.by)));
       // A dream ask quotes the dreamer (bar round 2: "it matters a great deal to them" on every card).
       if (q.kind === 'aspiration') {
-        const title = dreamTitle(state, this.game.sim.resident(q.by));
+        const title = q.dream ?? dreamTitle(state, this.game.sim.resident(q.by));
         if (title) card.appendChild(el('p', { class: 'quiet', 'data-testid': 'dream-quote' }, `“${title.charAt(0).toUpperCase()}${title.slice(1)}.” That is ${who.name}'s hope, and this is part of it.`));
       } else card.appendChild(el('p', { class: 'quiet' }, ASK_HINTS[q.kind]));
       const show = el('button', {}, 'Show me');
@@ -1500,7 +1540,7 @@ export class Ui {
     pane.appendChild(el('h3', {}, 'This morning'));
     const worth = this.morning.filter((e) => e.importance === 'major');
     const rest = this.morning.filter((e) => e.importance !== 'major').length;
-    if (worth.length === 0) pane.appendChild(el('p', { class: 'quiet' }, rest ? 'A quiet night. Nothing needs you.' : 'Nothing new on the board.'));
+    if (worth.length === 0) pane.appendChild(el('p', { class: 'quiet' }, worries.length ? 'Nothing else new this morning.' : rest ? 'A quiet night. Nothing needs you.' : 'Nothing new on the board.'));
     const list = el('ul');
     for (const e of worth) {
       const li = el('li', { class: e.importance });
@@ -1602,7 +1642,7 @@ export class Ui {
       const notes = this.standingNotes.get(id);
       if (notes?.length) {
         const ul = el('ul', { class: 'quiet' });
-        for (const n of notes) ul.appendChild(el('li', {}, ledgerLine(n)));
+        for (const n of notes) ul.appendChild(el('li', {}, this.game.narrator.toSteward(ledgerLine(n))));
         card.appendChild(ul);
       }
       pane.appendChild(card);
@@ -1713,7 +1753,9 @@ export class Ui {
       if (!chip) return;
       const kind = chip.dataset.reply as ReplyKind;
       say(chip.textContent ?? '');
-      this.game.command({ kind: 'reply', who: id, reply: kind });
+      const lc = this.game.narrator.lastCut;
+      const la = this.game.sim.state.residents[id]?.lastAnswer;
+      this.game.command({ kind: 'reply', who: id, reply: kind, ...(lc && la && lc.who === id && lc.t === la.tick ? { cut: lc.cut } : {}) });
       this.renderJournal(true);
     });
     const open = (mode: 'opinion' | 'visit' | 'mend') => {
@@ -1777,11 +1819,17 @@ export class Ui {
     const last = this.game.narrator.lastReply;
     p.reply.textContent = asleep ? `${residentDef(id).name} is asleep. Talk in the morning.` : last && last.who === id ? `“${last.text}”` : '';
     // The replies open to this answer, until one is made.
-    const open = !asleep && last && last.who === id && r.lastAnswer && !r.lastAnswer.replied ? r.lastAnswer.offers : [];
-    const rkey = open.map((o) => o.kind).join('|');
+    // Bar round 4: the replies answer what was actually said (a long answer is trimmed), and are
+    // redrawn for every answer, not only when the kinds change.
+    const la = r.lastAnswer;
+    const cut = this.game.narrator.lastCut;
+    const shownCut = cut && la && cut.who === id && cut.t === la.tick ? cut.cut : null;
+    const open = !asleep && last && last.who === id && la && !la.replied ? (shownCut && la.answer ? offersForCut(r, la.answer, shownCut, la.tick) : la.offers) : [];
+    const chipText = open.map((o) => replySaid(o, (sid) => this.game.narrator.subjectName(sid)));
+    const rkey = `${la?.tick ?? -1}|${chipText.join('|')}`;
     if (p.replies.dataset.key !== rkey) {
       p.replies.dataset.key = rkey;
-      p.replies.replaceChildren(...open.map((o) => el('button', { class: 'chip reply', 'data-reply': o.kind, 'data-testid': `reply-${o.kind}` }, replySaid(o, (sid) => this.game.narrator.subjectName(sid)))));
+      p.replies.replaceChildren(...open.map((o, i) => el('button', { class: 'chip reply', 'data-reply': o.kind, 'data-testid': `reply-${o.kind}` }, chipText[i] as string)));
     }
     p.replies.hidden = open.length === 0;
     const answered = p.reply.textContent !== '';

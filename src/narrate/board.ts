@@ -1,7 +1,8 @@
 // What the notice board and the standing ledger show, as pure functions so a test checks the
 // same rule the page uses (bar round 3: ten identical "asks for more food" cards; five
 // "kept me waiting N days" lines in a row).
-import type { Request } from '../sim/types.js';
+import { dayOfMeals } from '../sim/hunger.js';
+import type { Request, SimState } from '../sim/types.js';
 
 /** Open asks grouped into cards: one per kind, a dream ask per building wanted. */
 export function groupAsks(requests: readonly Request[]): Request[][] {
@@ -39,4 +40,16 @@ export function addLedgerNote(notes: LedgerNote[], note: LedgerNote): LedgerNote
 
 export function ledgerLine(n: LedgerNote): string {
   return `${n.up ? '▲' : '▼'} Day ${n.day}: ${n.reasons.join('; ')}${n.also.length ? ` · ${n.up ? '▼' : '▲'} ${n.also.join('; ')}` : ''}`;
+}
+
+/**
+ * What the town is worried about, for the top of the board (bar round 4: "A quiet night. Nothing
+ * needs you." with six food for eleven people).
+ */
+export function townWorries(state: SimState): string[] {
+  const out: string[] = [];
+  const need = dayOfMeals(state);
+  const have = Math.floor(state.stock.food + (state.granary ?? 0));
+  if (need > 0 && have < need) out.push(have <= 0 ? `The larder is empty, and everyone knows it.` : `The larder holds ${have} food: less than a day's meals for ${Math.round(need)}. People are starting to worry.`);
+  return out;
 }

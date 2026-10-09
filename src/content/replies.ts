@@ -25,11 +25,13 @@ export function replySaid(offer: ReplyOffer, subject?: (id: string) => string): 
     case 'explain':
       return about ? `Let me explain why ${ownNote(about)}.` : REPLY_SAID.explain;
     case 'agree':
+      if (offer.tone === 'hope') return offer.rest ? 'Take your time.' : 'I hope it comes true.';
       if (offer.tone === 'mood') return offer.well ? "Good. I'm glad." : "That's hard. I'm listening.";
       if (offer.tone === 'complaint') return "That's fair. I hear you.";
       if (offer.tone === 'praise') return 'Thank you. That means something.';
       return about && subject ? `That's fair, about ${subject(about)}.` : REPLY_SAID.agree;
     case 'disagree':
+      if (offer.tone === 'hope') return offer.rest ? "Don't settle for too little." : 'Is that really what you want?';
       if (offer.tone === 'mood') return offer.well ? "You don't seem it." : "It can't be all bad.";
       if (about === 'steward') return offer.tone === 'praise' ? "I don't deserve that." : "I don't see myself that way.";
       return about && subject ? `I don't see ${subject(about)} that way.` : REPLY_SAID.disagree;
@@ -131,5 +133,27 @@ Object.assign(REPLY_LINES, {
     warm: ["Oh, good. I thought it was just me.", "See? You get it.", "Isn't it nice to agree?", "I'm glad you think so too.", 'That makes two of us.'],
     chatty: ['Yes! Exactly! See!', 'Ha! Great minds!', 'Finally, someone agrees with me!', "That's what I keep saying!", 'Two of us! A movement!'],
     dreamy: ['Then we are looking at the same sky.', 'Agreed, like two notes in tune.', 'It is good to stand on the same side.', 'Yes. You see it too.', 'Then the thought is shared.'],
+  },
+  // Bar round 4: a hope cheered on, doubted by the steady, doubted by the touchy.
+  encouraged: {
+    plain: ['Thanks. Means something, that.', "We'll see. But thanks.", 'Good to hear.', "Ta. I'll keep at it.", 'Right. Onward, then.'],
+    formal: ['That is kind of you. I shall hold you to it.', 'Thank you. It helps to be believed in.', 'I am obliged. One does like a little encouragement.', 'Then I shall try not to disappoint you.', 'Thank you. I mean to see it through.'],
+    warm: ["Oh, thank you. That really helps.", "You're sweet. I hope so too.", "That means more than you know.", "Fingers crossed, then! Thank you.", "Thank you. I'll tell you how it goes."],
+    chatty: ["You think so? You do? Brilliant!", 'Ha! With you on my side, how can I fail!', "Yes! It will! I'll make sure of it!", "That's the spirit! Mine, I mean! And yours!", 'Oh, I could hug you! I won\'t. But I could!'],
+    dreamy: ['Then it is a little more real now.', 'A wish said twice grows roots.', 'I shall carry that with me.', 'Thank you. It glows a little brighter.', 'Then two of us are hoping.'],
+  },
+  mulled: {
+    plain: ["Hm. Fair question. Still want it.", "I've asked myself that. Yes.", "Maybe. I'll think on it.", 'Good question. Not sure.', "Honest of you. I'll chew on it."],
+    formal: ['A fair question. I believe it is, but I shall consider it.', 'You are right to ask. I have asked myself the same.', 'Hm. Perhaps I want the idea of it more than the thing.', 'I shall think on that. Thank you for asking it plainly.', 'It is, I think. But I am glad someone asked.'],
+    warm: ["Oh. Do you know, I'm not sure. Let me think.", "That's a good question, actually. Yes, I think so.", "Hm. You might have a point. I'll mull it over.", "I think so. But thank you for asking, really.", "Nobody's asked me that before. I'll think about it."],
+    chatty: ['Ooh! Good question! Let me think! Yes! Probably!', 'Is it? Is it! Hm! I think so!', "Now you've got me wondering!", "Ha! Sharp! I'll have to think about that one!", 'Do I? I do! Mostly! I think!'],
+    dreamy: ['Perhaps it is the wanting I love, and not the thing.', 'I shall sit with that question a while.', 'You have turned it in the light for me.', 'Maybe. Dreams are slippery.', 'I will ask the evening and see what it says.'],
+  },
+  bristled: {
+    plain: ["It is. Thanks for asking.", 'Yes. It is.', "Didn't ask for a vote.", 'My business, that.', "I know what I want."],
+    formal: ['I am quite certain, thank you.', 'I hardly think that is yours to judge.', 'I know my own mind, I assure you.', 'Yes. I did not expect to be questioned on it.', 'I shall pretend you did not ask that.'],
+    warm: ["Oh. Yes, it is. I thought you'd be pleased for me.", "That's a bit deflating, honestly.", "I do know what I want, you know.", "Oh. Well. I thought you'd understand.", 'That stung a little.'],
+    chatty: ['Of course it is! What a question!', "Excuse me! It's my dream!", 'Yes! Obviously! Honestly!', "Don't you start!", 'Rude! But yes!'],
+    dreamy: ['You have put a crack in it.', 'It was whole until you asked.', 'Some things are not for doubting aloud.', 'The wish goes quiet when it is questioned.', 'I will keep it closer, then.'],
   },
 });

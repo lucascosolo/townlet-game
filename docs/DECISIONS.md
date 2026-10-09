@@ -2,6 +2,54 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-09: Bar round 4: replies that answer what was said, a mood that moves, no ghosts, opinions with an edge
+
+**The review** (`docs/reviews/2026-10-09-bar-review-4.md`) scored the game 7, 6, 7, 7, 6. It credits round 3 with removing the raw text, refusals that mention you, a famine that bites, neglect that drives people out, and standing that spreads from +1.00 to −0.70. What holds it under now: reply chips and stage directions that do not match the answer just given, a mood that ordinary play never moves, dreams and pages that keep people who have left (and one dream that finishes itself), opinions of people and places that are nearly all warm with every founder sharing the same two habits, answers that still carry stock facts, a few raw fact and page lines, dreams that converge on gifts, and the Folk widget cut off at 900 px tall. Round 4 takes all eight problems in rank order.
+
+**Chosen:**
+- **Replies answer what was said.**
+  - The chips are redrawn for every answer, not only when the kinds change.
+  - Offers are built from what the answer actually says after it is trimmed. A chip that names a subject names one the answer named. Sorry and explain answer the grievance the answer states, not the strongest one they hold. An answer that carries a grievance is never offered "Thank you" for praise.
+  - "What are you hoping for?" gets two more replies: encouragement ("I hope it comes true") and doubt ("Is that really what you want?"). Encouragement warms; doubt is taken as care by the steady and as a slight by the touchy.
+  - A stage direction is picked by how they stand with you: nobody who thinks ill of you gives you a warm look.
+- **Everyday play moves mood.**
+  - A larder below a day's meals is a worry everyone shares, a little before it becomes a shortage, and the board says so.
+  - Losing a place someone loved weighs on their mood for days, not only in their feelings.
+  - Standing with you weighs more in mood at the low end, so a neglected town is visibly glummer while it empties, and "how are you" follows.
+- **No ghosts, and nothing finishes by itself.**
+  - A dream step that needs a building only the steward can give (Bram's ovens) waits for it and lets go after eight days, as the others do; it never completes on the nine-day rule.
+  - A gift dream for someone who has left is let go the next morning.
+  - Board lines, progress lines and season notes count only those still in town.
+  - A dream's ask card quotes the dream that posted the ask.
+- **Opinions with an edge.**
+  - Places can be disliked: values and the noise or bustle a place gives off produce dislikes ("too loud at night", "an eyesore"), with their own sentence shapes.
+  - A cool relationship shows when you ask about that person.
+  - The noise and rest facts are given only to those who stand out among the cast, so they tell people apart.
+  - A week of the larder below a day's meals keeps anyone from the top of the standing scale.
+- **Answers without stock facts.** A known fact is added only when the question is about it or the player has not heard it; the same verdict on a subject is never said twice in one answer; between dreams the hope answer says what they are enjoying meanwhile.
+- **Raw lines.** Fact lines are whole sentences with a capital and the right name; standing notes say "you"; a proposal shown in a modal does not say "approve on the board"; one morning's log never carries the same ask line more than twice; a "you built X for me" memory names what was built that day.
+- **Dreams that do not converge.** "Do something for the steward" counts against the gift cap; each trade has a second dream; a hope answer says how the dream is going.
+- **Layout.** The Folk widget gets the rest of the column at 900 px tall; worn ground fades back to grass when it is not walked for a few days.
+
+**Settled while building (recorded so the numbers are not a mystery later):**
+- **What was said decides the replies.** The narrator trims a long answer; it records what survived (topics kept, memory, reason, and whether the words named the subject), the chips are built from that, and a reply carries it as part of its command, so a save replays the same offer. "That's fair, about the commons" is not offered under "Is it a crime to be this happy?", which never names it.
+- **An answer that holds anything against you is a complaint** for the chips, whatever the rest of it says, so "Thank you" is never offered under "you kept me waiting".
+- **Hope answers between dreams get two replies too:** "Take your time" and "Don't settle for too little".
+- **A look follows standing:** below zero, a kind reply gets an even look ("nods", "takes that in"), never a warm one; above 0.5, a push-back gets an even look, never a cold one.
+- **Mood terms (each kept out of the slow decision to leave, as town hunger is):** a larder below a day's meals (two each, four in winter), up to 0.06; a loved place lost, up to 0.09, fading over four days; below zero standing, 0.15 per unit; asks left waiting over a day (0.02 each, up to 0.06) and asks lapsed in the last fortnight (0.03 each, up to 0.09). Together they take at most 0.22: past that it is resignation (uncapped, the year soak's neglected towns sat at a mean mood of 0.29).
+- **A low larder caps standing rather than counting against you.** The first version held a low larder against the steward every dawn; under the year soak's steward, who never feeds anyone, that sank whole towns to −1 and emptied them (24 of 24 gone). Now, from the second low dawn, nobody stands above 0.85 with you while it lasts.
+- **"A lovely spot" needs a visit that scores in the top fifth of what they like** (0.7; 0.5 and 0.6 still left it 59% and 43% of settled place views), and a visit in the bottom sixth leaves a dislike ("isn't my sort of place", or "spoils the view" for a workplace seen by someone who loves the green) that settles as readily as a liking.
+- **A neighbour's liking is counted from where acquaintance starts (0.2), not zero,** and someone known well but not liked is "cool": civil, not close.
+- **The needs and dislikes facts are relative to the rest of the town:** the need they feel more than most, the thing they mind more than most, or "easy to please" and "not much bothers her".
+- **The third ask of a kind in one morning is a short line** ("Fen asks for more food too"), so the log never carries the same quoted ask more than twice.
+- **A dream about someone who has left is put away the next morning**, except a dream of remembering someone gone, which is about someone who left by design.
+- **The Folk album keeps at least 260 px** (was 210): with Goals grown, 210 was less than one row of cards and the summary, so a card was cut; when both do not fit, the left column scrolls, as before.
+- **The neglected town's measure is met in part:** 0.083 to 0.140 by seed; seed 2 lost its two unhappiest residents and gained a newcomer, so the mean of those still there rose. Reported, not tuned for that seed.
+
+**Rejected:**
+- *Free-text replies.* Still four moves (five on hopes); the work is in their fitting.
+- *Raising every mood weight.* The year soak sits on a knife edge; mood moves through what happens (a low larder, a lost place, standing at the low end), not a bigger multiplier on everything.
+
 ## 2026-10-09: Bar round 3: no raw text, hunger that hurts, replies with substance, shorter answers, a tidier board
 
 **The review** (`docs/reviews/2026-10-09-bar-review-3.md`) scored the game 6, 5, 7, 6, 6. It credits round 2 with replies that name the grievance, proposals every few days that lapse as promised, residents who give up waiting and warn before leaving, and a phone start without a modal. What still holds it under: raw ids and broken grammar on screen, a famine nobody feels, replies that are one chip and a stock answer, answers that are stitched lists, and a board that repeats itself. Round 3 takes all nine problems in rank order, plus the round-2 misses (the year soak under total neglect, the hungry week's 0.10, the favours refusal rate).

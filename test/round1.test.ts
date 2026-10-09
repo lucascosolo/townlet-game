@@ -237,8 +237,12 @@ describe('round 1, criterion 3: talking back', () => {
       const t0 = r.rel[STEWARD]!.trust;
       const a0 = r.rel[STEWARD]!.affinity;
       // Bar round 3: disagreeing with praise is modesty, not push-back, so this pushes back on a view.
-      const other = sim.state.order.find((o) => o !== id)!;
-      sim.talk(id, 'opinion', `r:${other}`);
+      // Bar round 4: on day 2 some neighbours draw no view at all (liking counts from acquaintance), so
+      // ask about one they have a view of.
+      for (const o of sim.state.order.filter((x) => x !== id)) {
+        sim.talk(id, 'opinion', `r:${o}`);
+        if (r.lastAnswer?.offers.some((x) => x.kind === 'disagree')) break;
+      }
       const res = sim.reply(id, 'disagree');
       expect(res?.stance).toBe('differ');
       void kind;

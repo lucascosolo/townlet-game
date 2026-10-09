@@ -2,6 +2,26 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-09: Bar round 6: an economy that credits a rescue, grievances in their own voice, minds that agree with themselves
+
+**The review** (`docs/reviews/2026-10-09-bar-review-6.md`) scored the game 7, 7, 7, 8, 8. Opinionated and Expressive pass for the first time. It credits round 5 with standing earned by deeds and lost by neglect, a famine that bites, replies that land by what was said, a log that is there from the first look, and a board that no longer says nothing needs you. What holds it under now: an economy that starves the first fortnight of timber and cannot credit a winter rescue of the larder; grievance notes in the third person in residents' own mouths, the chips and the You tab; minds that hold opposite views of one place, praise the steward while their bubble says they are cross, or top praise at middling standing; a dreamer who does not grieve the building their dream produced; Folk still squeezed out beside the winter stores card; a handful of raw lines; a proposal that greets a phone player before the town; repetition in proposals, first steps, answer length and praise; "explain" offered for things that were never decisions; and a worn slab. Round 6 takes all ten in rank order.
+
+**Chosen:**
+- **A rescue counts.** Building a food place after a food ask is posted answers it, whatever the larder holds; the larder decides only whether the worry stays. A food ask lapses after seven days, as the others do. Timber comes in faster in the first fortnight, and a build refused for timber says where timber comes from.
+- **Grievances are in the first person.** The note is stored as they would say it ("never got me a fuller larder"); saved games are rewritten on load; the third person is made only where the narrator reports it.
+- **Minds agree with themselves.** When a view of a place settles, its opposite on the same place is retired. The steward's top praise needs standing above 0.6 and nothing held against them. Someone cross with the steward who still thinks well of them says what they hold against them. Someone with a shared memory of a neighbour does not say they hardly know them. An About page does not list a view of the steward that pulls against their standing.
+- **A dream's building is grieved.** The building a dream step asked for is held dear by its dreamer from the day it is built; taking it away is a loss at full weight.
+- **Folk keeps a row.** The left column gives Folk a whole row of cards before Goals takes the rest, whatever Goals holds.
+- **Raw lines.** No lowercase "someone" for a missing partner; the winter stores granary ask is its own ask, never quoted as another dream; dream lines that said "it" name what they mean; `new=1` with a named seed opens that seed.
+- **No decision before the town.** Tapping tabs after Begin is not looking at the town: the first proposal waits for a tap on the town itself or two hours of play.
+- **Less repetition.** A proposal rests a full month after it is answered either way; a first step that waits on the world is done after a few days; answers run to three sentences, four with a fact; a "nothing to say" fact does not close an answer that already said something; no tic before a bare subject; the steward's reasons have several wordings each.
+- **Explain is for decisions.** Explain is offered for a proposal answered, not for an ask left unmet; sorry still is.
+- **Worn ground is tracks, not a slab.** At most a sixteenth of the valley shows wear, and never a whole two-by-two block.
+
+**Rejected:**
+- *Removing the late timber pile.* The review saw timber pile up once the famine ended, but a pile is the reward for a working woodlot; the early famine is what stopped play, so that is what changes.
+- *A "promise" reply for a neglected ask.* The review suggested it; sorry already answers a neglected ask, and a promise needs a way to be held to it, which is a larger piece of work.
+
 ## 2026-10-09: Bar round 5: standing that is earned, replies that land by what was said, a log that is there, nothing that contradicts itself
 
 **The review** (`docs/reviews/2026-10-09-bar-review-5.md`) scored the game 7, 6, 7, 7, 7. It credits round 4 with chips that follow each answer, two replies on hopes, disliked places and cool neighbours, and neglect that drives people out. What holds it under now: everyone ends up adoring the steward because talking is rewarded in itself; replies land the same way whatever was said; the log is blank after the intro and Folk is squeezed out by the stores card; the board says nothing needs you when something does; a handful of raw lines; opinions that contradict their holder; sameness in facts, dreams, bios and praise; and an economy that starves early and hides hunger late. Round 5 takes all eight in rank order.

@@ -223,13 +223,14 @@ describe('round 2, criterion 3: troubles reach mood', () => {
       for (let day = 13; day <= 18; day++) expect(text, `seed ${seed} day ${day}`).toMatch(new RegExp(`Day ${day}[\\s\\S]*?thin supper[\\s\\S]*?Day ${day + 1}`));
       expect(forages, `seed ${seed} forages`).toBeGreaterThanOrEqual(1);
     }
-    // Measured: 0.09 on seed 1, 0.10 to 0.13 on the rest. The 0.10 declared is the expected failure below.
+    // Measured: 0.08 on seed 1, 0.10 to 0.12 on the rest. The 0.10 declared is the expected failure below.
     for (const [i, d] of drops.entries()) expect(d, `seed ${SEEDS[i]} drop ${d.toFixed(3)}`).toBeGreaterThanOrEqual(0.08);
   });
 
   // Missed on one seed and kept visible: with foragers eating as they pick (needed so a hungry
-  // town does not starve in the year soak), seed 1's hungry week lowers mean mood by 0.09, not 0.10.
-  it.fails('a larder forced empty for a week lowers mean mood by 0.10 on every seed (missed: 0.09 on seed 1; see the note)', { timeout: 900_000 }, () => {
+  // town does not starve in the year soak), seed 1's hungry week lowers mean mood by 0.08, not 0.10.
+  // Weighing hunger harder (3 against 2.5) got it to 0.09 and made a year-soak town lose nine of 23.
+  it.fails('a larder forced empty for a week lowers mean mood by 0.10 on every seed (missed: 0.08 on seed 1; see the note)', { timeout: 900_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('bakery', seed, 'none', { scripted: false });
       sim.runUntil(at(12, 12));

@@ -10,8 +10,9 @@ import { MIND_LINES, TO_STEWARD_LINES } from '../content/thoughts.js';
 import { DAY_WORDS, RECALL_LINES } from '../content/recall.js';
 import { FESTIVALS } from '../sim/story/director.js';
 import { REPLY_LINES, replySaid } from '../content/replies.js';
+import { answerTone, cutAnswer, type AnswerCut } from '../sim/replies.js';
 import { FAVOUR_DONE, FAVOUR_NO, FAVOUR_YES, TALK_HOPE,
-  TALK_HOPE_ONE, TALK_HOPE_DONE, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON, TALK_BUT } from '../content/talk.js';
+  TALK_HOPE_ONE, TALK_HOPE_DONE, TALK_HOPE_LET_GO, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON, TALK_BUT } from '../content/talk.js';
 import { firstPerson } from '../sim/mind/thoughts.js';
 import { opinion } from '../sim/mind/memory.js';
 import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
@@ -44,8 +45,20 @@ function plainVerb(v: string): string {
 const FIRST_PERSON: Person = { subj: 'I', obj: 'me', poss: 'my' };
 
 /** A reply answered with a look, when every line for it has been said lately (bar round 3). */
-const GESTURES_WARM = ['smiles', 'nods slowly', 'looks pleased', 'gives you a warm look', 'pats your arm', 'laughs softly', 'nods, satisfied'];
-const GESTURES_COOL = ['shrugs', 'frowns', 'looks away', 'sniffs', 'says nothing', 'folds {poss} arms', 'purses {poss} lips'];
+export const GESTURES_WARM = ['smiles', 'nods slowly', 'looks pleased', 'gives you a warm look', 'pats your arm', 'laughs softly', 'nods, satisfied'];
+/** The third and later ask of a kind in one morning (bar round 4). */
+const ASK_TOO: Record<string, string> = {
+  more_food: 'asks for more food too',
+  more_green: 'would like more green too',
+  somewhere_to_sit: 'would like somewhere to sit too',
+  place_to_gather: 'asks for a place to gather too',
+  quieter_home: 'asks for quieter nights too',
+  workplace: 'asks for work too',
+  aspiration: 'asks for help with a dream too',
+};
+export const GESTURES_COOL = ['shrugs', 'frowns', 'looks away', 'sniffs', 'says nothing', 'folds {poss} arms', 'purses {poss} lips'];
+/** Neither warm nor cold (bar round 4): what someone who thinks ill of you does when you say something kind, or a friend when you push back. */
+export const GESTURES_EVEN = ['nods', 'takes that in', 'considers that', 'tilts {poss} head', 'thinks about it', 'is quiet a moment', 'nods once'];
 
 /** Building names that are plural take a plural verb (bar round 3: "the garden plots is a lovely spot"). */
 const PLURAL_NAMES = ['garden plots', 'beehives'];
@@ -91,6 +104,7 @@ export function importanceOf(e: SimEvent): Importance {
     case 'disturbed_sleep':
     case 'shortage':
     case 'dream_let_go':
+    case 'dream_gone':
     case 'aspiration':
     case 'plot_cleared':
     case 'arrived':
@@ -487,6 +501,9 @@ export class Narrator {
       case 'forage':
         this.live(e.t, `${this.name(e.who)} goes ${this.at(e.placeId)} with a basket and comes back with ${e.food} food. ${this.voice(e.who, SPEECH.forage)}`);
         break;
+      case 'dream_gone':
+        this.live(e.t, `${this.name(e.who)} puts away what ${residentDef(e.who).pronouns.subj} had in mind for ${this.name(e.other)}. ${this.name(e.other)} is gone from the valley now.`);
+        break;
       case 'dream_let_go':
         this.live(e.t, `${this.name(e.who)} stops waiting for ${/^[aeiou]/i.test(buildingDef(e.wants).name) ? 'an' : 'a'} ${buildingDef(e.wants).name.toLowerCase()}. ${this.voice(e.who, SPEECH.letGo)}`);
         break;
@@ -518,12 +535,23 @@ export class Narrator {
       case 'belief_faded':
         this.pushDigest(() => `${this.name(e.who)} has stopped dwelling on how ${this.statement(e.who, e)}`);
         break;
-      case 'request_posted':
+      case 'request_posted': {
+        // Two people a morning say it in their own words; after that it is "asks for it too" (bar
+        // round 4: "We're running out of food. Could we grow more?" five times in one morning).
+        const key = `${dayOf(e.t)}|${e.request.kind}|${e.request.wants ?? ''}`;
+        const n = (this.asksToday.get(key) ?? 0) + 1;
+        this.asksToday.set(key, n);
+        if (this.asksToday.size > 64) for (const k of [...this.asksToday.keys()].slice(0, 32)) this.asksToday.delete(k);
+        if (n > 2) {
+          this.pushBoard(() => `${this.name(e.request.by)} ${ASK_TOO[e.request.kind] ?? 'asks for the same'}${e.request.wants ? `: ${/^[aeiou]/.test(singularName(e.request.wants)) ? 'an' : 'a'} ${singularName(e.request.wants)}` : ''}.`);
+          break;
+        }
         this.pushBoard(
           () =>
             `${this.name(e.request.by)} asks ${this.you ? 'you' : 'the steward'}: ${this.voice(e.request.by, ASKS[e.request.kind], { s: this.subjectName(e.request.subject), what: e.request.wants ? singularName(e.request.wants) : 'place' })}`,
         );
         break;
+      }
       case 'request_closed':
         if (e.request.status === 'resolved') break;
         this.pushBoard(
@@ -534,7 +562,11 @@ export class Narrator {
         if (e.phase === 'made') this.pushBoard(() => `Town Wish for the season: ${e.wish.label}. (${this.names(e.wish.supporters)} would like this.)`);
         else if (e.phase === 'granted') this.announce(e.t, `Wish granted: ${e.wish.label.toLowerCase()}. The whole town feels it.`);
         else if (e.phase === 'dropped') this.pushBoard(() => `The wish for ${e.wish.label.toLowerCase()} leaves with ${this.names(e.wish.supporters)}.`);
-        else this.pushBoard(() => `The season ended without ${e.wish.label.toLowerCase()}. ${this.names(e.wish.supporters)} had hoped for it.`);
+        else {
+          // Only those still in town (bar round 4).
+          const here = e.wish.supporters.filter((id) => !this.state.residents[id]?.departed);
+          this.pushBoard(() => `The season ended without ${e.wish.label.toLowerCase()}.${here.length ? ` ${this.names(here)} had hoped for it.` : ''}`);
+        }
         break;
       case 'standing': {
         const why = e.reasons[0] ?? '';
@@ -577,7 +609,7 @@ export class Narrator {
       case 'dilemma_posted':
         this.pushBoard(
           () =>
-            `${this.name(e.dilemma.proposer)} proposes: ${this.voice(e.dilemma.proposer, PROPOSALS[e.dilemma.type])} (Approve or decline on the board.)`,
+            `${this.name(e.dilemma.proposer)} proposes: ${this.voice(e.dilemma.proposer, PROPOSALS[e.dilemma.type])} (Yours to decide.)`,
         );
         break;
       case 'dilemma_closed':
@@ -630,8 +662,11 @@ export class Narrator {
         const def = residentDef(e.who);
         const options = REPLY_LINES[e.stance]?.[def.voice.register] ?? REPLY_LINES[e.stance]?.plain ?? [];
         const fresh = options.filter((o) => e.t - (this.saidBy.get(`${e.who}|${o}`) ?? -Infinity) >= 7 * 1440 && e.t - (this.saidAny.get(o) ?? -Infinity) >= 8 * 1440);
-        const warmish = ['warm', 'forgiven', 'convinced', 'owned', 'insist', 'with_you', 'seen'].includes(e.stance);
-        const gestures = (warmish ? GESTURES_WARM : GESTURES_COOL).map((g) => `(${this.name(e.who)} ${g.replace('{poss}', def.pronouns.poss)}.)`);
+        const warmish = ['warm', 'forgiven', 'convinced', 'owned', 'insist', 'with_you', 'seen', 'encouraged', 'mulled'].includes(e.stance);
+        // A look follows how they stand with you (bar round 4: a warm look after "you have lost my good opinion entirely").
+        const standing = this.state.residents[e.who]?.rel.steward?.affinity ?? 0;
+        const gestureSet = warmish ? (standing < 0 ? GESTURES_EVEN : GESTURES_WARM) : standing > 0.5 ? GESTURES_EVEN : GESTURES_COOL;
+        const gestures = gestureSet.map((g) => `(${this.name(e.who)} ${g.replace('{poss}', def.pronouns.poss)}.)`);
         const freshGesture = gestures.filter((g) => e.t - (this.saidBy.get(`${e.who}|${g}`) ?? -Infinity) >= 7 * 1440);
         let words: string;
         if (fresh.length > 0) words = this.utter(e.who, REPLY_LINES[e.stance], {}, 7);
@@ -640,7 +675,8 @@ export class Narrator {
           this.saidBy.set(`${e.who}|${words}`, e.t);
         } else words = '';
         this.lastReply = { who: e.who, t: e.t, text: words };
-        const offer = this.state.residents[e.who]?.lastAnswer?.offers.find((o) => o.kind === e.reply) ?? { kind: e.reply };
+        const last = this.state.residents[e.who]?.lastAnswer;
+        const offer = last?.used ?? last?.offers.find((o) => o.kind === e.reply) ?? { kind: e.reply };
         this.lastSaid = { who: e.who, t: e.t, text: replySaid(offer, (id) => this.subjectName(id)) };
         // Not every remark needs an answer: with nothing fresh to say, they just listen.
         this.live(e.t, words ? `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)}: "${words}"` : `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)} listens.`);
@@ -983,6 +1019,10 @@ export class Narrator {
   /** `${who}|${tic}` -> the day it was last used, so a tic is heard at most once a day. */
   private ticUsed = new Map<string, number>();
 
+  /** Asks posted per morning and kind, so the third alike is a short line (bar round 4). */
+  private readonly asksToday = new Map<string, number>();
+  /** What of the last answer was said (bar round 4): the replies offered and taken follow it. */
+  lastCut: { who: string; t: number; cut: AnswerCut } | null = null;
   /** The last thing a resident said to the steward, for the talk panel. */
   lastReply: { who: string; t: number; text: string } | null = null;
   /** What the steward last said in reply, in words (bar round 2: the chips and the chat show the same). */
@@ -1002,7 +1042,7 @@ export class Narrator {
       case 'mind':
         return a.topics && a.topics.length > 0 ? a.topics.map(mind).join(' ') : 'Nothing much, honestly.';
       case 'hope':
-        if (!a.hope || a.hope.done || !a.hope.next) return this.utter(who, TALK_HOPE_DONE);
+        if (!a.hope || a.hope.done || !a.hope.next) return this.utter(who, a.hope?.outcome === 'let_go' || a.hope?.outcome === 'gone' ? TALK_HOPE_LET_GO : TALK_HOPE_DONE, { x: a.hope?.meanwhile ?? 'the quiet' });
         // When the next step is the dream itself ("make something for Marlow, in the evenings"), say it once.
         if (a.hope.next.toLowerCase().includes(a.hope.title.toLowerCase())) return this.utter(who, TALK_HOPE_ONE, { title: firstPerson(lower(a.hope.next)) });
         return this.utter(who, TALK_HOPE, { title: firstPerson(lower(a.hope.title)), next: firstPerson(lower(a.hope.next)) });
@@ -1010,8 +1050,21 @@ export class Narrator {
       case 'me': {
         const person = !!a.about?.startsWith('r:');
         const lines = a.question === 'me' ? TALK_ME[a.band ?? 'neutral'] : (person ? TALK_OPINION_PERSON : TALK_OPINION)[a.band ?? 'neutral'];
-        const head = this.utter(who, lines, { s: a.about ? this.subjectName(a.about) : 'that' });
-        const why = a.because && a.band !== 'neutral' ? this.utter(who, TALK_REASON, { statement: this.spoken(who, a.because) }) : '';
+        const name = a.about ? this.subjectName(a.about) : 'that';
+        const head = this.utter(who, lines, { s: name });
+        // One verdict per subject in one breath (bar round 4: "The flower bed is all right. The flower
+        // bed is a lovely spot."; "You listen. Well, you listen."): the reason calls the subject "it"
+        // (or by pronoun) when the head already named it, and goes when it only repeats the head.
+        let statement = a.because && a.band !== 'neutral' ? this.spoken(who, a.because) : '';
+        const flat = (x: string) => this.toSteward(x).toLowerCase().replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
+        if (statement && flat(head).includes(flat(statement))) statement = '';
+        if (statement && a.because && a.because.subject === a.about && name !== 'that' && statement.toLowerCase().startsWith(name.toLowerCase()) && head.toLowerCase().includes(name.toLowerCase())) {
+          const rest = statement.slice(name.length).trimStart();
+          const person = a.about?.startsWith('r:') ? residentDef(a.about.slice(2)).pronouns.subj : null;
+          const pron = /^are\b/.test(rest) ? 'they' : person ?? 'it';
+          statement = `${pron} ${pron === 'they' ? rest.replace(/^is\b/, 'are').replace(/^was\b/, 'were').replace(/^has\b/, 'have') : rest}`;
+        }
+        const why = statement ? this.utter(who, TALK_REASON, { statement }) : '';
         const but = a.but ? this.utter(who, TALK_BUT, { x: deedClause(a.but.note) }) : '';
         return [head, why, but].filter(Boolean).join(' ');
       }
@@ -1034,7 +1087,15 @@ export class Narrator {
               : `what ${p.subj} ${p.subj === 'they' ? 'think' : 'thinks'} of ${a.about ? this.subjectName(a.about) : 'things'}`;
     // A fact this question reveals (M4 Folk album) is said in the reply, so the album learns what you were told.
     const fact = nextFact(this.state, e.who, a.question, a.about);
-    const told = fact ? factSaid(this.state, this.state.residents[e.who]!, fact) : '';
+    let told = fact ? factSaid(this.state, this.state.residents[e.who]!, fact) : '';
+    // "Ada? One of the best. Ada is my closest friend here." names her once (bar round 4).
+    if (told && a.question === 'opinion' && a.about?.startsWith('r:')) {
+      const other = this.subjectName(a.about);
+      if (told.startsWith(`${other} `)) {
+        const subj = residentDef(a.about.slice(2)).pronouns.subj;
+        told = `${subj.charAt(0).toUpperCase()}${subj.slice(1)} ${told.slice(other.length + 1)}`.replace(/^They is\b/, 'They are');
+      }
+    }
     // A memory they bring up (2026-10-08), in their own words, after the answer itself.
     let remembered = a.memory ? this.memoryLine(e.who, a.memory, this.you) : '';
     // Four sentences at most (bar round 3): a fact takes the place of a second thing on their
@@ -1060,6 +1121,11 @@ export class Narrator {
     }
     const words = [head, remembered, told].filter(Boolean).join(' ');
     this.lastReply = { who: e.who, t: e.t, text: words };
+    // What was actually said, so the replies answer it (bar round 4).
+    const cut: AnswerCut = { topics: shown.topics?.length ?? 0, memory: !!remembered, because: !!shown.because };
+    const subject = answerTone(cutAnswer(a, cut)).subject;
+    if (subject && subject !== STEWARD_ID && !words.toLowerCase().includes(this.subjectName(subject).toLowerCase())) cut.unnamed = true;
+    this.lastCut = { who: e.who, t: e.t, cut };
     this.live(e.t, `${this.you ? 'You ask' : 'The steward asks'} ${name} ${asking}. "${words}"`);
   }
 

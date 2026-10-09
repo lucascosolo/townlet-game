@@ -41,6 +41,12 @@ export interface Stage {
    * already there).
    */
   until?: string;
+  /**
+   * A building this step cannot do without and only the steward can give (bar round 4: Bram's
+   * "find a bakery to work in" completed by itself in a town with no bakery). Such a step never
+   * finishes on the nine-day rule; it waits, and lets go after eight days like a dream ask.
+   */
+  needs?: string;
 }
 
 export interface AspirationDef {
@@ -134,6 +140,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       {
         id: 'ovens',
         next: 'Find a bakery to work in',
+        needs: 'bakery',
         check: (h, r) => {
           const job = r.jobId !== null ? h.state.buildings.find((b) => b.id === r.jobId) : undefined;
           return job?.type === 'bakery';
@@ -387,6 +394,21 @@ function formNewDream(h: AspirationHost, r: ResidentState): void {
 /** Each morning: advance whoever's next stage has come about, and let new dreams form. */
 export function aspirationMorning(h: AspirationHost): void {
   for (const r of active(h.state)) {
+    // A dream about someone who has left is put away (bar round 4: "make something for Rufus" after he left).
+    const subj = r.aspiration.subject;
+    if (!r.aspiration.done && subj?.startsWith('r:') && h.state.residents[subj.slice(2)]?.departed) {
+      r.aspiration.done = true;
+      r.aspiration.outcome = 'gone';
+      r.aspiration.doneTick = h.state.tick;
+      for (const q of h.state.requests) {
+        if (q.by !== r.id || q.kind !== 'aspiration' || q.status !== 'open') continue;
+        q.status = 'resolved';
+        q.closedTick = h.state.tick;
+        h.emitEvent({ t: h.state.tick, type: 'request_closed', request: { ...q } });
+      }
+      addEmotion(r, { kind: 'loneliness', intensity: 0.3, tick: h.state.tick });
+      h.emitEvent({ t: h.state.tick, type: 'dream_gone', who: r.id, other: subj.slice(2) });
+    }
     formNewDream(h, r);
     advanceStage(h, r);
   }
@@ -401,7 +423,23 @@ function letGo(h: AspirationHost, r: ResidentState): boolean {
   // Only a building this dream asks for counts: not, say, Juniper's granary for the winter stores.
   const def = dreamOf(state, r);
   if (!def) return false;
-  const refs = new Set(def.stages.flatMap((st) => [st.until, st.place]).filter((x): x is string => !!x && x !== 'home'));
+  // A step that cannot be done without a building nobody has built lets go the same way.
+  const stage = currentStage(state, r);
+  if (stage?.needs && !exists(state, stage.needs)) {
+    for (const q of state.requests) {
+      if (q.by !== r.id || q.status !== 'open' || q.wants !== stage.needs) continue;
+      q.status = 'lapsed';
+      q.closedTick = state.tick;
+      h.emitEvent({ t: state.tick, type: 'request_closed', request: { ...q } });
+    }
+    r.aspiration.done = true;
+    r.aspiration.outcome = 'let_go';
+    r.aspiration.doneTick = state.tick;
+    addEmotion(r, { kind: 'worry', intensity: 0.3, tick: state.tick });
+    h.emitEvent({ t: state.tick, type: 'dream_let_go', who: r.id, wants: stage.needs });
+    return true;
+  }
+  const refs = new Set(def.stages.flatMap((st) => [st.until, st.place, st.needs]).filter((x): x is string => !!x && x !== 'home'));
   const ask = state.requests.find((q) => q.by === r.id && q.kind === 'aspiration' && (q.status === 'open' || q.status === 'lapsed') && !!q.wants && refs.has(q.wants) && !exists(state, q.wants));
   if (!ask || !ask.wants) return false;
   if (ask.status === 'open') {
@@ -459,7 +497,9 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
   // A step that needs nothing from the steward is done within nine days of trying, one way or
   // another (bar round 3: "get to know the neighbours" from day 4 to day 29).
   const waitingOnYou = h.state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open');
-  const longEnough = !stage.until && !waitingOnYou && h.state.tick - r.aspiration.since >= 9 * TICKS_PER_DAY;
+  // Never a step that needs a building that is not there (bar round 4).
+  const lacking = (stage.needs && !exists(h.state, stage.needs)) || (stage.place && stage.place !== 'home' && !exists(h.state, stage.place));
+  const longEnough = !stage.until && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= 9 * TICKS_PER_DAY;
   if (!stage.check(h, r) && !longEnough) return;
   stage.enter?.(h, r);
   r.aspiration.stage++;

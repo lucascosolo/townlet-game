@@ -218,6 +218,8 @@ export interface Unseen {
 }
 
 export interface ResidentState {
+  /** A place they held dear that was taken away (bar round 4): weighs on mood for a few days. */
+  lostPlace?: { tick: number; weight: number };
   id: string;
   homeId: number;
   jobId: number | null;
@@ -249,7 +251,11 @@ export interface ResidentState {
   moodArcs?: number;
   lastMoodEnd?: number;
   /** Their last answer to the steward and the replies it opened (talking back, bar round 1). */
-  lastAnswer?: { tick: number; offers: import('./replies.js').ReplyOffer[]; replied: boolean };
+  /**
+   * The last answer and the replies open to it. `answer` is kept whole; what was actually said may be
+   * a trimmed part of it (bar round 4), and a reply names the cut it answers.
+   */
+  lastAnswer?: { tick: number; offers: import('./replies.js').ReplyOffer[]; replied: boolean; answer?: TalkAnswer; used?: import('./replies.js').ReplyOffer };
   /** Belief aspect -> tick it was last given as the reason for their view of the steward. */
   cited?: Record<string, number>;
   /** Grievance aspect -> tick the steward last said sorry for it. */
@@ -346,7 +352,7 @@ export interface TalkAnswer {
   /** The topics or lines the answer draws on. */
   topics?: MindMention[];
   mood?: { kind: MoodKind; reason: string };
-  hope?: { title: string; next: string | null; done: boolean };
+  hope?: { title: string; next: string | null; done: boolean; outcome?: string; meanwhile?: string };
   about?: SubjectId;
   /** opinion/me: the belief behind it, if any. */
   because?: { subject: SubjectId; aspect: string };
@@ -375,6 +381,8 @@ export interface Request {
   subject: SubjectId;
   /** For a workplace ask: the building type wanted. */
   wants?: string;
+  /** For a dream ask: the dream that asked, in its words (bar round 4). */
+  dream?: string;
   postedTick: number;
   /** fulfilled: the steward dealt with it. resolved: it went away by itself. lapsed: ignored. */
   status: 'open' | 'fulfilled' | 'resolved' | 'lapsed';
@@ -499,6 +507,8 @@ export interface SimState {
   lastShortageDay: number;
   /** Consecutive days the town has gone short, ending on lastShortageDay (bar round 3). */
   shortRun?: number;
+  /** The day each worn tile was last walked (bar round 4). */
+  wearDay?: Record<string, number>;
   nextFavourId?: number;
   /** Today's production so far, by resident (or building type for what grows itself), shown each morning. */
   produced?: Record<string, Partial<Record<Resource, number>>>;
@@ -591,6 +601,8 @@ export type SimEvent =
   | { t: number; type: 'gave_up'; who: string }
   /** A dream stage waited on the steward for over a week and the dreamer let it go (bar round 2). */
   | { t: number; type: 'dream_let_go'; who: string; wants: string }
+  /** A dream about someone who has since left the valley is put away (bar round 4). */
+  | { t: number; type: 'dream_gone'; who: string; other: string }
   /** A hungry resident went looking for food along the brook or the wild edge (bar round 2). */
   | { t: number; type: 'forage'; who: string; placeId: number; food: number }
   /** A newcomer moves into an empty home (M3c). */

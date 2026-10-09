@@ -169,6 +169,14 @@ export const TALK_OPINION_PERSON: Record<string, Lines> = {
     chatty: ['{S}? Hardly know {s}!', 'Haven\'t had a proper natter with {s} yet!', 'Ask me again about {s} later!'],
     dreamy: ['{S} is a closed book to me, still.', 'We pass each other like boats.', "I haven't found {s}'s tune yet."],
   },
+  // Bar round 4: known well and not warm. Civil, not close (0 of 15 neighbour opinions were cool).
+  cool: {
+    plain: ["{S}? We're civil. That's about it.", "{S} and I aren't close.", "{S} goes {s}'s way, I go mine.", "Wouldn't call {s} a friend.", "{S}'s all right. From a distance."],
+    formal: ['{S} and I are civil, but no more than that.', 'I know {s} well enough. I would not say I like {s}.', 'We are cordial, {s} and I. Nothing warmer.', '{S} and I have never quite taken to each other.', 'I have no complaint of {s}. Nor much affection.'],
+    warm: ["{S}? We get along, I suppose. We're not close.", "I've tried with {s}. It just doesn't click.", "{S}'s nice enough. We're not really friends.", "I wish I liked {s} more than I do, honestly.", "We're polite, {s} and me. That's the word, polite."],
+    chatty: ['{S}? Eh! We nod! We do not natter!', "Not my favourite, {s}! Not my least either!", '{S} and me? Ships in the night!', "{S}! Fine! Next question!", "We're not pals, {s} and me! We're... neighbours!"],
+    dreamy: ['{S} and I are two notes that never quite chord.', 'We share the valley, {s} and I. Not much else.', 'There is a pane of glass between {s} and me.', '{S} is weather I simply wait out.', 'We pass, and nod, and pass.'],
+  },
   dislike: {
     plain: ["{S} and I don't get on.", 'Not keen on {s}.', 'Rather keep clear of {s}.'],
     formal: ['{S} and I do not see eye to eye.', 'I find {s} rather trying.', 'I am not fond of {s}.'],
@@ -203,11 +211,20 @@ export const TALK_HOPE_ONE: Lines = {
 };
 
 export const TALK_HOPE_DONE: Lines = {
-  plain: ['Did what I set out to do. Thinking about what\'s next.'],
-  formal: ['I have done what I hoped to. Something new will come.'],
-  warm: ["I did it, you know! I'm still thinking what comes next."],
-  chatty: ['Done it! What next? No idea yet!'],
-  dreamy: ['My last dream came true. The next one is still forming.'],
+  plain: ["Did what I set out to do. Thinking about what's next.", 'Between plans. Enjoying {x} meanwhile.', 'Nothing big just now. {X} does me fine.', "Got there. Taking it easy for a bit. {X}, mostly.", 'No new plan yet. Making the most of {x}.'],
+  formal: ['I have done what I hoped to. Something new will come.', 'For now I am content with {x}. The next ambition can wait.', 'I am between purposes, and I find I do not mind. {X} keeps me well.', 'I allow myself a pause. {X} is pleasure enough for the present.', 'Nothing grand at present. I am enjoying {x}, which is its own sort of hope.'],
+  warm: ["I did it, you know! I'm still thinking what comes next.", "Honestly? Just enjoying {x} for now. Something will come.", "I'm taking a breather. {X} has been lovely.", "No big plans just now. I'm making the most of {x}.", "I'm happy as I am for a bit. {X} helps."],
+  chatty: ['Done it! What next? No idea yet!', 'Nothing! For now! Too busy enjoying {x}!', "Next plan? Brewing! Meanwhile, {x}!", "Ha! Ask me next week! I'm all about {x} right now!", 'Between dreams! Very restful! {X}!'],
+  dreamy: ['My last dream came true. The next one is still forming.', 'I am resting between wishes. {X} fills the gap.', 'The next dream has not found me yet. {X} will do until it does.', 'I am letting the field lie fallow. {X} is enough for now.', 'Something new is gathering. Meanwhile there is {x}.'],
+};
+
+/** Between dreams after letting one go (bar round 4). {x} as above. */
+export const TALK_HOPE_LET_GO: Lines = {
+  plain: ['Stopped waiting on that. Something else will come.', "Gave that up. No sense waiting. {X} will do.", "Let it go. There's still {x}.", "That one's gone. I'll find another.", 'Made do. Moved on. {X}, these days.'],
+  formal: ['I have set that hope aside. One learns to make do.', 'I stopped expecting it. {X} consoles me somewhat.', 'That ambition is put away. I shall find another in time.', 'I no longer hope for that. There is still {x}, and that must serve.', 'It was not to be. I have made my peace with it.'],
+  warm: ["I stopped hoping for that, honestly. It hurt less.", "I let it go. There's still {x}, thank goodness.", "It wasn't going to happen. I'll dream something else.", "I gave up on that one. Maybe something smaller next time.", "That's put away now. {X} cheers me up, at least."],
+  chatty: ['Gave up! On that! Not on everything!', "Waited and waited! Never mind! Next!", "That's off the list! {X} instead!", 'Let it go! Very freeing! Mostly!', "Not happening! Fine! I'll think of something better!"],
+  dreamy: ['That wish went quiet. Another will come.', 'I let that one drift off downstream.', '{X} is what I have now. It is enough.', 'The dream thinned and I let it go.', 'Some hopes are only borrowed. I gave that one back.'],
 };
 
 export const FAVOUR_YES: Record<FavourKind, Lines> = {

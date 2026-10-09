@@ -93,7 +93,8 @@ const QUALITY_LIKES: Record<Quality, [string, string]> = {
 };
 
 const QUIRK_WORDS: Record<string, string> = {
-  light_sleeper: 'Sleeps lightly; any noise at night wakes them',
+  // One whole sentence each (bar round 4: the page split this on its semicolon into "any noise at night wakes them").
+  light_sleeper: 'Sleeps lightly, and wakes at the least noise',
   early_riser: 'Up before everyone else',
   homebody: 'Happiest at home',
   restless: "Can't sit still for long",
@@ -107,6 +108,20 @@ const VALUE_WORDS: Record<string, string> = {
   beauty: 'beautiful things',
   quiet: 'peace and quiet',
 };
+
+/** The town's average of something about each resident still here. */
+function castMean(state: SimState, of: (d: ReturnType<typeof residentDef>, r: ResidentState) => Record<string, number>): Record<string, number> {
+  const sum: Record<string, number> = {};
+  let n = 0;
+  for (const id of state.order) {
+    const x = state.residents[id];
+    if (!x || x.departed) continue;
+    n++;
+    for (const [k, v] of Object.entries(of(residentDef(id), x))) sum[k] = (sum[k] ?? 0) + v;
+  }
+  for (const k of Object.keys(sum)) sum[k] = (sum[k] as number) / Math.max(1, n);
+  return sum;
+}
 
 /** A fact about a resident, in words, read from their current state (so it is always true). */
 export function factValue(state: SimState, r: ResidentState, key: string): string {
@@ -128,18 +143,23 @@ export function factValue(state: SimState, r: ResidentState, key: string): strin
       return `Loves ${top.q === 'noise' ? QUALITY_LIKES.noise[top.v > 0 ? 0 : 1] : QUALITY_LIKES[top.q][0]}`;
     }
     case 'dislikes': {
-      // Whatever they mind most: noise for nearly everyone, then whatever they like least.
-      const worst = [...ranked].sort((a, b) => a.v - b.v)[0] as { q: Quality; v: number };
-      return worst.v < 0 ? `Can't abide ${worst.q === 'noise' ? 'noise, especially at night' : QUALITY_LIKES[worst.q][0]}` : `Not much bothers them`;
+      // What they mind more than the rest of the town does (bar round 4: every founder "can't abide
+      // noise", Bram included): their liking set against the town's average.
+      const mean = castMean(state, (d) => ambientPrefs(d) as unknown as Record<string, number>);
+      const worst = [...ranked].map((x) => ({ ...x, rel: x.v - (mean[x.q] ?? 0) })).sort((a, b) => a.rel - b.rel)[0] as { q: Quality; v: number; rel: number };
+      return worst.v < 0 && worst.rel < -0.05 ? `Can't abide ${worst.q === 'noise' ? 'noise, especially at night' : QUALITY_LIKES[worst.q][0]}` : `Not much bothers ${def.pronouns.obj}`;
     }
     case 'quirk':
       return def.quirks.length ? def.quirks.map((q) => QUIRK_WORDS[q] ?? q).join('; ') : 'No odd habits to speak of';
     case 'needs': {
-      const most = (Object.entries(r.setpoints) as Array<[string, number]>).sort((a, b) => b[1] - a[1])[0];
-      return most ? `Needs plenty of ${most[0]}` : 'Easy to please';
+      // The need they feel more than most (bar round 4: rest is highest for everyone, so all six
+      // founders "need plenty of rest").
+      const mean = castMean(state, (_d, x) => x.setpoints as unknown as Record<string, number>);
+      const most = (Object.entries(r.setpoints) as Array<[string, number]>).map(([k, v]) => [k, v - (mean[k] ?? v)] as const).sort((a, b) => b[1] - a[1])[0];
+      return most && most[1] > 0.02 ? `Needs more ${most[0]} than most` : 'Easy to please';
     }
     case 'dream':
-      return dreamTitle(state, r) ?? 'Still working out what they want';
+      return dreamTitle(state, r) ?? `Still working out what ${def.pronouns.subj} ${def.pronouns.subj === 'they' ? 'want' : 'wants'}`;
     case 'values': {
       const top = (Object.entries(def.values) as Array<[string, number]>).sort((a, b) => b[1] - a[1]).slice(0, 2);
       return `Cares about ${top.map(([v]) => VALUE_WORDS[v] ?? v).join(' and ')}`;
@@ -288,8 +308,8 @@ export function factSaid(state: SimState, r: ResidentState, key: string): string
     case 'quirk':
       return def.quirks.length ? def.quirks.map((q) => QUIRK_SAID[q] ?? '').filter(Boolean).join(' ') || 'I have my habits, like anyone.' : 'I have no odd habits to speak of.';
     case 'needs': {
-      const most = (Object.entries(r.setpoints) as Array<[string, number]>).sort((a, b) => b[1] - a[1])[0];
-      return most ? `I need ${NEED_SAID[most[0]] ?? most[0]}, more than most.` : 'I am easy to please.';
+      const need = value.match(/^Needs more (\w+) than most$/)?.[1];
+      return need ? `I need ${NEED_SAID[need] ?? need}, more than most.` : 'I am easy to please.';
     }
     case 'dream':
       // The dream is the answer to "what are you hoping for" itself; it is learned, not said twice (bar round 1).

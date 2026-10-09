@@ -45,7 +45,14 @@ interface Candidate {
   score: number;
 }
 
-const MILD_ASPECTS = new Set(['good_times', 'peaceful_spot', 'smells_lovely']);
+const MILD_ASPECTS = new Set(['good_times', 'peaceful_spot', 'smells_lovely', 'not_for_me']);
+/**
+ * Bar round 4: a first visit scored against what they like. Most of the valley scores well, so the
+ * thresholds sit on the spread (measured: a tenth below 0.22, half above 0.5): the top half is "a
+ * lovely spot" (0.5 and 0.6 still left it 59% and 43% of settled place views), the bottom sixth a dislike (it was 0.35 and never, so 79% were lovely and 2% not).
+ */
+export const LOVELY_ABOVE = 0.7;
+export const DISLIKE_BELOW = 0.3;
 
 /**
  * The most newsworthy thing r could tell other, and how newsworthy it is. News the listener
@@ -276,7 +283,7 @@ export const StructuredMind: Mind = {
       r.visitAppraised = true;
       const [tx, ty] = placeTile(b);
       const s = prefScore(ambientPrefs(def), ambientAt(ctx.state, tx, ty, ctx.worked));
-      if (s > 0.35) {
+      if (s > LOVELY_ABOVE) {
         const p: Perception = {
           subject,
           aspect: 'peaceful_spot',
@@ -288,6 +295,20 @@ export const StructuredMind: Mind = {
           relevance: ['nature', 'beauty'],
         };
         perceive(ctx, r, p);
+      } else if (s < DISLIKE_BELOW) {
+        // Bar round 4: a place can be disliked too (no dislike in 40 settled place views). A work
+        // place jars most on someone who loves the green; anywhere else it is just not their sort of place.
+        const eyesore = buildingDef(b.type).kind === 'work' && unit(def.values.nature) > 0.6;
+        perceive(ctx, r, {
+          subject,
+          aspect: eyesore ? 'eyesore' : 'not_for_me',
+          valence: -0.5,
+          base: 0.35 + 0.6 * Math.min(1, DISLIKE_BELOW - s),
+          source: 'witnessed',
+          placeId,
+          note: eyesore ? 'spoils the view' : 'not my sort of place',
+          relevance: eyesore ? ['nature', 'beauty'] : ['quiet'],
+        });
       }
       const crowd = presentAt(ctx.state, placeId, r.id).length;
       if (crowd >= 3 && unit(def.traits.sociable) < 0.4) {

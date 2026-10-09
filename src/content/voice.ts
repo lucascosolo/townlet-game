@@ -18,6 +18,9 @@ export const BELIEF_STATEMENTS: Record<string, string> = {
   smells_lovely: '{s} makes the mornings smell wonderful',
   good_times: '{s} is where the good evenings happen',
   peaceful_spot: '{s} is a lovely spot',
+  // Bar round 4: places can be disliked.
+  not_for_me: "{s} isn't {poss} sort of place",
+  eyesore: '{s} spoils the view',
   too_crowded: '{s} gets too crowded',
   nice_addition: '{s} was a good addition',
   unwelcome_addition: '{s} was a mistake',
@@ -46,6 +49,7 @@ export const BELIEF_STATEMENTS: Record<string, string> = {
   looks_out_for_me: 'the steward looks out for {obj}',
   // Bar round 3: every aspect the sim can form has words (a missing one showed as "matters (still_waiting)").
   went_hungry: 'the steward lets the larder run bare',
+  larder_low: 'the steward lets the larder run low',
   still_waiting: 'the steward keeps {obj} waiting',
   spoke_plainly: 'the steward says what they think',
   heard_me_out: 'the steward hears {obj} out',

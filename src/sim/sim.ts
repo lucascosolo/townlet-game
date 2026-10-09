@@ -1,7 +1,7 @@
 // The simulation loop. Owns the body and the world; delegates cognition to a Mind.
 
 import { recallFor, storyKey } from './recall.js';
-import { applyReply, offersFor, type ReplyKind, type ReplyResult } from './replies.js';
+import { applyReply, offersFor, offersForCut, type AnswerCut, type ReplyKind, type ReplyResult } from './replies.js';
 import { buildingDef } from '../content/buildings.js';
 import { generateNewcomer } from '../content/newcomers.js';
 import { registerResident, residentDef } from '../content/residents.js';
@@ -25,7 +25,7 @@ import { ASK_KINDS, ASK_LAPSE_DAYS, WISH_LABELS, assess } from './asks.js';
 import { voiceTopic } from './mind/thoughts.js';
 import { runExchange } from './social.js';
 import { memoryFits, reconcile, talkAnswer, memoryAgrees } from './talk.js';
-import { townHunger } from './hunger.js';
+import { lowLarder, townHunger, waitingOnYou } from './hunger.js';
 import {
   ASKS_BEFORE_GRATING,
   CLEAR_MINUTES,
@@ -40,7 +40,7 @@ import {
   recentAsks,
   type FavourVerdict,
 } from './favours.js';
-import { aspirationMinute, aspirationMorning, aspirationsAfterBuild, waitingOnStage, type AspirationHost } from './story/aspirations.js';
+import { aspirationMinute, aspirationMorning, aspirationsAfterBuild, dreamTitle, waitingOnStage, type AspirationHost } from './story/aspirations.js';
 import { activeGatherings, newStoryState, storyStep } from './story/director.js';
 import { closeDilemma } from './story/dilemmas.js';
 import { progressDawn, progressEvent, progressHourly, residentCap, learnFact } from './progress.js';
@@ -82,7 +82,7 @@ export type Command =
   /** A trader's cart stops by with a gift: the reward for a watched ad, at most once a day (2026-10-08). */
   | { at: number; kind: 'gift'; from: 'trader' }
   /** Talk back after an answer: agree, push back, say sorry or explain (bar round 1). */
-  | { at: number; kind: 'reply'; who: string; reply: ReplyKind }
+  | { at: number; kind: 'reply'; who: string; reply: ReplyKind; cut?: AnswerCut }
   /** The steward reads a resident's page (bar round 2): their background is learned there, not recited in talk. */
   | { at: number; kind: 'look'; who: string };
 
@@ -127,6 +127,11 @@ export const WINTER_APPETITE = 2;
 export const STOCK_CAP: Record<Resource, number> = { food: LARDER_CAP, timber: 100 };
 /** What mood is made of (bar round 1): the day's needs, feelings, the home, a place to be fond of, and standing with the steward. */
 export const MOOD_MIX = { needs: 0.5, feelings: 0.15, home: 0.12, fond: 0.03, standing: 0.2 } as const;
+/** Bar round 4: a loved place lost weighs on mood (at most this much) for this many days. */
+export const LOSS_WEIGHT = 0.09;
+export const LOSS_DAYS = 4;
+/** Bar round 4: below zero standing, mood falls this much more per unit (so −1 costs 0.15 more). */
+export const LOW_STANDING = 0.15;
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
 /** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */
 /** How much telling a memory rehearses it: about as much as reminiscing with a friend. */
@@ -430,6 +435,11 @@ export class Simulation implements AspirationHost {
         log.push(r.rel[STEWARD]?.affinity ?? 0);
         if (log.length > 3) log.shift();
       }
+      // Bar round 4: a larder below a day's meals at dawn is held against the steward a little, so a
+      // hungry week leaves nobody thinking the world of you (Bram at +1.00 through an empty larder).
+      if (lowLarder(state) > 0) {
+        for (const r of this.activeResidents()) this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'larder_low', valence: -0.5, base: 0.45, source: 'witnessed', note: 'let the larder run low' });
+      }
       storesDawn(this);
       progressDawn(this);
       wearDawn(state);
@@ -464,7 +474,7 @@ export class Simulation implements AspirationHost {
     } else if (c.kind === 'gift') {
       this.traderGift();
     } else if (c.kind === 'reply') {
-      if (this.state.residents[c.who]) this.reply(c.who, c.reply);
+      if (this.state.residents[c.who]) this.reply(c.who, c.reply, c.cut);
     } else if (c.kind === 'look') {
       if (this.state.residents[c.who]) learnFact(this, c.who, 'background');
     } else {
@@ -511,19 +521,22 @@ export class Simulation implements AspirationHost {
     // What the steward can say back (bar round 1): kept with the resident, so a replay lands the same.
     const offers = offersFor(r, answer, state.tick);
     answer.replies = offers.map((o) => o.kind);
-    r.lastAnswer = { tick: state.tick, offers, replied: false };
+    r.lastAnswer = { tick: state.tick, offers, replied: false, answer };
     this.emit({ t: state.tick, type: 'talk', who, answer, counted });
     return answer;
   }
 
   /** The steward talks back to the last answer. One reply per answer; a reply not on offer does nothing. */
-  reply(who: string, kind: ReplyKind): ReplyResult | null {
+  reply(who: string, kind: ReplyKind, cut?: AnswerCut): ReplyResult | null {
     const r = this.resident(who);
     const last = r.lastAnswer;
     if (!last || last.replied || r.departed) return null;
-    const result = applyReply(this.state, r, kind, last.offers, (p) => this.mind.perceive(this.ctx(), r, { subject: STEWARD, source: 'witnessed', ...p }));
+    // Bar round 4: the reply answers what was actually said, which may be a trimmed part of the answer.
+    const offers = cut && last.answer ? offersForCut(r, last.answer, cut, last.tick) : last.offers;
+    const result = applyReply(this.state, r, kind, offers, (p) => this.mind.perceive(this.ctx(), r, { subject: STEWARD, source: 'witnessed', ...p }));
     if (!result) return null;
     last.replied = true;
+    last.used = offers.find((o) => o.kind === kind);
     this.emit({ t: this.state.tick, type: 'reply', who, reply: kind, stance: result.stance, ...(result.aspect ? { aspect: result.aspect } : {}) });
     return result;
   }
@@ -601,7 +614,7 @@ export class Simulation implements AspirationHost {
       o.needs.company = clamp(o.needs.company + 0.25);
       o.needs.delight = clamp(o.needs.delight + 0.1);
       this.mind.perceive(ctx, o, { subject: `r:${r.id}`, aspect: 'kind_to_me', valence: 0.7, base: 0.45, source: 'witnessed', note: `${residentDef(r.id).name} came to see me` });
-      this.mind.perceive(ctx, o, { subject: STEWARD, aspect: 'looks_out_for_me', valence: 0.5, base: 0.3, source: 'told', from: r.id, note: `the steward sent ${residentDef(r.id).name} round` });
+      this.mind.perceive(ctx, o, { subject: STEWARD, aspect: 'looks_out_for_me', valence: 0.5, base: 0.3, source: 'told', from: r.id, note: `sent ${residentDef(r.id).name} round to see me` });
     }
     r.favour = null;
     this.emit({ t: state.tick, type: 'favour', who: r.id, phase: 'done', kind: f.kind, yield: got, placeId: f.placeId, ...(f.other ? { other: f.other } : {}) });
@@ -825,6 +838,8 @@ export class Simulation implements AspirationHost {
         this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect: 'lost_place', valence: -0.8, base: (0.7 + 0.8 * op) * heard, source, note: `the ${name} is gone` });
         this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'destroyed_place', valence: -0.7, base: (0.3 + 0.6 * op) * heard, source, note: `took away the ${name}` });
         this.emit({ t: state.tick, type: 'grief', who: r.id, building: b.id, btype: b.type, how });
+        // Bar round 4: a loss weighs on mood for days, not only in feelings that fade by evening.
+        r.lostPlace = { tick: state.tick, weight: Math.max(r.lostPlace && state.tick - r.lostPlace.tick < LOSS_DAYS * TICKS_PER_DAY ? r.lostPlace.weight : 0, clamp(0.5 + op)) };
         return;
       }
     }
@@ -954,7 +969,11 @@ export class Simulation implements AspirationHost {
           if (state.tick > 0) {
             this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect: 'my_workplace', valence: 0.8, base: 0.6, source: 'witnessed', note: 'my own workplace', relevance: ['craft'] });
             if (b.placedBy === 'steward') {
-              this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'improves_town', valence: 0.6, base: 0.5, source: 'witnessed', note: `built the ${buildingDef(b.type).name.toLowerCase()} for ${def.pronouns.obj}` });
+              // "Built it for me" only when it went up for them; an older workplace was given, not built
+              // (bar round 4: a newcomer thanked you for garden plots built three weeks before she came).
+              const forThem = state.tick - b.placedTick < TICKS_PER_DAY && (r.arrivedTick === undefined || b.placedTick >= r.arrivedTick);
+              const what = buildingDef(b.type).name.toLowerCase();
+              this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'improves_town', valence: 0.6, base: 0.5, source: 'witnessed', note: forThem ? `built the ${what} for ${def.pronouns.obj}` : `gave ${def.pronouns.obj} work at the ${what}` });
             }
           }
           continue;
@@ -1314,7 +1333,9 @@ export class Simulation implements AspirationHost {
   /** A resident asks the steward for something outside the usual asks (a dream, for now). */
   ask(r: ResidentState, kind: Request['kind'], wants?: string): Request {
     const state = this.state;
-    const q: Request = { id: state.nextRequestId++, by: r.id, kind, subject: `r:${r.id}`, postedTick: state.tick, status: 'open', ...(wants ? { wants } : {}) };
+    // A dream ask carries the dream that asked, so its card quotes that dream, not a later one (bar round 4).
+    const dream = kind === 'aspiration' ? dreamTitle(state, r) : null;
+    const q: Request = { id: state.nextRequestId++, by: r.id, kind, subject: `r:${r.id}`, postedTick: state.tick, status: 'open', ...(wants ? { wants } : {}), ...(dream ? { dream } : {}) };
     state.requests.push(q);
     this.emit({ t: state.tick, type: 'request_posted', request: { ...q } });
     return q;
@@ -1334,6 +1355,7 @@ export class Simulation implements AspirationHost {
     }
     storesHourly(this.state);
     progressHourly(this);
+    const larder = lowLarder(this.state);
     for (const r of this.activeResidents()) {
       const def = residentDef(r.id);
       decayEmotions(r);
@@ -1342,9 +1364,15 @@ export class Simulation implements AspirationHost {
       const standing = 0.5 + 0.5 * (r.rel[STEWARD]?.affinity ?? 0);
       // Something to look forward to: a place in town they are fond of, that still stands.
       const fond = this.hasFondPlace(r) ? 1 : 0.4;
-      r.mood = clamp(MOOD_MIX.needs * needsWellbeing(r.needs, r.setpoints, def) + MOOD_MIX.feelings * (0.5 + 0.5 * emotionBalance(r)) + MOOD_MIX.home * home + MOOD_MIX.fond * fond + MOOD_MIX.standing * standing - townHunger(this.state));
-      // Bar round 3: a famine lowers mood and talk, but the slow decision to leave is weighed without it.
-      r.dayMoodSum += r.mood + townHunger(this.state);
+      // Bar round 4: what happens moves mood day to day: a larder below a day's meals, a loved place
+      // lost in the last few days, and standing with you at the low end.
+      const aff = r.rel[STEWARD]?.affinity ?? 0;
+      const lost = r.lostPlace ? LOSS_WEIGHT * r.lostPlace.weight * Math.max(0, 1 - (this.state.tick - r.lostPlace.tick) / (LOSS_DAYS * TICKS_PER_DAY)) : 0;
+      const felt = townHunger(this.state) + larder + lost + LOW_STANDING * Math.max(0, -aff) + waitingOnYou(this.state, r.id);
+      r.mood = clamp(MOOD_MIX.needs * needsWellbeing(r.needs, r.setpoints, def) + MOOD_MIX.feelings * (0.5 + 0.5 * emotionBalance(r)) + MOOD_MIX.home * home + MOOD_MIX.fond * fond + MOOD_MIX.standing * standing - felt);
+      // Bar round 3: a famine lowers mood and talk, but the slow decision to leave is weighed without
+      // it; round 4's terms likewise (standing is already in the decision directly).
+      r.dayMoodSum += clamp(r.mood + felt);
       r.dayMoodN++;
     }
   }

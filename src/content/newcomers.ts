@@ -78,7 +78,7 @@ const TRADES: Trade[] = [
     ages: [20, 75],
     traits: { steady: 0.3, tidy: 0.3 },
     values: { nature: 0.9, beauty: 0.7 },
-    hopes: ['Make something grow that outlasts them.', 'Know every growing thing in the valley.'],
+    hopes: ['Make something grow that lasts for generations.', 'Know every growing thing in the valley.'],
   },
   {
     id: 'carpenter',
@@ -89,7 +89,7 @@ const TRADES: Trade[] = [
     ages: [24, 62],
     traits: { generous: 0.4, tidy: 0.4 },
     values: { craft: 0.9, prosperity: 0.6 },
-    hopes: ['Build something that outlasts them.', 'Put a roof over people who need one.'],
+    hopes: ['Build something that lasts for generations.', 'Put a roof over people who need one.'],
   },
   {
     id: 'tinkerer',

@@ -327,6 +327,9 @@ export function templateDream(state: SimState, r: ResidentState): AspirationDef 
   return TEMPLATE_BY_ID.get(kind)?.build(state, r, r.aspiration.subject ?? STEWARD);
 }
 
+/** Dreams of making something for someone (bar round 4: the steward counts). */
+export const GIFT_KINDS = new Set(['gift', 'thank']);
+
 /** The five strongest attachments are where a new dream may come from. */
 export const DREAM_SOURCES = 5;
 
@@ -343,8 +346,9 @@ export function chooseDream(state: SimState, r: ResidentState): { kind: string; 
   for (const a of attachments(state, r).slice(0, DREAM_SOURCES)) {
     if (a.subject === lastSubject) continue;
     // Two people making something for someone is plenty at once (bar round 3: eight of ten).
-    const gifting = Object.values(state.residents).filter((o) => o.id !== r.id && !o.departed && !o.aspiration.done && o.aspiration.kind === 'gift').length;
-    const t = DREAM_TEMPLATES.find((x) => !recent.has(x.id) && !(x.id === 'gift' && gifting >= 2) && x.fits(state, r, a));
+    // Bar round 4: "do something for the steward" is a gift too (six of eleven dreams were one or the other).
+    const gifting = Object.values(state.residents).filter((o) => o.id !== r.id && !o.departed && !o.aspiration.done && GIFT_KINDS.has(o.aspiration.kind ?? '')).length;
+    const t = DREAM_TEMPLATES.find((x) => !recent.has(x.id) && !(GIFT_KINDS.has(x.id) && gifting >= 2) && x.fits(state, r, a));
     if (t) options.push({ kind: t.id, subject: a.subject, weight: a.strength + (t.id === 'remember_gone' ? 2 : 0) });
   }
   const pick = weighted(r, options, (o) => o.weight);

@@ -260,6 +260,8 @@ export interface ResidentState {
   hungryRun?: number;
   /** The last day they went foraging (bar round 2): one trip a day when the larder is bare. */
   lastForageDay?: number;
+  /** Trips made on lastForageDay (two when very hungry). */
+  forageTrips?: number;
   /** Day of the steward's last talk with them that counted (M3b: no farming). */
   lastTalkDay?: number;
   /** A favour they agreed to and are doing (M3c). */

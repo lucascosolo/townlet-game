@@ -1071,6 +1071,9 @@ export class Simulation implements AspirationHost {
     if (act?.id === 'forage' && r.at === act.placeId && tick >= act.until) {
       const found = Math.round((FORAGE_YIELD[seasonOf(tick)] ?? 1) * 10) / 10;
       state.stock.food += found;
+      // They eat as they pick: a forager is never the one who starves (year soak: a hungry
+      // resident spent half their waking hours with the food need under 0.1).
+      r.needs.food = clamp(r.needs.food + 0.35);
       this.emit({ t: tick, type: 'forage', who: r.id, placeId: act.placeId, food: found });
     }
     const next = this.favourNext(r) ?? this.forageNext(r) ?? this.mind.decide(ctx, r);
@@ -1152,13 +1155,17 @@ export class Simulation implements AspirationHost {
     const tick = state.tick;
     const minute = minuteOf(tick);
     if (minute < 8 * 60 || minute > 16 * 60) return null;
-    if (r.favour || r.needs.food >= 0.5 || r.lastForageDay === dayOf(tick)) return null;
+    // One trip a day, or two when they are very hungry.
+    const today = dayOf(tick);
+    const trips = r.lastForageDay === today ? (r.forageTrips ?? 1) : 0;
+    if (r.favour || r.needs.food >= 0.5 || trips >= (r.needs.food < 0.2 ? 2 : 1)) return null;
     const meal = seasonOf(tick) === 'winter' ? MEAL * WINTER_APPETITE : MEAL;
     if (state.stock.food >= meal || (state.granary ?? 0) >= meal) return null;
     const spots = liveBuildings(state).filter((b) => b.type === 'brook' || b.type === 'wild');
     if (spots.length === 0) return null;
     const spot = spots.sort((a, b) => distanceTo(a, r.x, r.y) - distanceTo(b, r.x, r.y))[0] as BuildingState;
-    r.lastForageDay = dayOf(tick);
+    r.forageTrips = trips + 1;
+    r.lastForageDay = today;
     return { id: 'forage', placeId: spot.id, until: tick + FORAGE_MINUTES };
   }
 

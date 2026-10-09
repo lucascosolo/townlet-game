@@ -29,10 +29,11 @@ export function replySaid(offer: ReplyOffer, subject?: (id: string) => string): 
       if (offer.tone === 'mood') return offer.well ? "Good. I'm glad." : "That's hard. I'm listening.";
       if (offer.tone === 'complaint') return "That's fair. I hear you.";
       if (offer.tone === 'praise') return 'Thank you. That means something.';
+      if (about === 'steward') return "Fair. We'll get to know each other.";
       return about && subject ? `That's fair, about ${subject(about)}.` : REPLY_SAID.agree;
     case 'disagree':
       if (offer.tone === 'hope') return offer.rest ? "Don't settle for too little." : 'Is that really what you want?';
-      if (offer.tone === 'mood') return offer.well ? "You don't seem it." : "It can't be all bad.";
+      if (offer.tone === 'mood') return offer.well ? "What's been the best of it?" : "It can't be all bad.";
       if (about === 'steward') return offer.tone === 'praise' ? "I don't deserve that." : "I don't see myself that way.";
       return about && subject ? `I don't see ${subject(about)} that way.` : REPLY_SAID.disagree;
   }
@@ -136,6 +137,14 @@ Object.assign(REPLY_LINES, {
   },
   // Bar round 5: "You don't seem it" to someone who really is well; a nudge between dreams; a sorry
   // that comes too late to someone who has given up on you.
+  // Bar round 7: the best of their week, in their words. {x} is a memory clause from the last week.
+  best_of: {
+    plain: ['{X}. That was the best of it.', 'Best of it? {X}.', '{X}. Good, that.', 'Easy. {X}.', '{X}. Can\'t beat it.'],
+    formal: ['I should say: {x}.', 'If I must choose: {x}.', 'The best of it was this: {x}.', 'Without question, {x}.', 'I would name this: {x}.'],
+    warm: ['Oh, {x}. That was lovely.', 'Honestly? {X}.', '{X}. I keep thinking about it.', 'The best bit? {X}.', '{X}. It made my week.'],
+    chatty: ['Ooh! {X}! Easily!', 'The best? {X}! Obviously!', '{X}! Did you hear?', 'Ha! {X}! Best thing all week!', '{X}! I could talk about it all day!'],
+    dreamy: ['{X}. It is still glowing.', 'This: {x}.', '{X}. I keep it close.', 'Mm. {X}.', '{X}. Like sun on a wall.'],
+  },
   fine: {
     plain: ["No, really. I'm fine.", 'Honest. All good.', "I'm well. Don't fuss.", "Fine. Really. Promise.", "Nothing wrong with me."],
     formal: ['I assure you, I am quite well.', 'You are kind to wonder, but there is no need.', 'Truly, I am in good spirits.', 'I would tell you if it were otherwise.', 'I am well. Better than well, in fact.'],
@@ -149,6 +158,14 @@ Object.assign(REPLY_LINES, {
     warm: ["You're right, I shouldn't get too comfortable.", "Oh, I won't! I just need a breather.", "That's sweet. I'll dream something big, promise.", "Ha, you sound like my mother. But yes.", "You think I could do more? Maybe I could."],
     chatty: ['Settle? Me? Never! Just pausing!', "Ooh, a challenge! Fine! Something BIG next!", "Too little? Watch this space!", "You're right! What's the biggest thing I could do?", 'Pausing! Not stopping! Big difference!'],
     dreamy: ['The next wish is gathering itself.', 'I am only between tides.', 'You may be right. I will listen for something larger.', 'Fallow fields grow the best crops.', 'Perhaps I have been dreaming too small.'],
+  },
+  // Bar round 7: a sorry too soon after a loss you caused.
+  too_soon: {
+    plain: ['Not yet.', 'Too soon. Leave it a while.', 'Not today. Ask me again.', 'Give it time.', "I'm not ready to hear it."],
+    formal: ['Not yet, steward. It is too fresh.', 'I cannot accept that today.', 'Allow me a little time before you ask that.', 'It is too soon for apologies.', 'I would rather not speak of it yet.'],
+    warm: ["Not yet. It still hurts.", "I know you mean it. Just not yet.", "Give me a few days, would you?", "It's too raw, honestly.", "Ask me again when it hurts less."],
+    chatty: ['Not yet! Too soon! Far too soon!', 'Ask me next week! Maybe!', "Nope! Still cross! Very cross!", 'Too fresh! Try again later!', "Not today, not tomorrow, we'll see!"],
+    dreamy: ['The ground is still bare where it stood.', 'Not yet. The ache is new.', 'Let the hole close a little first.', 'Some things want a season.', 'Too soon. The birds have not come back.'],
   },
   cheap: {
     plain: ["Words are cheap.", "Sorry won't mend it.", "Show me, don't tell me.", "Heard sorry before.", "Do something, then."],

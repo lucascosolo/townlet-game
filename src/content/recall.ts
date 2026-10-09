@@ -5,19 +5,20 @@
 import type { Lines } from './voice.js';
 
 export const RECALL_LINES: { good: Lines; bad: Lines } = {
+  // Bar round 7: six ways each, rested a week ("Do you know, I still smile about it" ten times in a month).
   good: {
-    plain: ['{clause}, {when}. I haven\'t forgotten.', 'I remember {when}: {clause}. Good, that.'],
-    formal: ['I still recall that {clause}, {when}.', 'I have not forgotten that {clause}, {when}. It meant a great deal.'],
-    warm: ['I keep thinking about how {clause}, {when}.', 'Do you know, I still smile about it: {clause}, {when}.'],
-    chatty: ['Remember {when}? {clause}! I still smile about it!', '{clause}, {when}! I tell everyone!'],
-    dreamy: ['{when}, {clause}. I keep it like a pressed flower.', 'I still think of it: {clause}, {when}.'],
+    plain: ["{clause}, {when}. I haven't forgotten.", 'I remember {when}: {clause}. Good, that.', '{when}, {clause}. Still pleased about it.', 'Think on it often: {clause}, {when}.', '{clause}, {when}. That was a good day.', 'Not forgotten: {clause}, {when}.'],
+    formal: ['I still recall that {clause}, {when}.', 'I have not forgotten that {clause}, {when}. It meant a great deal.', 'It gives me some pleasure to recall that {clause}, {when}.', 'I think often of how {clause}, {when}.', 'I treasure it still: {clause}, {when}.', 'Allow me to remember that {clause}, {when}. It did me good.'],
+    warm: ['I keep thinking about how {clause}, {when}.', 'Do you know, I still smile about it: {clause}, {when}.', "It warms me still that {clause}, {when}.", 'I hold on to it: {clause}, {when}.', "{clause}, {when}. I'll not forget that.", 'Funny what stays with you. {clause}, {when}.'],
+    chatty: ['Remember {when}? {clause}! I still smile about it!', '{clause}, {when}! I tell everyone!', '{when}! {clause}! Best day!', 'Did I ever tell you? {clause}, {when}!', '{clause}, {when}! Still grinning!', 'Oh, and {when}! {clause}! Lovely!'],
+    dreamy: ['{when}, {clause}. I keep it like a pressed flower.', 'I still think of it: {clause}, {when}.', '{clause}, {when}. It glows a little, still.', 'There is a small lamp in me from it: {clause}, {when}.', '{when}, {clause}. I carry it about.', 'Some days are kept. {clause}, {when}.'],
   },
   bad: {
-    plain: ['{clause}, {when}. Still sore about it.', 'I remember {when}: {clause}. Not forgotten.'],
-    formal: ['I have not forgotten that {clause}, {when}.', 'I confess it still weighs on me that {clause}, {when}.'],
-    warm: ['It still stings that {clause}, {when}.', 'I try not to dwell on it, but {clause}, {when}.'],
-    chatty: ['And {when}? {clause}! Don\'t think I\'ve forgotten!', '{clause}, {when}! Honestly!'],
-    dreamy: ['{when}, {clause}. It\'s still in me, like a splinter.', 'Something still aches: {clause}, {when}.'],
+    plain: ['{clause}, {when}. Still sore about it.', 'I remember {when}: {clause}. Not forgotten.', '{clause}, {when}. Rankles.', "{when}, {clause}. Haven't let it go.", 'Still think on it: {clause}, {when}.', '{clause}, {when}. Not right, that.'],
+    formal: ['I have not forgotten that {clause}, {when}.', 'I confess it still weighs on me that {clause}, {when}.', 'It troubles me yet that {clause}, {when}.', 'I find I cannot set aside that {clause}, {when}.', 'I remain unhappy that {clause}, {when}.', 'It is not forgotten that {clause}, {when}.'],
+    warm: ['It still stings that {clause}, {when}.', "I try not to dwell on it, but {clause}, {when}.", "It's still with me that {clause}, {when}.", "I keep coming back to it: {clause}, {when}.", '{clause}, {when}. It hurt, honestly.', "I'd like to forget that {clause}, {when}. I can't yet."],
+    chatty: ["And {when}? {clause}! Don't think I've forgotten!", '{clause}, {when}! Honestly!', '{when}! {clause}! Still cross!', 'Oh, {when}? {clause}! Not forgotten! Not forgiven!', '{clause}, {when}! The cheek of it!', "Don't get me started on {when}. {clause}!"],
+    dreamy: ["{when}, {clause}. It's still in me, like a splinter.", 'Something still aches: {clause}, {when}.', '{clause}, {when}. A cold spot I keep walking into.', '{when}, {clause}. The weather has not cleared.', 'It sits in me still: {clause}, {when}.', '{clause}, {when}. A bruise that does not fade.'],
   },
 };
 

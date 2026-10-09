@@ -25,7 +25,7 @@ import { ASK_KINDS, ASK_LAPSE_DAYS, WISH_LABELS, assess } from './asks.js';
 import { voiceTopic } from './mind/thoughts.js';
 import { runExchange } from './social.js';
 import { memoryFits, reconcile, talkAnswer, memoryAgrees } from './talk.js';
-import { lowLarder, townHunger, waitingOnYou } from './hunger.js';
+import { bareLarder, lowLarder, townHunger, waitingOnYou } from './hunger.js';
 import {
   ASKS_BEFORE_GRATING,
   CLEAR_MINUTES,
@@ -136,6 +136,12 @@ export const LOW_STANDING = 0.15;
 export const FELT_CAP = 0.25;
 /** Bar round 4: the most anyone thinks of you while the larder has been low two dawns running. */
 export const LOW_LARDER_TOP = 0.85;
+/** Bar round 7: standing after a loss you caused (workplace, dream building, a place held dear), for HURT_DAYS. */
+export const HURT_TOP = 0.6;
+export const HURT_DAYS = 10;
+/** Bar round 7: nobody holding something against you from the last week thinks the world of you. */
+export const FRESH_GRIEVANCE_TOP = 0.85;
+export const FRESH_GRIEVANCE_DAYS = 7;
 /** Bar round 5: 30 timber to start (was 25): seventeen builds were refused for timber in the first fortnight. */
 /** Bar round 6: the woodlot yields this much more in the first fortnight (16 builds were refused for timber on days 3 to 14). */
 export const EARLY_TIMBER = 2.5;
@@ -451,7 +457,7 @@ export class Simulation implements AspirationHost {
       // Bar round 4: while the larder is below a day's meals nobody thinks the world of you (Bram at
       // +1.00 through an empty larder). A cap, not a grievance: held against you every low dawn, it
       // sank a town nobody feeds to the bottom of the scale and emptied it in the year soak.
-      if (lowLarder(state) > 0) {
+      if (bareLarder(state)) {
         state.lowRun = (state.lowRun ?? 0) + 1;
         // Bar round 5: and for three days after, so a hungry week is not forgotten overnight.
         if (state.lowRun >= 2) state.lowCapUntil = state.tick + 3 * TICKS_PER_DAY;
@@ -686,7 +692,7 @@ export class Simulation implements AspirationHost {
     }
     // Bar round 6: food built while the larder is still bare answers the ask, but the thanks wait on
     // full plates (a hungry week weighed nothing once everyone felt listened to).
-    const stillBare = q.kind === 'more_food' && lowLarder(state) > 0;
+    const stillBare = q.kind === 'more_food' && bareLarder(state);
     if (stewardActed) this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'listens_to_me', valence: 1, base: stillBare ? 0.3 : 0.9, source: 'witnessed', note: stillBare ? 'built food for us' : ASK_THANKS[q.kind] });
     this.emit({ t: state.tick, type: 'request_closed', request: { ...q } });
     return true;
@@ -821,8 +827,9 @@ export class Simulation implements AspirationHost {
         r.path = [];
         r.at = null;
       }
-      if (r.jobId === b.id) r.jobId = null;
-      r.unseen.push({ building: b.id, kind: 'removed', tick: this.state.tick });
+      const work = r.jobId === b.id;
+      if (work) r.jobId = null;
+      r.unseen.push({ building: b.id, kind: 'removed', tick: this.state.tick, ...(work ? { work: true } : {}) });
     }
     this.assignJobs();
     return b;
@@ -864,10 +871,15 @@ export class Simulation implements AspirationHost {
 
     if (change.kind === 'removed') {
       const dreamt = !!b.dreamOf?.includes(r.id);
-      const op = dreamt ? 1 : attachment(r, `b:${b.id}`);
+      // Bar round 7: their workplace is theirs to lose too (Fen's jetty drew no reaction).
+      const work = !!change.work;
+      const op = dreamt ? 1 : Math.max(work ? 0.7 : 0, attachment(r, `b:${b.id}`));
       if (op > 0.15) {
-        this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect: 'lost_place', valence: -0.8, base: (0.7 + 0.8 * op) * heard, source, note: dreamt ? `my dream's ${name} is gone` : `the ${name} is gone` });
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'destroyed_place', valence: -0.7, base: (0.3 + 0.6 * op) * heard, source, note: dreamt ? `took away my dream's ${name}` : `took away the ${name}` });
+        this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect: 'lost_place', valence: -0.8, base: (0.7 + 0.8 * op) * heard, source, note: dreamt ? `my dream's ${name} is gone` : work ? `my ${name} is gone` : `the ${name} is gone` });
+        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'destroyed_place', valence: -0.7, base: (0.3 + 0.6 * op) * heard, source, note: dreamt ? `took away my dream's ${name}` : work ? `took away my ${name}` : `took away the ${name}` });
+        // A loss you caused holds their standing down for ten days, not only their mood for four.
+        r.hurtUntil = state.tick + HURT_DAYS * TICKS_PER_DAY;
+        r.hurtAt = state.tick;
         this.emit({ t: state.tick, type: 'grief', who: r.id, building: b.id, btype: b.type, how });
         // Bar round 4: a loss weighs on mood for days, not only in feelings that fade by evening.
         r.lostPlace = { tick: state.tick, weight: Math.max(r.lostPlace && state.tick - r.lostPlace.tick < LOSS_DAYS * TICKS_PER_DAY ? r.lostPlace.weight : 0, clamp(0.5 + op)) };
@@ -1340,6 +1352,8 @@ export class Simulation implements AspirationHost {
         this.emit({ t: tick, type: 'thinking_of_leaving', who: r.id });
       }
     } else if (r.disposition > (r.leaving.dream ? 0.7 : STAYING_ABOVE)) {
+      // A change of heart is recorded as staying (bar round 7: Marlow's page still said "Decided to go").
+      if (r.leaving.dream && r.aspiration.outcome === 'leave') r.aspiration.outcome = 'stay';
       r.leaving = null;
       r.lowDays = 0;
       this.emit({ t: tick, type: 'decided_to_stay', who: r.id });
@@ -1379,12 +1393,23 @@ export class Simulation implements AspirationHost {
     return q;
   }
 
-  /** While a low larder is remembered, nobody stands above LOW_LARDER_TOP with you: checked at dawn and every minute (bar round 6: a granted ask at 07:00 slipped past the dawn check). */
+  /**
+   * Caps on standing, checked at dawn and every minute (bar round 6: a granted ask at 07:00 slipped
+   * past the dawn check): while a low larder is remembered nobody stands above LOW_LARDER_TOP;
+   * bar round 7: after a loss you caused, HURT_TOP for ten days; with anything held against you
+   * from the last week, FRESH_GRIEVANCE_TOP.
+   */
   private capAfterLowLarder(): void {
-    if ((this.state.lowCapUntil ?? -1) <= this.state.tick) return;
+    const tick = this.state.tick;
+    const larder = (this.state.lowCapUntil ?? -1) > tick;
     for (const r of this.activeResidents()) {
       const x = r.rel[STEWARD];
-      if (x && x.affinity > LOW_LARDER_TOP) x.affinity = LOW_LARDER_TOP;
+      if (!x) continue;
+      let top = 1;
+      if (larder) top = LOW_LARDER_TOP;
+      if ((r.grievedAt ?? -Infinity) > tick - FRESH_GRIEVANCE_DAYS * TICKS_PER_DAY) top = Math.min(top, FRESH_GRIEVANCE_TOP);
+      if ((r.hurtUntil ?? -1) > tick) top = Math.min(top, HURT_TOP);
+      if (x.affinity > top) x.affinity = top;
     }
   }
 

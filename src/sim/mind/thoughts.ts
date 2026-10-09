@@ -165,7 +165,9 @@ export function freshGrievance(r: ResidentState, tick: number): { aspect: string
       if (!best || weight > best.weight || (weight === best.weight && src.tick > best.tick)) best = { aspect, note: src.note, weight, tick: src.tick };
     }
   };
-  for (const b of Object.values(r.beliefs)) if (b.subject === STEWARD) consider(b.aspect, b.valence, b.sources, b.strength);
-  for (const t of Object.values(r.traces)) if (t.subject === STEWARD) consider(t.aspect, t.evidence, t.sources, Math.abs(t.evidence));
+  // Bar round 7: not one they forgave you for in the last week.
+  const quiet = (aspect: string) => (r.forgiven?.[aspect] ?? -Infinity) > tick - 7 * TICKS_PER_DAY;
+  for (const b of Object.values(r.beliefs)) if (b.subject === STEWARD && !quiet(b.aspect)) consider(b.aspect, b.valence, b.sources, b.strength);
+  for (const t of Object.values(r.traces)) if (t.subject === STEWARD && !quiet(t.aspect)) consider(t.aspect, t.evidence, t.sources, Math.abs(t.evidence));
   return best;
 }

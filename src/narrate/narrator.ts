@@ -254,7 +254,9 @@ export class Narrator {
   }
 
   /** The log runs dawn to dawn; small hours are marked so they don't read as the evening before. */
-  private live(t: number, text: string): void {
+  private live(t: number, raw: string): void {
+    // Plural place names take plural verbs in every line (bar round 7: "the garden plots is gone").
+    const text = raw.replace(PLURAL_VERB, (_m: string, name: string, verb: string) => `${name} ${PLURAL_OF[verb.toLowerCase()] ?? verb}`);
     const night = minuteOf(t) < DAWN_MINUTE && dayOf(t) > 1;
     this.out(`${clock(t)}${night ? '*' : ' '} ${text}`);
     this.entry('live', t, text);
@@ -278,8 +280,19 @@ export class Narrator {
     if (!b) return 'somewhere';
     const def = buildingDef(b.type);
     if (def.kind === 'home') {
-      const owners = this.state.order.filter((r) => this.state.residents[r]?.homeId === id).map((r) => this.name(r));
+      // Bar round 7: named after those still living there ("Bram and Hazel's cottage" after Bram left).
+      const owners = this.state.order.filter((r) => this.state.residents[r]?.homeId === id && !this.state.residents[r]?.departed).map((r) => this.name(r));
       if (owners.length > 0) return `${owners.join(' and ')}'s ${def.name.toLowerCase()}`;
+    }
+    // Bar round 7: two places of a kind are told apart ("the teahouse is where the good evenings
+    // happen" and "the teahouse isn't their sort of place" were two teahouses).
+    if (def.kind !== 'decor' && def.kind !== 'home' && b.type !== 'path') {
+      const kin = this.state.buildings.filter((x) => x.type === b.type && (!x.removed || x.id === id)).sort((x, y) => x.id - y.id);
+      if (kin.length > 1) {
+        const i = kin.findIndex((x) => x.id === id);
+        const which = kin.length === 2 ? (i === 0 ? 'old' : 'new') : (['first', 'second', 'third', 'fourth', 'fifth', 'sixth'][i] ?? 'last');
+        return `the ${which} ${def.name.toLowerCase()}`;
+      }
     }
     return `the ${def.name.toLowerCase()}`;
   }
@@ -400,6 +413,8 @@ export class Narrator {
   /** The reason given in the last answer that gave one (bar round 6, for the repetition measure). */
   lastReason: { who: string; t: number; text: string } | null = null;
   private plotsCleared?: number;
+  private pageReadDay = -1;
+  private readonly lastMemoryAt = new Map<string, number>();
 
   private freshest(who: string, options: string[], mineGapDays = 3): string {
     const t = this.state.tick;
@@ -535,6 +550,11 @@ export class Narrator {
         this.live(e.t, `${this.name(e.who)} puts away what ${residentDef(e.who).pronouns.subj} had in mind for ${this.name(e.other)}. ${this.name(e.other)} is gone from the valley now.`);
         break;
       case 'dream_let_go':
+        // Bar round 7: a date missed, not a building waited for ("No ovens for the supper. Next year.").
+        if (e.missed) {
+          this.live(e.t, `${this.name(e.who)} had no ovens for ${e.missed}. "Next year, then."`);
+          break;
+        }
         this.live(e.t, `${this.name(e.who)} stops waiting for ${/^[aeiou]/i.test(buildingDef(e.wants).name) ? 'an' : 'a'} ${buildingDef(e.wants).name.toLowerCase()}. ${this.voice(e.who, SPEECH.letGo)}`);
         break;
       case 'recall': {
@@ -682,8 +702,11 @@ export class Narrator {
         break;
       case 'fact':
         // Bar round 5: a bio is read on their page, not recited lowercased in the log ("…Talks to dough..").
-        if (e.key === 'background') this.aside(e.t, `${e.first ? `${this.you ? "You've" : 'The steward has'} met ${this.name(e.who)}. ` : ''}${this.you ? 'You read' : 'The steward reads'} ${this.name(e.who)}'s story on ${residentDef(e.who).pronouns.poss} page.`);
-        else this.aside(e.t, `${e.first ? `${this.you ? "You've" : 'The steward has'} met ${this.name(e.who)}. ` : ''}${this.you ? 'You learn' : 'The steward learns'} something about ${this.name(e.who)}: ${lowerFirst(factValue(this.state, this.state.residents[e.who]!, e.key)).replace(/[.!?]+$/, '')}.`);
+        // Bar round 7: one such line a day at most (reading every page put six in the log).
+        if (e.key === 'background' && this.pageReadDay !== dayOf(e.t)) {
+          this.pageReadDay = dayOf(e.t);
+          this.aside(e.t, `${e.first ? `${this.you ? "You've" : 'The steward has'} met ${this.name(e.who)}. ` : ''}${this.you ? 'You read' : 'The steward reads'} ${this.name(e.who)}'s story on ${residentDef(e.who).pronouns.poss} page.`);
+        } else if (e.key !== 'background') this.aside(e.t, `${e.first ? `${this.you ? "You've" : 'The steward has'} met ${this.name(e.who)}. ` : ''}${this.you ? 'You learn' : 'The steward learns'} something about ${this.name(e.who)}: ${lowerFirst(factValue(this.state, this.state.residents[e.who]!, e.key)).replace(/[.!?]+$/, '')}.`);
         break;
       case 'renown':
         break;
@@ -694,14 +717,15 @@ export class Narrator {
         const def = residentDef(e.who);
         const options = REPLY_LINES[e.stance]?.[def.voice.register] ?? REPLY_LINES[e.stance]?.plain ?? [];
         const fresh = options.filter((o) => e.t - (this.saidBy.get(`${e.who}|${o}`) ?? -Infinity) >= 7 * 1440 && e.t - (this.saidAny.get(o) ?? -Infinity) >= 8 * 1440);
-        const warmish = ['warm', 'forgiven', 'convinced', 'owned', 'insist', 'with_you', 'seen', 'encouraged', 'mulled', 'fine', 'nudged'].includes(e.stance);
+        const warmish = ['warm', 'forgiven', 'convinced', 'owned', 'insist', 'with_you', 'seen', 'encouraged', 'mulled', 'fine', 'nudged', 'best_of'].includes(e.stance);
         // A look follows how they stand with you (bar round 4: a warm look after "you have lost my good opinion entirely").
         const standing = this.state.residents[e.who]?.rel.steward?.affinity ?? 0;
         const gestureSet = warmish ? (standing < 0 ? GESTURES_EVEN : GESTURES_WARM) : standing > 0.5 ? GESTURES_EVEN : GESTURES_COOL;
         const gestures = gestureSet.map((g) => `(${this.name(e.who)} ${g.replace('{poss}', def.pronouns.poss)}.)`);
         const freshGesture = gestures.filter((g) => e.t - (this.saidBy.get(`${e.who}|${g}`) ?? -Infinity) >= 7 * 1440);
         let words: string;
-        if (fresh.length > 0) words = this.utter(e.who, REPLY_LINES[e.stance], {}, 7, true);
+        if (e.stance === 'best_of') words = this.utter(e.who, REPLY_LINES.best_of, { x: this.bestOfWeek(e.who) }, 7, true);
+        else if (fresh.length > 0) words = this.utter(e.who, REPLY_LINES[e.stance], {}, 7, true);
         else if (freshGesture.length) {
           words = pick(this.rng, freshGesture);
           this.saidBy.set(`${e.who}|${words}`, e.t);
@@ -1001,8 +1025,12 @@ export class Narrator {
         return `${x} and I argued`;
       case 'made_amends':
         return `${x} and I made it up`;
-      case 'wonderful_time':
-        return `the whole valley turned out for ${x}`;
+      case 'wonderful_time': {
+        // Bar round 7: "the whole valley turned out" only when most of it did.
+        const m = rec.subject.startsWith('m:') ? this.state.story.memories.find((y) => `m:${y.id}` === rec.subject) : undefined;
+        const town = Object.values(this.state.residents).filter((y) => !y.departed).length;
+        return !m || m.attendees.length * 2 >= town ? `the whole valley turned out for ${x}` : `we had ${x}`;
+      }
       case 'lost_place':
         return `we lost ${x}`;
       case 'my_workplace':
@@ -1041,6 +1069,14 @@ export class Narrator {
     }
   }
 
+  /** The best thing in a resident's last week, as a clause: "you built the bench for me" (bar round 7). */
+  bestOfWeek(who: string): string {
+    const r = this.state.residents[who];
+    const since = this.state.tick - 7 * 1440;
+    const best = r ? [...r.episodes, ...r.buffer].filter((e) => e.tick >= since && e.valence > 0 && e.source !== 'recalled').sort((a, b) => b.valence * b.intensity - a.valence * a.intensity || b.tick - a.tick)[0] : undefined;
+    return best ? this.memoryClause(who, best, this.you) : 'the quiet, mostly';
+  }
+
   /** A memory for their page: the same words each time it is drawn (no tic, wording fixed by the memory). */
   memoryQuote(who: string, ep: { id: number; subject: SubjectId; aspect: string; note: string; valence: number; tick: number }): string {
     const lines = ep.valence >= 0 ? RECALL_LINES.good : RECALL_LINES.bad;
@@ -1054,7 +1090,8 @@ export class Narrator {
     // No verbal tic: it follows an answer that may have had one ("I must say ... I must say").
     const lines = rec.valence >= 0 ? RECALL_LINES.good : RECALL_LINES.bad;
     const options = lines[residentDef(who).voice.register] ?? lines.plain;
-    return sentenceCase(fixArticles(this.fill(this.freshest(who, options), FIRST_PERSON, { clause: this.memoryClause(who, rec, youAreSteward), when: this.whenSaid(rec.tick) })));
+    // Rested a week each (bar round 7).
+    return sentenceCase(fixArticles(this.fill(this.freshest(who, options, 7), FIRST_PERSON, { clause: this.memoryClause(who, rec, youAreSteward), when: this.whenSaid(rec.tick) })));
   }
 
   /** `${who}|${tic}` -> the day it was last used, so a tic is heard at most once a day. */
@@ -1107,7 +1144,8 @@ export class Narrator {
           const pron = /^are\b/.test(rest) ? 'they' : person ?? 'it';
           statement = `${pron} ${pron === 'they' ? rest.replace(/^is\b/, 'are').replace(/^was\b/, 'were').replace(/^has\b/, 'have') : rest}`;
         }
-        const why = statement ? this.utter(who, TALK_REASON, { statement }) : '';
+        // The lead-in is the reason's own: no tic on top of it (bar round 7: "I must say, I would say ...").
+        const why = statement ? this.utter(who, TALK_REASON, { statement }, 3, true) : '';
         if (why) this.lastReason = { who, t: this.state.tick, text: this.toSteward(why) };
         const but = a.but ? this.utter(who, TALK_BUT, { x: deedClause(a.but.note) }) : '';
         return [head, why, but].filter(Boolean).join(' ');
@@ -1141,7 +1179,10 @@ export class Narrator {
       }
     }
     // A memory they bring up (2026-10-08), in their own words, after the answer itself.
-    let remembered = a.memory ? this.memoryLine(e.who, a.memory, this.you) : '';
+    // Bar round 7: not every answer is a reminiscence: one memory in two days each ("Do you know, I
+    // still smile about it" ten times in a month).
+    const lastMem = this.lastMemoryAt.get(e.who) ?? -Infinity;
+    let remembered = a.memory && e.t - lastMem >= 2 * 1440 ? this.memoryLine(e.who, a.memory, this.you) : '';
     // Four sentences at most (bar round 3): a fact takes the place of a second thing on their
     // mind, then the second thing goes, then the memory waits for another day.
     const tics = residentDef(e.who).voice.tics;
@@ -1199,6 +1240,7 @@ export class Narrator {
     const base = words;
     const before = said.filter((x) => x.base === base).pop();
     if (before) words = `As I told you on day ${dayOf(before.t)}: ${words}`;
+    if (remembered) this.lastMemoryAt.set(e.who, e.t);
     said.push({ t: e.t, text: words, base });
     this.answersTo.set(e.who, said.slice(-40));
     this.lastReply = { who: e.who, t: e.t, text: words };

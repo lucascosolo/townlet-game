@@ -25,14 +25,16 @@ export const STEWARD_LOVE = 0.6;
 export const CROSS_AT = 0.3;
 
 /** The strongest thing they hold against the steward, with its latest note. */
-function heldAgainst(r: ResidentState): { aspect: string; note: string } | null {
+function heldAgainst(r: ResidentState, now: number): { aspect: string; note: string } | null {
   let best: { aspect: string; note: string; weight: number } | null = null;
   const consider = (aspect: string, weight: number, sources: Array<{ tick: number; note: string }>) => {
     const last = [...sources].sort((a, b) => b.tick - a.tick)[0];
     if (last?.note && (!best || weight > best.weight)) best = { aspect, note: last.note, weight };
   };
-  for (const b of Object.values(r.beliefs)) if (b.subject === STEWARD && b.valence < -0.1) consider(b.aspect, b.strength * -b.valence, b.sources);
-  for (const t of Object.values(r.traces)) if (t.subject === STEWARD && t.evidence < -0.1) consider(t.aspect, -t.evidence * 0.5, t.sources);
+  // Bar round 7: not one they forgave you for in the last week.
+  const quiet = (aspect: string) => (r.forgiven?.[aspect] ?? -Infinity) > now - 7 * TICKS_PER_DAY;
+  for (const b of Object.values(r.beliefs)) if (b.subject === STEWARD && b.valence < -0.1 && !quiet(b.aspect)) consider(b.aspect, b.strength * -b.valence, b.sources);
+  for (const t of Object.values(r.traces)) if (t.subject === STEWARD && t.evidence < -0.1 && !quiet(t.aspect)) consider(t.aspect, -t.evidence * 0.5, t.sources);
   return best ? { aspect: (best as { aspect: string }).aspect, note: (best as { note: string }).note } : null;
 }
 
@@ -166,7 +168,7 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
       // Bar round 6: someone cross with you who still thinks well of you says what they hold
       // against you (the bubble said "the steward still irritates me", the answer "I think well of you").
       const cross = r.emotions.some((e) => e.target === STEWARD && (e.kind === 'annoyance' || e.kind === 'grief') && e.intensity >= CROSS_AT);
-      const fresh = reasonSign(v) >= 0 ? (freshGrievance(r, state.tick) ?? (cross ? heldAgainst(r) : null)) : null;
+      const fresh = reasonSign(v) >= 0 ? (freshGrievance(r, state.tick) ?? (cross ? heldAgainst(r, state.tick) : null)) : null;
       // The top praise is for real standing with nothing held against you ("I could not ask for a
       // better steward" at 0.41, the morning after a famine).
       let band = feelingBand(v);

@@ -47,6 +47,8 @@ export interface Stage {
    * finishes on the nine-day rule; it waits, and lets go after eight days like a dream ask.
    */
   needs?: string;
+  /** Bar round 7: waits on a date (a season, a supper, the cart's last visit), so it is never done by days passing. */
+  dated?: boolean;
 }
 
 export interface AspirationDef {
@@ -58,6 +60,8 @@ export interface AspirationDef {
 const exists = (state: SimState, type: string) => liveBuildings(state).some((b) => b.type === type);
 /** Bar round 6: a dream's first step that needs nothing from the steward is done within this many days. */
 export const FIRST_STEP_DAYS = 4;
+/** Bar round 7: any later step that needs nothing from the steward or a date is done within this many days. */
+export const STEP_DAYS = 6;
 
 const days = (h: AspirationHost, r: ResidentState) => (h.state.tick - r.aspiration.since) / TICKS_PER_DAY;
 const feel = (h: AspirationHost, r: ResidentState, p: Omit<Perception, 'source'>) => h.mind.perceive(h.mindContext(), r, { ...p, source: 'witnessed' });
@@ -162,14 +166,26 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       {
         id: 'plan',
         next: 'Plan a feast for the Harvest Supper',
+        dated: true,
         check: (h) => seasonOf(h.state.tick) === 'autumn',
       },
       {
         id: 'feast',
-        next: 'Bake for everyone at the Harvest Supper',
+        // Bar round 7: not the title again ("Bake for the whole valley... Next up: bake for everyone...").
+        next: 'Have the ovens hot on the night of the supper',
+        dated: true,
+        // Bar round 7: on the night of the supper, with an oven standing; a supper gone by without
+        // one is missed, not fed four days later when a bakery comes back.
         check: (h, r) => {
           const supper = h.state.story.memories.find((m) => m.label === 'Harvest Supper' && m.tick >= r.aspiration.since);
-          return !!supper && exists(h.state, 'bakery') && h.state.stock.food >= 5;
+          if (!supper) return false;
+          // Told the morning after (the dream is checked each morning; the supper is an evening).
+          if (h.state.tick - supper.tick < TICKS_PER_DAY) return exists(h.state, 'bakery') && h.state.stock.food >= 5;
+          r.aspiration.done = true;
+          r.aspiration.outcome = 'missed';
+          r.aspiration.doneTick = h.state.tick;
+          h.emitEvent({ t: h.state.tick, type: 'dream_let_go', who: r.id, wants: 'bakery', missed: 'the Harvest Supper' });
+          return false;
         },
         enter: (h, r) => {
           h.state.stock.food = Math.max(0, h.state.stock.food - 5);
@@ -192,6 +208,16 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
           if (keen) r.aspiration.partner = keen.id;
           return !!keen;
         },
+        // A search that ran out of days still ends with a pupil, the one Fen likes best, chosen as
+        // the step ends so its line names them (bar rounds 6 and 7: "someone has learned a great
+        // deal", then "A friend says yes.").
+        enter: (h, r) => {
+          if (r.aspiration.partner) return;
+          const best = active(h.state)
+            .filter((x) => x !== r)
+            .sort((a, b) => rel(r, b.id).affinity - rel(r, a.id).affinity || (a.id < b.id ? -1 : 1))[0];
+          if (best) r.aspiration.partner = best.id;
+        },
       },
       {
         id: 'lessons',
@@ -200,14 +226,6 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
         together: true,
         check: (_h, r) => r.aspiration.minutes >= 4 * 60,
         enter: (h, r) => {
-          // Bar round 6: a search that ran out of days still ends with a pupil, the one Fen likes best
-          // ("someone has learned a great deal").
-          if (!r.aspiration.partner) {
-            const best = active(h.state)
-              .filter((x) => x !== r)
-              .sort((a, b) => rel(r, b.id).affinity - rel(r, a.id).affinity || (a.id < b.id ? -1 : 1))[0];
-            if (best) r.aspiration.partner = best.id;
-          }
           const p = r.aspiration.partner && (h.state.residents[r.aspiration.partner] as ResidentState | undefined);
           if (p) {
             adjust(r, p.id, { affinity: 0.12, trust: 0.1 }, h.state.tick);
@@ -325,6 +343,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       {
         id: 'decide',
         next: "Make up his mind before the cart's last visit of the year",
+        dated: true,
         check: (h) => dayOf(h.state.tick) >= 23,
         enter: (h, r) => {
           // What he has here: friends, how settled he feels, how the steward treats him.
@@ -528,7 +547,8 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
   const lacking = (stage.needs && !exists(h.state, stage.needs)) || (stage.place && stage.place !== 'home' && !exists(h.state, stage.place));
   // A first step is done within four days: due after three, since steps move at the morning check (bar round 6: "watch the trade cart come and go" was
   // Marlow's bubble four days running, "find someone willing to learn" Fen's for three).
-  const longEnough = !stage.until && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 1 : 9) * TICKS_PER_DAY;
+  // Bar round 7: and every later step within six (Fen's "teach someone at the jetty" ran a week).
+  const longEnough = !stage.until && !stage.dated && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 1 : STEP_DAYS - 1) * TICKS_PER_DAY;
   const passed = stage.check(h, r);
   if (!passed && !longEnough) return;
   // Bar round 6: a first step that only ran out of days is moved past, not celebrated (the quicker

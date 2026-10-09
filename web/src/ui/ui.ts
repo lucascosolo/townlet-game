@@ -499,6 +499,15 @@ export class Ui {
     this.statusEl.title = text;
   }
 
+  /** A tier card held back while reply chips wait (bar round 7). */
+  private pendingTier: Extract<SimEvent, { type: 'tier' }> | null = null;
+
+  /** Reply chips are on screen, waiting for the player. */
+  private repliesWaiting(): boolean {
+    const r = this.root.querySelector<HTMLElement>('[data-testid="talk-replies"]');
+    return !!r && r.offsetParent !== null && r.querySelector('button') !== null;
+  }
+
   get modalOpen(): boolean {
     return this.modal !== null;
   }
@@ -867,8 +876,8 @@ export class Ui {
       fill.style.width = pct((p.renown - nt.from) / (nt.to - nt.from));
       track.appendChild(fill);
       tier.appendChild(track);
-      const opens = ({ Hamlet: 'beehives', Village: 'a chicken coop', Townlet: 'a fountain' } as Record<string, string>)[nt.name];
-      tier.appendChild(el('p', { class: 'quiet' }, `${nt.need} ✦ to ${nt.name}: it opens ${opens} and room for more neighbours.`));
+      const opens = ({ Hamlet: 'beehives, a fountain', Village: 'a chicken coop' } as Record<string, string>)[nt.name];
+      tier.appendChild(el('p', { class: 'quiet' }, `${nt.need} ✦ to ${nt.name}: it opens ${opens ? `${opens} and ` : ''}room for more neighbours.`));
     } else tier.appendChild(el('p', { class: 'quiet' }, 'A Townlet: the valley is all it set out to be.'));
     const renownHow = 'Renown comes from goals, granted asks and wishes, dreams come true, the winter stores, newcomers, and getting to know people.';
     tier.appendChild(el('p', { class: 'quiet small renown-how' }, renownHow));
@@ -1406,7 +1415,11 @@ export class Ui {
     if (e.type === 'goal' && e.phase === 'done' && e.goal) this.toast(`${ICONS.check}<span>${goalLabel(e.goal)}</span><b>+${RENOWN.goal} ✦</b>`, 'goal');
     if (e.type === 'goal' && e.phase === 'all') this.toast(`${ICONS.star}<span>All of today's goals!</span><b>+${RENOWN.allGoals} ✦</b>`, 'goal big');
     if (e.type === 'fact') this.toast(`${portraitSvg(e.who, 26)}<span>${e.first ? 'Met' : 'Getting to know'} ${residentDef(e.who).name}: ${factValue(this.game.sim.state, this.game.sim.resident(e.who), e.key)}</span>`, 'fact');
-    if (e.type === 'tier') this.celebrateTier(e);
+    // Bar round 7: not over a conversation waiting for your reply (the Hamlet card blocked the chips).
+    if (e.type === 'tier') {
+      if (this.repliesWaiting()) this.pendingTier = e;
+      else this.celebrateTier(e);
+    }
     if (e.type === 'standing') {
       // A grievance that grows by a day updates its line rather than adding one (bar round 3).
       this.standingNotes.set(e.who, addLedgerNote(this.standingNotes.get(e.who) ?? [], { day: dayOf(e.t), up: e.delta > 0, reasons: e.reasons, also: e.also ?? [] }));
@@ -1579,9 +1592,10 @@ export class Ui {
     const card = el('div', { class: 'card quest', 'data-testid': 'stores-card' });
     const head = el('div', { class: 'card-title' });
     head.innerHTML = ICONS.sack;
-    head.append(el('span', {}, `Winter stores · ${keeper}'s worry`));
-    card.appendChild(head);
     const days = daysToWinter(state.tick);
+    // Bar round 7: the numbers are in the title, which still shows when Goals is short at 1440x900.
+    head.append(el('span', { 'data-testid': 'stores-title' }, q.outcome ? `Winter stores · ${keeper}'s worry` : `Winter stores · ${put}/${q.target} · ${days} day${days === 1 ? '' : 's'} to go`));
+    card.appendChild(head);
     const status = q.outcome === 'met'
       ? `${put} food put by. The town is ready for winter.`
       : q.outcome === 'short'
@@ -2084,7 +2098,7 @@ export class Ui {
         el(
           'p',
           { class: 'quiet', 'data-testid': 'hope-next' },
-          rep.hope.done ? (rep.hope.outcome === 'leave' ? 'Decided to go.' : rep.hope.outcome === 'stay' ? 'Decided to stay.' : rep.hope.outcome === 'let_go' ? 'Let it go, for now.' : 'Done!') : `Next: ${rep.hope.next}`,
+          rep.hope.done ? (rep.hope.outcome === 'leave' ? 'Decided to go.' : rep.hope.outcome === 'stay' ? 'Decided to stay.' : rep.hope.outcome === 'let_go' ? 'Let it go, for now.' : rep.hope.outcome === 'gone' ? 'Put away: they have left the valley.' : rep.hope.outcome === 'missed' ? 'Missed it this year.' : 'Done!') : `Next: ${rep.hope.next}`,
         ),
       );
       j.appendChild(hope);
@@ -2242,6 +2256,11 @@ export class Ui {
     if (!this.menu.hidden) this.refreshMenu();
     if (!this.tabs.get('journal')!.pane.hidden) this.renderJournal();
     if (!this.tabs.get('you')!.pane.hidden) this.renderYou();
+    if (this.pendingTier && !this.repliesWaiting() && !this.modal) {
+      const t = this.pendingTier;
+      this.pendingTier = null;
+      this.celebrateTier(t);
+    }
     // New proposals get a popup, but not before the player has looked around (bar round 1: on a
     // phone the first thing after the intro was a decision about people you had not met).
     const passed = Math.max(0, state.tick - this.watchedFrom);

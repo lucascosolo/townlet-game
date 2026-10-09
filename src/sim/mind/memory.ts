@@ -103,6 +103,8 @@ export function perceive(ctx: MindContext, r: ResidentState, p: Perception): Epi
     ...(p.placeId !== undefined ? { placeId: p.placeId } : {}),
   };
   r.buffer.push(ep);
+  // Bar round 7: something you did that they hold against you, taken in first hand.
+  if (p.subject === 'steward' && p.valence < 0 && p.source === 'witnessed') r.grievedAt = ctx.tick;
   if (p.source !== 'recalled') {
     addEmotion(r, {
       kind: emotionFor(p.subject, p.aspect, p.valence),

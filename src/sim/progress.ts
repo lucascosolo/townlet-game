@@ -213,7 +213,8 @@ function addRenown(h: ProgressHost, amount: number, why: string): void {
 export function tierUnlocks(tier: number): string[] {
   return TIER_BUILDINGS[tier] ?? [];
 }
-const TIER_BUILDINGS: Record<number, string[]> = { 1: ['beehives'], 2: ['coop'], 3: ['fountain'] };
+// Bar round 7: the fountain opens at Hamlet, so mid-game timber has somewhere to go (it piled to 74).
+const TIER_BUILDINGS: Record<number, string[]> = { 1: ['beehives', 'fountain'], 2: ['coop'] };
 
 function bump(h: ProgressHost, kind: GoalKind, by = 1): void {
   const p = progressOf(h.state);
@@ -294,13 +295,19 @@ export const NOTHING_SAID = new Set(['Not much bothers me, truly.', 'I have no o
  * The same fact as the resident says it, so what you learn is what you were told (owner playtest:
  * "Getting to know Ada: can't abide noise at night" followed a reply about something else).
  */
+/** Bar round 7: a fact in one of several wordings, fixed per resident ("What matters to me is" eight times in a month). */
+function said(state: SimState, r: ResidentState, ways: string[]): string {
+  const i = Math.max(0, state.order.indexOf(r.id));
+  return ways[i % ways.length] as string;
+}
+
 export function factSaid(state: SimState, r: ResidentState, key: string): string {
   const def = residentDef(r.id);
   const value = factValue(state, r, key);
   switch (key) {
     case 'job': {
       const job = r.jobId !== null ? state.buildings.find((b) => b.id === r.jobId) : undefined;
-      if (job) return `I work at the ${buildingDef(job.type).name.toLowerCase()}.`;
+      if (job) return said(state, r, [`I work at the ${buildingDef(job.type).name.toLowerCase()}.`, `The ${buildingDef(job.type).name.toLowerCase()} is where you'll find me most days.`, `My days go to the ${buildingDef(job.type).name.toLowerCase()}.`, `I'm at the ${buildingDef(job.type).name.toLowerCase()} most of the day.`]);
       if (def.job) {
         const one = singularName(def.job);
         return `I'd love to work at ${/^[aeiou]/i.test(one) ? 'an' : 'a'} ${one}.`;
@@ -308,20 +315,20 @@ export function factSaid(state: SimState, r: ResidentState, key: string): string
       return 'I keep house and help where I can.';
     }
     case 'lifts':
-      return `Nothing lifts me like ${lowerFirst(value.replace(/^Loves /, ''))}.`;
+      return said(state, r, [`Nothing lifts me like ${lowerFirst(value.replace(/^Loves /, ''))}.`, `Give me ${lowerFirst(value.replace(/^Loves /, ''))} and I'm happy.`, `I'm never better than with ${lowerFirst(value.replace(/^Loves /, ''))}.`, `${value.replace(/^Loves /, '').replace(/^./, (c) => c.toUpperCase())} always cheers me.`]);
     case 'dislikes':
       return value.startsWith("Can't abide") ? `I can't abide ${value.replace(/^Can't abide /, '')}.` : 'Not much bothers me, truly.';
     case 'quirk':
       return def.quirks.length ? def.quirks.map((q) => QUIRK_SAID[q] ?? '').filter(Boolean).join(' ') || 'I have my habits, like anyone.' : 'I have no odd habits to speak of.';
     case 'needs': {
       const need = value.match(/^Needs more (\w+) than most$/)?.[1];
-      return need ? `I need ${NEED_SAID[need] ?? need}, more than most.` : 'I am easy to please.';
+      return need ? said(state, r, [`I need ${NEED_SAID[need] ?? need}, more than most.`, `Without ${NEED_SAID[need] ?? need} I'm no good to anyone.`, `More than most, I need ${NEED_SAID[need] ?? need}.`, `I go to pieces without ${NEED_SAID[need] ?? need}.`]) : 'I am easy to please.';
     }
     case 'dream':
       // The dream is the answer to "what are you hoping for" itself; it is learned, not said twice (bar round 1).
       return '';
     case 'values':
-      return `What matters to me is ${value.replace(/^Cares about /, '')}.`;
+      return said(state, r, [`What matters to me is ${value.replace(/^Cares about /, '')}.`, `I care about ${value.replace(/^Cares about /, '')}, above most things.`, `If you want to know me, I set great store by ${value.replace(/^Cares about /, '')}.`, `${value.replace(/^Cares about /, '').replace(/^./, (c) => c.toUpperCase())}: that's what I care about.`]);
     case 'background':
       // In their own words (bar round 1: a bare lead-in with nothing after it).
       return def.bio ?? `I came to the valley for my own reasons. Ask me again some time.`;

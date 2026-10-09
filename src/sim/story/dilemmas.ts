@@ -207,6 +207,15 @@ export function closeDilemma(host: StoryHost, d: Dilemma, outcome: 'approved' | 
   if (outcome === 'approved') def.approve(host, d);
   const ctx = host.mindContext();
   const reactions: Array<{ who: string; valence: number }> = [];
+  // Bar round 7: a proposal left to lapse is held against you by its proposer and its two keenest
+  // backers, not the whole town (five people opened with "you never answered Bram's night baking").
+  const keen = new Set(
+    active(state)
+      .filter((r) => r.id !== d.proposer && stanceScore(r, def) > 0)
+      .sort((a, b) => stanceScore(b, def) - stanceScore(a, def) || (a.id < b.id ? -1 : 1))
+      .slice(0, 2)
+      .map((r) => r.id),
+  );
   for (const r of active(state)) {
     if (r.id === d.proposer) {
       const p =
@@ -223,6 +232,7 @@ export function closeDilemma(host: StoryHost, d: Dilemma, outcome: 'approved' | 
     // A lapse disappoints those who backed it and quietly relieves those who opposed it (bar round 1).
     const v = outcome === 'approved' ? score : outcome === 'declined' ? -0.6 * score : -0.5 * score;
     if (Math.abs(v) < 0.15) continue;
+    if (outcome === 'lapsed' && v < 0 && !keen.has(r.id)) continue;
     const sign = Math.sign(v);
     host.mind.perceive(ctx, r, {
       subject: STEWARD,

@@ -12,7 +12,7 @@ import { STEWARD, type ResidentState, type SimState, type TalkAnswer } from './t
 export type ReplyKind = 'agree' | 'disagree' | 'sorry' | 'explain';
 
 /** How the reply landed, which picks the resident's response. */
-export type ReplyStance = 'warm' | 'respect' | 'sulk' | 'forgiven' | 'enough' | 'convinced' | 'unconvinced' | 'puzzled' | 'owned' | 'insist' | 'differ' | 'seen' | 'with_you' | 'encouraged' | 'mulled' | 'bristled' | 'fine' | 'nudged' | 'cheap';
+export type ReplyStance = 'warm' | 'respect' | 'sulk' | 'forgiven' | 'enough' | 'convinced' | 'unconvinced' | 'puzzled' | 'owned' | 'insist' | 'differ' | 'seen' | 'with_you' | 'encouraged' | 'mulled' | 'bristled' | 'fine' | 'nudged' | 'cheap' | 'too_soon' | 'best_of';
 
 /** What an answer said, which decides how agreeing or disagreeing with it lands (bar round 3). */
 export type ReplyTone = 'praise' | 'complaint' | 'view' | 'mood' | 'hope';
@@ -73,13 +73,22 @@ export function explainable(aspect: string, note: string): boolean {
 }
 /** A second sorry for the same thing within this long changes nothing. */
 export const SORRY_GAP = 3 * TICKS_PER_DAY;
+/** Bar round 7: a sorry for a loss you caused, this soon after it, is "not yet". */
+export const TOO_SOON = 2 * TICKS_PER_DAY;
+
+/** Bar round 7: a grievance forgiven in the last week is not raised again (Juniper brought one up the day after forgiving it). */
+export const FORGIVEN_QUIET = 7 * TICKS_PER_DAY;
+export function recentlyForgiven(r: ResidentState, aspect: string, now: number): boolean {
+  const t = r.forgiven?.[aspect];
+  return t !== undefined && now - t < FORGIVEN_QUIET;
+}
 
 /** Everything they hold against the steward, strongest first: settled beliefs and feelings still forming. */
 export function grievances(r: ResidentState, now = 0): Array<{ aspect: string; weight: number; settled: boolean; last: number }> {
   const out: Array<{ aspect: string; weight: number; settled: boolean; last: number }> = [];
   const lastOf = (sources: Array<{ tick: number }>) => sources.reduce((m, x) => Math.max(m, x.tick), -1);
-  for (const b of Object.values(r.beliefs)) if (b.subject === STEWARD && b.valence < -0.1) out.push({ aspect: b.aspect, weight: b.strength * -b.valence, settled: true, last: Math.max(b.reinforcedTick, lastOf(b.sources)) });
-  for (const t of Object.values(r.traces)) if (t.subject === STEWARD && t.evidence < -0.1) out.push({ aspect: t.aspect, weight: -t.evidence * 0.5, settled: false, last: lastOf(t.sources) });
+  for (const b of Object.values(r.beliefs)) if (b.subject === STEWARD && b.valence < -0.1 && !recentlyForgiven(r, b.aspect, now)) out.push({ aspect: b.aspect, weight: b.strength * -b.valence, settled: true, last: Math.max(b.reinforcedTick, lastOf(b.sources)) });
+  for (const t of Object.values(r.traces)) if (t.subject === STEWARD && t.evidence < -0.1 && !recentlyForgiven(r, t.aspect, now)) out.push({ aspect: t.aspect, weight: -t.evidence * 0.5, settled: false, last: lastOf(t.sources) });
   // Something that happened in the last three days comes first: a sorry is for what is fresh.
   const fresh = (g: { last: number }) => (now - g.last < 3 * TICKS_PER_DAY ? 1 : 0);
   return out.sort((a, b) => fresh(b) - fresh(a) || b.weight - a.weight);
@@ -122,7 +131,8 @@ export function answerTone(answer: TalkAnswer): { tone: ReplyTone; subject?: str
   // An answer that says something against you is a complaint whatever else it says (bar round 4:
   // "Thank you. That means something." was offered under "you kept me waiting 7 days").
   const aggrieved = !!answer.but || (answer.memory?.subject === STEWARD && answer.memory.valence < 0) || !!answer.topics?.some((t) => t.key === 'leaving' || t.key === 'steward:fresh' || t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)));
-  if (answer.question === 'me') return { tone: DARK_BANDS.has(answer.band ?? '') || aggrieved ? 'complaint' : 'praise', subject: STEWARD };
+  // Bar round 7: a neutral view of you is neither praise nor complaint ("I don't know you well enough yet" was offered "Thank you").
+  if (answer.question === 'me') return { tone: DARK_BANDS.has(answer.band ?? '') || aggrieved ? 'complaint' : answer.band === 'neutral' || answer.band === 'cool' ? 'view' : 'praise', subject: STEWARD };
   if (answer.question === 'opinion') return { tone: 'view', ...(answer.about ? { subject: answer.about } : {}) };
   if (answer.question === 'how') return { tone: 'mood', well: answer.band === 'good' || answer.band === 'great' };
   if (answer.question === 'hope') return { tone: 'hope', ...(!answer.hope || answer.hope.done || !answer.hope.next ? { rest: true } : {}) };
@@ -251,8 +261,12 @@ export function applyReply(
       }
       if (offer.tone === 'mood') {
         adjust(r, STEWARD, { familiarity: 0.04 }, tick);
-        // Bar round 5: someone who really is well denies it ("You don't seem it" was conceded 16 of 16).
-        if (offer.well && r.mood >= 0.7) return { stance: 'fine' };
+        // Bar round 7: to someone who says they are well, the challenge is "What's been the best of
+        // it?", and they tell you ("You don't seem it" was denied 18 of 18 and led nowhere).
+        if (offer.well) {
+          talkWarmth(r, 0.01, tick);
+          return { stance: 'best_of' };
+        }
         talkWarmth(r, 0.01, tick);
         return { stance: 'seen' };
       }
@@ -274,17 +288,24 @@ export function applyReply(
       if (last !== undefined && tick - last < SORRY_GAP) return { stance: 'enough', aspect };
       // Bar round 5: someone who thinks ill of you hears a sorry for something old as words, not
       // amends ("You have lost my good opinion entirely" then "let us put it behind us").
-      const g = grievances(r, tick).find((x) => x.aspect === aspect);
-      if ((r.rel[STEWARD]?.affinity ?? 0) < -0.5 && (!g || tick - g.last >= 3 * TICKS_PER_DAY)) {
+      // Bar round 7: and below -0.5 that holds whatever the grievance's age (Juniper at -0.60,
+      // "has lost faith in you", took a sorry with "I will try to let it go").
+      if ((r.rel[STEWARD]?.affinity ?? 0) < -0.5) {
         (r.sorryFor ??= {})[aspect] = tick;
         adjust(r, STEWARD, { familiarity: 0.02 }, tick);
         return { stance: 'cheap', aspect };
+      }
+      // Bar round 7: too soon after taking away what was theirs ("Not yet. You took my jetty.").
+      if (aspect === 'destroyed_place' && r.hurtAt !== undefined && tick - r.hurtAt < TOO_SOON) {
+        adjust(r, STEWARD, { familiarity: 0.02 }, tick);
+        return { stance: 'too_soon', aspect };
       }
       (r.sorryFor ??= {})[aspect] = tick;
       // An apology clears the air: everything fresh softens most, older grievances a little.
       for (const g of grievances(r, tick)) soften(r, g.aspect, tick - g.last < 3 * TICKS_PER_DAY ? 0.6 : 0.85);
       adjust(r, STEWARD, { affinity: 0.06, trust: 0.03 }, tick);
       perceive({ aspect: 'made_amends', valence: 0.6, base: 0.5, note: 'said sorry' });
+      (r.forgiven ??= {})[aspect] = tick;
       return { stance: 'forgiven', aspect };
     }
     case 'explain': {

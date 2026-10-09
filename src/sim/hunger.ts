@@ -49,6 +49,21 @@ export const LOW_LARDER_WEIGHT = 0.1;
 export function lowLarder(state: SimState): number {
   const need = dayOfMeals(state);
   if (need <= 0) return 0;
-  const have = state.stock.food + (state.granary ?? 0);
-  return have >= need ? 0 : LOW_LARDER_WEIGHT * (1 - have / need);
+  const larder = state.stock.food;
+  if (larder >= need) return 0;
+  const short = LOW_LARDER_WEIGHT * (1 - larder / need);
+  const granary = state.granary ?? 0;
+  // In winter the granary is the larder. Before it, a town living off the winter stores worries at
+  // half weight (bar round 7: with every food place gone in autumn, nobody minded).
+  if (seasonOf(state.tick) === 'winter') return larder + granary >= need ? 0 : LOW_LARDER_WEIGHT * (1 - (larder + granary) / need);
+  return granary >= need - larder ? EARLY_STORES_SHARE * short : short;
+}
+
+/** Bar round 7: eating the winter stores before winter weighs this share of a low larder. */
+export const EARLY_STORES_SHARE = 0.5;
+
+/** A larder below a day's meals with nothing in the granary to cover it: the low-larder cap on standing and smaller thanks key on this. */
+export function bareLarder(state: SimState): boolean {
+  const need = dayOfMeals(state);
+  return need > 0 && state.stock.food + (state.granary ?? 0) < need;
 }

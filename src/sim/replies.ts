@@ -12,7 +12,7 @@ import { STEWARD, type ResidentState, type SimState, type TalkAnswer } from './t
 export type ReplyKind = 'agree' | 'disagree' | 'sorry' | 'explain';
 
 /** How the reply landed, which picks the resident's response. */
-export type ReplyStance = 'warm' | 'respect' | 'sulk' | 'forgiven' | 'enough' | 'convinced' | 'unconvinced' | 'puzzled' | 'owned' | 'insist' | 'differ' | 'seen' | 'with_you' | 'encouraged' | 'mulled' | 'bristled';
+export type ReplyStance = 'warm' | 'respect' | 'sulk' | 'forgiven' | 'enough' | 'convinced' | 'unconvinced' | 'puzzled' | 'owned' | 'insist' | 'differ' | 'seen' | 'with_you' | 'encouraged' | 'mulled' | 'bristled' | 'fine' | 'nudged' | 'cheap';
 
 /** What an answer said, which decides how agreeing or disagreeing with it lands (bar round 3). */
 export type ReplyTone = 'praise' | 'complaint' | 'view' | 'mood' | 'hope';
@@ -100,7 +100,7 @@ export function carriedGrievance(r: ResidentState, answer: TalkAnswer, now = 0):
   if (answer.question === 'me' && DARK_BANDS.has(answer.band ?? '') && answer.because && answer.because.subject === STEWARD) {
     return { aspect: answer.because.aspect, note: grievanceNote(r, answer.because.aspect) };
   }
-  const letDown = answer.topics?.some((t) => t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)));
+  const letDown = answer.topics?.some((t) => t.key === 'leaving' || t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)));
   if (letDown) {
     const g = grievances(r, now)[0];
     if (g) return { aspect: g.aspect, note: grievanceNote(r, g.aspect) };
@@ -114,7 +114,7 @@ export function answerTone(answer: TalkAnswer): { tone: ReplyTone; subject?: str
   const top = answer.topics?.[0];
   // An answer that says something against you is a complaint whatever else it says (bar round 4:
   // "Thank you. That means something." was offered under "you kept me waiting 7 days").
-  const aggrieved = !!answer.but || (answer.memory?.subject === STEWARD && answer.memory.valence < 0) || !!answer.topics?.some((t) => t.key === 'steward:fresh' || t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)));
+  const aggrieved = !!answer.but || (answer.memory?.subject === STEWARD && answer.memory.valence < 0) || !!answer.topics?.some((t) => t.key === 'leaving' || t.key === 'steward:fresh' || t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)));
   if (answer.question === 'me') return { tone: DARK_BANDS.has(answer.band ?? '') || aggrieved ? 'complaint' : 'praise', subject: STEWARD };
   if (answer.question === 'opinion') return { tone: 'view', ...(answer.about ? { subject: answer.about } : {}) };
   if (answer.question === 'how') return { tone: 'mood', well: answer.band === 'good' || answer.band === 'great' };
@@ -155,6 +155,24 @@ export interface ReplyResult {
   aspect?: string;
 }
 
+/** The most talk alone can add to someone's liking of you in seven days (bar round 5: everyone adored the steward). */
+export const TALK_WARMTH_WEEK = 0.06;
+
+/**
+ * Warmth from talk, capped over a rolling week (bar round 5): agreeing, encouraging and being seen
+ * are pleasant, but standing is earned by deeds, not by how often you chat.
+ */
+export function talkWarmth(r: ResidentState, amount: number, tick: number): void {
+  const log = (r.talkWarmth ?? []).filter(([t]) => tick - t < 7 * TICKS_PER_DAY);
+  const used = log.reduce((s, [, a]) => s + a, 0);
+  const give = Math.max(0, Math.min(amount, TALK_WARMTH_WEEK - used));
+  if (give > 0) {
+    adjust(r, STEWARD, { affinity: give }, tick);
+    log.push([tick, give]);
+  }
+  r.talkWarmth = log;
+}
+
 /** Weaken a grievance about the steward: the belief if settled, the trace if still forming. */
 function soften(r: ResidentState, aspect: string, keep: number): void {
   const k = beliefKey(STEWARD, aspect);
@@ -186,25 +204,34 @@ export function applyReply(
   switch (kind) {
     case 'agree':
       // Encouraging a hope (bar round 4).
+      // Bar round 5: talk builds familiarity; what it adds to liking is capped weekly, and only
+      // owning a complaint is remembered as something you did.
       if (offer.tone === 'hope') {
-        adjust(r, STEWARD, { familiarity: 0.03, affinity: 0.02 }, tick);
-        perceive({ aspect: 'heard_me_out', valence: 0.4, base: 0.25, note: 'cheered me on' });
+        adjust(r, STEWARD, { familiarity: 0.03 }, tick);
+        talkWarmth(r, 0.02, tick);
         return { stance: 'encouraged' };
       }
       // Owning a complaint is worth more than agreeing with praise (bar round 3).
       if (offer.tone === 'complaint') {
-        adjust(r, STEWARD, { familiarity: 0.03, trust: 0.04, affinity: 0.02 }, tick);
-        perceive({ aspect: 'heard_me_out', valence: 0.5, base: 0.35, note: 'owned up to it' });
+        adjust(r, STEWARD, { familiarity: 0.03, trust: 0.04 }, tick);
+        talkWarmth(r, 0.02, tick);
+        perceive({ aspect: 'heard_me_out', valence: 0.5, base: 0.25, note: 'owned up to it' });
         return { stance: 'owned' };
       }
-      adjust(r, STEWARD, { familiarity: 0.03, affinity: 0.02 }, tick);
-      perceive({ aspect: 'heard_me_out', valence: 0.4, base: 0.25, note: 'heard me out' });
+      adjust(r, STEWARD, { familiarity: 0.03 }, tick);
+      talkWarmth(r, 0.02, tick);
       return { stance: offer.tone === 'praise' ? 'warm' : 'with_you' };
     case 'disagree':
       // Brushing off praise is modesty, not a slight; doubting "I'm fine" is being seen.
       if (offer.tone === 'praise') {
-        adjust(r, STEWARD, { familiarity: 0.03, affinity: 0.01 }, tick);
+        adjust(r, STEWARD, { familiarity: 0.03 }, tick);
+        talkWarmth(r, 0.01, tick);
         return { stance: 'insist' };
+      }
+      // Bar round 5: doubting a pause between dreams is a nudge, with its own answers.
+      if (offer.tone === 'hope' && offer.rest) {
+        adjust(r, STEWARD, { familiarity: 0.03 }, tick);
+        return { stance: 'nudged' };
       }
       if (offer.tone === 'hope') {
         // Doubting a dream: the steady take it as care and think again; the touchy bristle.
@@ -217,7 +244,9 @@ export function applyReply(
       }
       if (offer.tone === 'mood') {
         adjust(r, STEWARD, { familiarity: 0.04 }, tick);
-        perceive({ aspect: 'heard_me_out', valence: 0.3, base: 0.2, note: 'saw how I really was' });
+        // Bar round 5: someone who really is well denies it ("You don't seem it" was conceded 16 of 16).
+        if (offer.well && r.mood >= 0.7) return { stance: 'fine' };
+        talkWarmth(r, 0.01, tick);
         return { stance: 'seen' };
       }
       if (offer.tone === 'view') {
@@ -236,6 +265,14 @@ export function applyReply(
       const aspect = offer.aspect as string;
       const last = r.sorryFor?.[aspect];
       if (last !== undefined && tick - last < SORRY_GAP) return { stance: 'enough', aspect };
+      // Bar round 5: someone who thinks ill of you hears a sorry for something old as words, not
+      // amends ("You have lost my good opinion entirely" then "let us put it behind us").
+      const g = grievances(r, tick).find((x) => x.aspect === aspect);
+      if ((r.rel[STEWARD]?.affinity ?? 0) < -0.5 && (!g || tick - g.last >= 3 * TICKS_PER_DAY)) {
+        (r.sorryFor ??= {})[aspect] = tick;
+        adjust(r, STEWARD, { familiarity: 0.02 }, tick);
+        return { stance: 'cheap', aspect };
+      }
       (r.sorryFor ??= {})[aspect] = tick;
       // An apology clears the air: everything fresh softens most, older grievances a little.
       for (const g of grievances(r, tick)) soften(r, g.aspect, tick - g.last < 3 * TICKS_PER_DAY ? 0.6 : 0.85);

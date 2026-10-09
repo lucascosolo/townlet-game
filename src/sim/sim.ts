@@ -136,7 +136,8 @@ export const LOW_STANDING = 0.15;
 export const FELT_CAP = 0.22;
 /** Bar round 4: the most anyone thinks of you while the larder has been low two dawns running. */
 export const LOW_LARDER_TOP = 0.85;
-export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
+/** Bar round 5: 35 timber to start (was 25): seventeen builds were refused for timber in the first fortnight. */
+export const START_STOCK: Record<Resource, number> = { food: 20, timber: 35 };
 /** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */
 /** How much telling a memory rehearses it: about as much as reminiscing with a friend. */
 export const RECALL_REHEARSAL = 0.15;
@@ -1266,7 +1267,9 @@ export class Simulation implements AspirationHost {
         const before = lapsesOf(state, r.id, q.kind, tick);
         q.status = 'lapsed';
         q.closedTick = tick;
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'ignores_me', valence: -0.7, base: before === 0 ? 0.6 : 0.3, source: 'witnessed', note: 'nothing was done' });
+        // Bar round 5: name what was not done ("(what the steward did: nothing was done)").
+        const forWhat = q.kind === 'aspiration' && q.wants ? `${/^[aeiou]/i.test(buildingDef(q.wants).name) ? 'an' : 'a'} ${buildingDef(q.wants).name.toLowerCase()}` : WISH_LABELS[q.kind].toLowerCase();
+        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'ignores_me', valence: -0.7, base: before === 0 ? 0.6 : 0.3, source: 'witnessed', note: `never got ${def.pronouns.obj} ${forWhat}` });
         this.emit({ t: tick, type: 'request_closed', request: { ...q } });
       }
     }

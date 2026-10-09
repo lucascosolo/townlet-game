@@ -392,6 +392,14 @@ function formNewDream(h: AspirationHost, r: ResidentState): void {
 }
 
 /** Each morning: advance whoever's next stage has come about, and let new dreams form. */
+/** Building types a resident's dreams have asked for, now or before (bar round 5: Juniper said her own glasshouse "spoils the view"). */
+export function dreamBuildings(state: SimState, r: ResidentState): Set<string> {
+  const out = new Set<string>();
+  for (const def of [ASPIRATIONS[r.id], dreamOf(state, r)]) for (const st of def?.stages ?? []) for (const x of [st.until, st.place, st.needs]) if (x && x !== 'home') out.add(x);
+  for (const q of state.requests) if (q.by === r.id && q.wants) out.add(q.wants);
+  return out;
+}
+
 export function aspirationMorning(h: AspirationHost): void {
   for (const r of active(h.state)) {
     // A dream about someone who has left is put away (bar round 4: "make something for Rufus" after he left).

@@ -220,8 +220,12 @@ export function storesDawn(h: AspirationHost): void {
 /** The first day of spring: last year's stores won't keep, so they are shared out at a feast. */
 function springFeast(h: AspirationHost): void {
   const state = h.state;
-  const eaten = Math.floor(state.granary ?? 0);
-  state.granary = 0;
+  // Bar round 5: two thirds are shared out and a third carried into spring, so the town does not go
+  // from 300 food put by to a bare-larder worry the next morning.
+  const all = state.granary ?? 0;
+  const kept = Math.floor(all / 3);
+  const eaten = Math.floor(all - kept);
+  state.granary = all - eaten;
   const people = active(state);
   const k = keeper(state);
   if (!k || people.length === 0) return;
@@ -249,5 +253,6 @@ function springFeast(h: AspirationHost): void {
     stored: eaten,
     target: 0,
     daysLeft: daysToWinter(state.tick),
+    kept,
   });
 }

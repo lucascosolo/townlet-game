@@ -109,6 +109,8 @@ export function mindTopics(state: SimState, r: ResidentState): MindTopic[] {
   for (const b of Object.values(r.beliefs)) {
     // Their view of the steward has its own topic.
     if (tick - b.formedTick > 2 * TICKS_PER_DAY || b.subject === STEWARD) continue;
+    // Losing a place is grief, not a turn against it (bar round 5: "The old oak! Overrated!" days after mourning it).
+    if (b.aspect === 'lost_place') continue;
     const person = b.subject.startsWith('r:');
     topics.push({ key: `belief${person ? '_person' : ''}:${b.valence >= 0 ? '+' : '-'}`, about: b.subject, weight: 0.4 + 0.3 * b.strength, vars: { x: subjectWord(state, b.subject), aspect: b.aspect }, reason: `newly decided something about ${subjectWord(state, b.subject)}` });
   }

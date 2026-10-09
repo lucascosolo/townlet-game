@@ -139,7 +139,10 @@ export function factValue(state: SimState, r: ResidentState, key: string): strin
       return 'Keeps house and helps where needed';
     }
     case 'lifts': {
-      const top = ranked[0] as { q: Quality; v: number };
+      // What they love more than the rest of the town does (bar round 5: four of six founders "love
+      // growing things"); noise they love is the noise they mind least.
+      const mean = castMean(state, (d) => ambientPrefs(d) as unknown as Record<string, number>);
+      const top = [...ranked].filter((x) => x.q !== 'noise' || x.v > 0).map((x) => ({ ...x, rel: x.v - (mean[x.q] ?? 0) })).sort((a, b) => b.rel - a.rel)[0] as { q: Quality; v: number; rel: number };
       return `Loves ${top.q === 'noise' ? QUALITY_LIKES.noise[top.v > 0 ? 0 : 1] : QUALITY_LIKES[top.q][0]}`;
     }
     case 'dislikes': {

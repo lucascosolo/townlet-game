@@ -220,6 +220,8 @@ export interface Unseen {
 export interface ResidentState {
   /** A place they held dear that was taken away (bar round 4): weighs on mood for a few days. */
   lostPlace?: { tick: number; weight: number };
+  /** Warmth that talk added lately, [tick, amount] (bar round 5: capped weekly). */
+  talkWarmth?: Array<[number, number]>;
   id: string;
   homeId: number;
   jobId: number | null;
@@ -537,7 +539,7 @@ export type SimEvent =
   | { t: number; type: 'tier'; tier: number; name: string; unlocks: string[]; cap: number }
   | { t: number; type: 'goal'; phase: 'new' | 'done' | 'all'; goal?: import('./progress.js').Goal; goals?: import('./progress.js').Goal[] }
   | { t: number; type: 'fact'; who: string; key: string; first: boolean }
-  | { t: number; type: 'stores'; phase: 'asked' | 'reminded' | 'progress' | 'met' | 'short' | 'feast'; who: string; stored: number; target: number; daysLeft: number }
+  | { t: number; type: 'stores'; phase: 'asked' | 'reminded' | 'progress' | 'met' | 'short' | 'feast'; who: string; stored: number; target: number; daysLeft: number; kept?: number }
   | { t: number; type: 'built'; building: number; btype: string; by: 'steward' }
   | { t: number; type: 'removed'; building: number; btype: string; by: 'steward' }
   | { t: number; type: 'took_job'; who: string; building: number }

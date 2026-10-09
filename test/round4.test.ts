@@ -40,7 +40,7 @@ function statesGrievance(a: TalkAnswer, offer: ReplyOffer): boolean {
   if (a.topics?.some((t) => t.key === 'steward:fresh' && t.vars.aspect === offer.aspect)) return true;
   if (a.question === 'me' && a.because?.aspect === offer.aspect) return true;
   // A general let-down ("You don't listen. Never have.") is answered by a sorry for the freshest grievance.
-  return !!a.topics?.some((t) => t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)));
+  return !!a.topics?.some((t) => t.key === 'leaving' || t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)));
 }
 
 describe('round 4, criteria 1 and 5: replies that answer what was said; answers without stock facts', () => {

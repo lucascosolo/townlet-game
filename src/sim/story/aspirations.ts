@@ -314,7 +314,8 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       {
         id: 'asking',
         next: 'Ask around about where the trade cart goes',
-        check: (h, r) => days(h, r) >= 2,
+        // Done by the passing of days, quietly: a question asked is not a milestone.
+        check: () => false,
       },
       {
         id: 'restless',

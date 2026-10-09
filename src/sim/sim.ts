@@ -425,6 +425,7 @@ export class Simulation implements AspirationHost {
       this.execute(this.commands.shift() as Command);
     }
     this.worked = new Set();
+    this.capAfterLowLarder();
     for (const id of state.order) {
       const r = state.residents[id] as ResidentState;
       if (!r.departed && r.activity?.id === 'work' && r.at === r.activity.placeId) this.worked.add(r.at);
@@ -683,7 +684,10 @@ export class Simulation implements AspirationHost {
         .sort((a, b) => Number(b.placedTick >= q.postedTick) - Number(a.placedTick >= q.postedTick) || distanceTo(a, hx, hy) - distanceTo(b, hx, hy))[0];
       if (built && !built.dreamOf?.includes(r.id)) (built.dreamOf ??= []).push(r.id);
     }
-    if (stewardActed) this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'listens_to_me', valence: 1, base: 0.9, source: 'witnessed', note: ASK_THANKS[q.kind] });
+    // Bar round 6: food built while the larder is still bare answers the ask, but the thanks wait on
+    // full plates (a hungry week weighed nothing once everyone felt listened to).
+    const stillBare = q.kind === 'more_food' && lowLarder(state) > 0;
+    if (stewardActed) this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'listens_to_me', valence: 1, base: stillBare ? 0.3 : 0.9, source: 'witnessed', note: stillBare ? 'built food for us' : ASK_THANKS[q.kind] });
     this.emit({ t: state.tick, type: 'request_closed', request: { ...q } });
     return true;
   }
@@ -1375,7 +1379,7 @@ export class Simulation implements AspirationHost {
     return q;
   }
 
-  /** While a low larder is remembered, nobody stands above LOW_LARDER_TOP with you: checked at dawn and each hour (bar round 6: a granted ask at 07:00 slipped past the dawn check). */
+  /** While a low larder is remembered, nobody stands above LOW_LARDER_TOP with you: checked at dawn and every minute (bar round 6: a granted ask at 07:00 slipped past the dawn check). */
   private capAfterLowLarder(): void {
     if ((this.state.lowCapUntil ?? -1) <= this.state.tick) return;
     for (const r of this.activeResidents()) {
@@ -1385,7 +1389,6 @@ export class Simulation implements AspirationHost {
   }
 
   private hourly(): void {
-    this.capAfterLowLarder();
     // Orchards and glasshouses grow on their own, by season.
     const season = seasonOf(this.state.tick);
     for (const b of liveBuildings(this.state)) {

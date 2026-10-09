@@ -133,7 +133,7 @@ export const LOSS_DAYS = 4;
 /** Bar round 4: below zero standing, mood falls this much more per unit (so −1 costs 0.15 more). */
 export const LOW_STANDING = 0.15;
 /** Bar round 4: the most the town's troubles take off mood together. */
-export const FELT_CAP = 0.22;
+export const FELT_CAP = 0.25;
 /** Bar round 4: the most anyone thinks of you while the larder has been low two dawns running. */
 export const LOW_LARDER_TOP = 0.85;
 /** Bar round 5: 30 timber to start (was 25): seventeen builds were refused for timber in the first fortnight. */

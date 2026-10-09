@@ -44,6 +44,14 @@ export const BELIEF_STATEMENTS: Record<string, string> = {
   granted_wish: 'the steward makes wishes come true',
   asks_too_much: 'the steward asks too much of {obj}',
   looks_out_for_me: 'the steward looks out for {obj}',
+  // Bar round 3: every aspect the sim can form has words (a missing one showed as "matters (still_waiting)").
+  went_hungry: 'the steward lets the larder run bare',
+  still_waiting: 'the steward keeps {obj} waiting',
+  spoke_plainly: 'the steward says what they think',
+  heard_me_out: 'the steward hears {obj} out',
+  explained: 'the steward explains things',
+  excuses: 'the steward makes excuses',
+  disagreement: '{S} and {subj} see things differently',
 };
 
 /** Thoughts and speech, keyed by aspect and sign ("+" or "-"). */
@@ -228,6 +236,13 @@ export const SPEECH: Record<string, Lines> = {
     warm: ['Something, at least. Better than nothing on the table.', 'The brook never lets you down, not entirely.', 'Enough for a stew, if I am clever with it.', 'I found more than I expected. Small mercies.', "It'll feed us tonight, and that's what matters."],
     chatty: ['Berries! And a mushroom I am nearly sure about!', 'Provisions! Of a sort!', 'Look! Food! Free food!', 'The hedge is a shop that never shuts!', 'I wrestled a fish! The fish won, but I kept the eggs!'],
     dreamy: ['The hedge gave what it had.', 'The brook keeps a little back for the hungry.', 'The valley feeds you if you ask it quietly.', 'A basket of small kindnesses from the bank.', 'I brought back the colour green and a little more.'],
+  },
+  gaveUp: {
+    plain: ["Not asking again. What's the use.", "Stopped asking. Easier.", 'Done asking.', "I'll sort myself out.", "Won't trouble the steward again."],
+    formal: ['I shall not trouble the steward further.', 'I have stopped expecting anything, which is a kind of peace.', 'There is no point in asking where nobody answers.', 'I will manage my own affairs from now on.', 'The steward has made their position clear enough.'],
+    warm: ["I've stopped asking. It hurt less than waiting.", "I don't expect much any more. That's all right.", "I'll just get on with things myself.", "I suppose I'll stop hoping for a while.", "No more asks from me. I'm tired of waiting."],
+    chatty: ['I give up! Officially! On asking!', 'No more asks! The board can stay empty for all I care!', 'Asking the steward is like shouting at fog!', 'Done! Finished! Not asking!', 'Who needs the steward anyway? Not me! Probably!'],
+    dreamy: ['I have folded my hopes up and put them away.', 'The board is a door I no longer knock on.', 'I stopped calling, and the quiet came in.', 'Some wishes are better kept than sent.', 'I will ask the brook instead.'],
   },
   letGo: {
     plain: ['Not this season, then.', "Asked. Waited. Done waiting."],

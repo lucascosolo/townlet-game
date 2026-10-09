@@ -262,6 +262,8 @@ export interface ResidentState {
   lastForageDay?: number;
   /** Trips made on lastForageDay (two when very hungry). */
   forageTrips?: number;
+  /** Gave up expecting anything of the steward until this tick (bar round 3): no asks, no waiting pangs. */
+  gaveUpUntil?: number;
   /** Day of the steward's last talk with them that counted (M3b: no farming). */
   lastTalkDay?: number;
   /** A favour they agreed to and are doing (M3c). */
@@ -495,6 +497,8 @@ export interface SimState {
   stock: Record<Resource, number>;
   /** Day of the last food shortage announcement, or 0. */
   lastShortageDay: number;
+  /** Consecutive days the town has gone short, ending on lastShortageDay (bar round 3). */
+  shortRun?: number;
   nextFavourId?: number;
   /** Today's production so far, by resident (or building type for what grows itself), shown each morning. */
   produced?: Record<string, Partial<Record<Resource, number>>>;
@@ -583,6 +587,8 @@ export type SimEvent =
   /** Standing moved: `reasons` pulled the way it moved, `also` the other way (bar round 2: each side with its own sign). */
   | { t: number; type: 'standing'; who: string; delta: number; reasons: string[]; also?: string[] }
   | { t: number; type: 'thinking_of_leaving'; who: string }
+  /** Ignored once too often, they stop asking the steward for anything for a while (bar round 3). */
+  | { t: number; type: 'gave_up'; who: string }
   /** A dream stage waited on the steward for over a week and the dreamer let it go (bar round 2). */
   | { t: number; type: 'dream_let_go'; who: string; wants: string }
   /** A hungry resident went looking for food along the brook or the wild edge (bar round 2). */

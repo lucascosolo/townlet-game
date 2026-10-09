@@ -9,19 +9,20 @@ import { residentReport, type ResidentReport } from '../../../src/inspect/inspec
 import type { NarratorEntry } from '../../../src/narrate/narrator.js';
 import { CLEAR_MINUTES, FAVOUR_MINUTES, considerFavour, openPlots, recentAsks } from '../../../src/sim/favours.js';
 import { opinion } from '../../../src/sim/mind/memory.js';
-import { ambientPrefs, prefScore } from '../../../src/sim/needs.js';
+import { ambientPrefs, prefScore, needIsLow } from '../../../src/sim/needs.js';
 import { wishProgress } from '../../../src/sim/story/director.js';
 import { dilemmaDef, stanceScore } from '../../../src/sim/story/dilemmas.js';
 import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
 import { daysToWinter, granaryRoom, hasGranary } from '../../../src/sim/stores.js';
 import { dreamTitle } from '../../../src/sim/story/aspirations.js';
-import { ALL_FACTS, FACTS, TIERS, factValue, goalLabel, knownFacts, nextTier, progressOf, todaysGoals, unlocked, RENOWN } from '../../../src/sim/progress.js';
+import { TIER_GIFT, ALL_FACTS, FACTS, TIERS, factValue, goalLabel, knownFacts, nextTier, progressOf, todaysGoals, unlocked, RENOWN } from '../../../src/sim/progress.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
 import type { AdResult, RewardedAds } from '../ads.js';
 import { TRADER_GIFT } from '../../../src/sim/sim.js';
 import type { ReplyKind } from '../../../src/sim/replies.js';
 import { replySaid } from '../../../src/content/replies.js';
+import { addLedgerNote, groupAsks, ledgerLine, type LedgerNote } from '../../../src/narrate/board.js';
 import { vividMemories } from '../../../src/sim/recall.js';
 import { residentColor } from '../view/meshes.js';
 import { ICONS } from './icons.js';
@@ -202,7 +203,7 @@ export class Ui {
   private readonly bubbles = new Map<string, { el: HTMLElement; until: number; born: number; major: boolean }>();
   private readonly bubbleLayer: HTMLElement;
   private readonly openWhy = new Set<string>();
-  private readonly standingNotes = new Map<string, string[]>();
+  private readonly standingNotes = new Map<string, LedgerNote[]>();
   private readonly shownDilemmas = new Set<number>();
   private modal: HTMLElement | null = null;
   private speedBeforeModal = 1;
@@ -929,7 +930,7 @@ export class Ui {
       confetti.appendChild(bit);
     }
     c.append(confetti, el('div', { class: 'eyebrow' }, 'The valley grows'), el('h2', {}, `A ${e.name} now!`));
-    c.appendChild(el('p', {}, `Word has got round. The neighbouring towns send 15 timber, and up to ${e.cap} can make their home here.`));
+    c.appendChild(el('p', {}, `Word has got round. The neighbouring towns send ${TIER_GIFT} timber, and up to ${e.cap} can make their home here.`));
     for (const t of e.unlocks) {
       const row = el('div', { class: 'unlock' });
       const img = el('img', { class: 'thumb', alt: '' });
@@ -1331,10 +1332,8 @@ export class Ui {
     if (e.type === 'fact') this.toast(`${portraitSvg(e.who, 26)}<span>${e.first ? 'Met' : 'Getting to know'} ${residentDef(e.who).name}: ${factValue(this.game.sim.state, this.game.sim.resident(e.who), e.key)}</span>`, 'fact');
     if (e.type === 'tier') this.celebrateTier(e);
     if (e.type === 'standing') {
-      const notes = this.standingNotes.get(e.who) ?? [];
-      const other = e.also && e.also.length > 0 ? ` · ${e.delta > 0 ? '▼' : '▲'} ${e.also.join('; ')}` : '';
-      notes.unshift(`${e.delta > 0 ? '▲' : '▼'} Day ${dayOf(e.t)}: ${e.reasons.join('; ')}${other}`);
-      this.standingNotes.set(e.who, notes.slice(0, 5));
+      // A grievance that grows by a day updates its line rather than adding one (bar round 3).
+      this.standingNotes.set(e.who, addLedgerNote(this.standingNotes.get(e.who) ?? [], { day: dayOf(e.t), up: e.delta > 0, reasons: e.reasons, also: e.also ?? [] }));
       this.bubble(e.who, e.delta > 0 ? `♥ Thinks better of you: ${e.reasons[0]}` : `☁ Thinks less of you: ${e.reasons[0]}`, e.delta > 0 ? 'up' : 'down');
     }
   }
@@ -1402,7 +1401,8 @@ export class Ui {
       const p = wishProgress(state, w);
       const card = el('div', { class: 'card wish', 'data-testid': `wish-${w.id}` });
       card.appendChild(el('div', { class: 'card-title' }, w.label));
-      card.appendChild(el('p', { class: 'quiet' }, `${p.met} of ${p.of} who wished for it have it: ${w.supporters.map((id) => residentDef(id).name).join(', ')}.`));
+      const here = w.supporters.filter((id) => !this.game.sim.state.residents[id]?.departed);
+      card.appendChild(el('p', { class: 'quiet' }, `${p.met} of ${p.of} who wished for it have it: ${here.map((id) => residentDef(id).name).join(', ')}.`));
       if (w.kind === 'more_green') {
         // Grouped by how green it is round each home: "Nothing green nearby yet: Ada, Fen and Wren."
         const by = new Map<string, string[]>();
@@ -1435,10 +1435,15 @@ export class Ui {
 
     pane.appendChild(el('h3', {}, 'Asked of you'));
     if (requests.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'Nobody is asking for anything just now.'));
-    for (const q of requests) {
+    // One card per kind of ask, with everyone's names (bar round 3: ten identical food cards).
+    for (const group of groupAsks(requests)) {
+      const q = group[0] as Request;
       const card = el('div', { class: 'card', 'data-testid': `request-${q.id}` });
       const who = residentDef(q.by);
-      card.appendChild(el('div', { class: 'card-title' }, `${who.name} ${ASK_TITLES[q.kind]}${q.wants ? `: ${/^[aeiou]/.test(singularName(q.wants)) ? 'an' : 'a'} ${singularName(q.wants)}` : ''}`));
+      const names = group.map((x) => residentDef(x.by).name);
+      const people = names.length === 1 ? who.name : names.length <= 3 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
+      const title = names.length === 1 ? ASK_TITLES[q.kind] : ASK_TITLES[q.kind].replace(/^asks\b/, 'ask').replace(/^wants\b/, 'want').replace(/^would like\b/, 'would like');
+      card.appendChild(el('div', { class: 'card-title' }, `${people} ${title}${q.wants ? `: ${/^[aeiou]/.test(singularName(q.wants)) ? 'an' : 'a'} ${singularName(q.wants)}` : ''}`));
       if (q.kind === 'quieter_home') card.appendChild(el('p', {}, `${cap(this.game.narrator.statement(q.by, { subject: q.subject, aspect: 'noisy_at_night' }))}.`));
       if (q.kind === 'more_green') card.appendChild(el('p', { 'data-testid': 'green-progress' }, this.greenLine(q.by)));
       // A dream ask quotes the dreamer (bar round 2: "it matters a great deal to them" on every card).
@@ -1561,7 +1566,7 @@ export class Ui {
       const notes = this.standingNotes.get(id);
       if (notes?.length) {
         const ul = el('ul', { class: 'quiet' });
-        for (const n of notes) ul.appendChild(el('li', {}, n));
+        for (const n of notes) ul.appendChild(el('li', {}, ledgerLine(n)));
         card.appendChild(ul);
       }
       pane.appendChild(card);
@@ -1598,17 +1603,26 @@ export class Ui {
     const root = el('div', { class: 'talk', 'data-testid': 'talk' });
     // The conversation reads top-down like a chat: your question, then their answer.
     const convo = el('div', { class: 'convo' });
+    // The two exchanges before this one stay on screen (bar round 3: the answer being replied to vanished).
+    const history = el('div', { class: 'convo-history', 'data-testid': 'talk-history' });
     const asked = el('div', { class: 'said you', 'data-testid': 'talk-asked' });
     const answer = el('div', { class: 'said them' });
     answer.appendChild(portrait(id, 36));
     const reply = el('div', { class: 'bubble-reply', 'data-testid': 'talk-reply' });
     answer.appendChild(reply);
     const replies = el('div', { class: 'replies', 'data-testid': 'talk-replies' });
-    convo.append(asked, answer, replies);
+    convo.append(history, asked, answer, replies);
     root.appendChild(convo);
     const controls: HTMLButtonElement[] = [];
     let p!: TalkPanel;
     const say = (words: string) => {
+      // What was said and answered moves up into the history before the next exchange.
+      if (asked.textContent && reply.textContent && !answer.hidden) {
+        const old = el('div', { class: 'exchange' });
+        old.append(el('div', { class: 'said you old' }, asked.textContent), el('div', { class: 'said them old' }, reply.textContent));
+        history.appendChild(old);
+        while (history.childElementCount > 2) history.firstElementChild?.remove();
+      }
       asked.textContent = words;
       p.pick = null;
     };
@@ -2005,7 +2019,7 @@ export class Ui {
     j.appendChild(this.meter('Mood', rep.mood));
     j.appendChild(this.meter('Settled here', rep.disposition));
 
-    const low = rep.needs.filter((n) => n.level < n.setpoint * 0.6).map((n) => n.need);
+    const low = rep.needs.filter((n) => needIsLow(n.level, n.setpoint)).map((n) => n.need);
     const needs = this.section(`Needs${low.length ? ` · low: ${low.join(', ')}` : ' · all met'}`, 'needs');
     for (const n of rep.needs) needs.appendChild(this.meter(cap(n.need), n.level, n.setpoint));
     j.appendChild(needs);
@@ -2013,13 +2027,17 @@ export class Ui {
     j.appendChild(this.personality(rep));
     j.appendChild(el('h3', {}, 'Feeling'));
     const feel = el('p', { 'data-testid': 'feelings' });
-    feel.textContent = rep.feelings.length ? rep.feelings.map((f) => `${f.kind}${f.about ? ` about ${f.about}` : ''}`).join(', ') : 'Nothing in particular.';
+    feel.textContent = rep.feelings.length ? [...new Set(rep.feelings.map((f) => `${f.kind}${f.about ? ` about ${f.about}` : ''}`))].join(', ') : 'Nothing in particular.';
     j.appendChild(feel);
 
     j.appendChild(el('h3', {}, 'Opinions, and why'));
     if (rep.opinions.length === 0) j.appendChild(el('p', { class: 'quiet' }, 'No settled opinions yet.'));
+    // Each thing once (bar round 3: three flower beds gave three identical lines).
+    const saidOpinions = new Set<string>();
     for (const o of rep.opinions) {
       for (const b of o.beliefs) {
+        if (saidOpinions.has(b.statement)) continue;
+        saidOpinions.add(b.statement);
         const det = this.why(`${cap(b.statement)}.`, 'why', 'opinion');
         const ul = el('ul');
         for (const s of b.sources) ul.appendChild(el('li', {}, `${s.when}, ${s.how}: ${s.note}`));
@@ -2030,7 +2048,9 @@ export class Ui {
     if (rep.forming.length) {
       j.appendChild(el('h3', {}, `Still making up ${residentDef(rep.id).pronouns.poss} mind`));
       for (const f of rep.forming) {
-        const det = this.why(`Maybe ${f.statement}…`, 'why forming', 'opinion-forming');
+        if (saidOpinions.has(f.statement)) continue;
+        saidOpinions.add(f.statement);
+        const det = this.why(`Maybe ${f.statement.replace(/^The /, 'the ')}…`, 'why forming', 'opinion-forming');
         det.appendChild(el('p', { class: 'quiet' }, `${Math.min(99, Math.round((Math.abs(f.evidence) / 0.9) * 100))}% of the way to deciding.`));
         const ul = el('ul');
         for (const s of f.sources) ul.appendChild(el('li', {}, `${s.when}, ${s.how}: ${s.note}`));

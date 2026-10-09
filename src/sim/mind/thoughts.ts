@@ -152,10 +152,11 @@ function topicId(t: MindTopic): string {
 /** The freshest bad turn the steward did them in the last two days: its note in their words, if any. */
 export function freshGrievance(r: ResidentState, tick: number): { aspect: string; note: string; weight: number } | null {
   let best: { aspect: string; note: string; weight: number; tick: number } | null = null;
-  const consider = (aspect: string, valence: number, sources: Array<{ tick: number; note: string; weight: number }>, size: number) => {
+  const consider = (aspect: string, valence: number, sources: Array<{ tick: number; note: string; weight: number; kind?: string }>, size: number) => {
     if (valence >= 0) return;
     for (const src of sources) {
-      if (tick - src.tick >= 2 * TICKS_PER_DAY) continue;
+      // Telling you about it is not something you did (bar round 3: "you told you about it").
+      if (tick - src.tick >= 2 * TICKS_PER_DAY || (src as { kind?: string }).kind === 'recalled') continue;
       // The one that weighs most, not merely the latest: a felled oak outweighs this morning's small pang.
       // A source's weight is signed (feeling times intensity); its size is what counts here.
       const weight = Math.min(1, size * Math.abs(src.weight));

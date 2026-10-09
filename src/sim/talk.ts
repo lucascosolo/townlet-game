@@ -4,6 +4,7 @@
 // acquaintance with the steward; asking again the same day changes nothing.
 
 import { opinion } from './mind/memory.js';
+import { townHunger } from './hunger.js';
 import { freshGrievance } from './mind/thoughts.js';
 import { TICKS_PER_DAY } from './time.js';
 import { rel } from './mind/relationships.js';
@@ -64,9 +65,14 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
       // Asked by someone who has let them down badly, "how are you" is no better than fair, and
       // says why (bar round 2: the page said "unhappy with you" while the mouth said "rather good spirits").
       const sour = rel(r, STEWARD).affinity < -0.5;
+      // Hungry two days running, or in a town going short: no better than fair, and they say why (bar round 3).
+      const day = Math.floor(state.tick / TICKS_PER_DAY) + 1;
+      const hungry = ((r.hungryRun ?? 0) >= 2 && (r.lastHungryDay ?? -9) >= day - 1) || townHunger(state) >= 0.12;
       const band = moodBand(r.mood);
-      const capped = sour && (band === 'good' || band === 'great');
-      const topics = capped ? [{ key: 'steward:-', about: STEWARD as SubjectId, vars: {}, rank: 0 }, ...top.slice(0, 1).map((t) => ({ ...t, rank: 1 }))] : top.slice(0, 1);
+      const capped = (sour || hungry) && (band === 'good' || band === 'great');
+      const reason = hungry ? { key: 'larder', vars: {}, rank: 0 } : { key: 'steward:-', about: STEWARD as SubjectId, vars: {}, rank: 0 };
+      const rest = top.filter((t) => !(hungry && (t.key === 'feel:joy' || t.key === 'larder')));
+      const topics = capped || hungry ? [reason, ...rest.slice(0, 1).map((t) => ({ ...t, rank: 1 }))].slice(0, hungry && !capped ? 1 : 2) : top.slice(0, 1);
       return {
         question,
         band: capped ? 'fair' : band,
@@ -76,7 +82,8 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
       };
     }
     case 'mind':
-      return { question, topics: top };
+      // Two things at most (bar round 3: six- and ten-sentence answers).
+      return { question, topics: top.slice(0, 2) };
     case 'hope':
       return { question, hope: { title: dreamTitle(state, r) ?? '', next: nextStep(state, r), done: r.aspiration.done } };
     case 'opinion': {
@@ -110,6 +117,13 @@ export function reconcile(answer: TalkAnswer): TalkAnswer {
       if (dark && (t.key === 'feel:joy' || t.key === 'steward:+' || (t.about === STEWARD && t.key === 'feel:gratitude'))) return false;
       return true;
     });
+  }
+  // Someone well does not lead with a worry, a want or the larder (bar round 3: "On top of the
+  // world, me! Larder emergency!"); and joy and hunger never share an answer.
+  if (answer.topics && answer.question === 'how' && sunny) answer.topics = answer.topics.filter((t) => !/^(need:|larder|feel:(worry|grief|loneliness|annoyance))/.test(t.key));
+  if (answer.topics && answer.topics.some((t) => t.key === 'feel:joy') && answer.topics.some((t) => t.key === 'larder' || t.key === 'need:food')) {
+    const first = answer.topics.find((t) => t.key === 'feel:joy' || t.key === 'larder' || t.key === 'need:food')!;
+    answer.topics = answer.topics.filter((t) => t === first || !(t.key === 'feel:joy' || t.key === 'larder' || t.key === 'need:food'));
   }
   // One feeling per subject in one breath (bar round 2: "I am grateful to you... you still
   // irritate me"): where two topics about the same thing pull opposite ways, the higher-ranked one stays.

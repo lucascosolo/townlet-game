@@ -101,11 +101,11 @@ export const TALK_REASON: Lines = {
 
 /** A concession after a kind view (bar round 2): "though you took away the old oak". {x} is the grievance in their words. */
 export const TALK_BUT: Lines = {
-  plain: ['Though you {x}. I keep count.', 'Mind, you {x}.'],
-  formal: ['Though I have not forgotten that you {x}.', 'That said, you {x}, and I noticed.'],
-  warm: ['Though you {x}, and that stung a little.', 'Even so, you {x}. I wish you had not.'],
-  chatty: ['Though you {x}! I have not forgotten!', 'Mind you, you {x}. Hmph!'],
-  dreamy: ['Though you {x}. It has not settled yet.', 'And yet you {x}; that sits in me still.'],
+  plain: ['Though {x}, and I keep count.', 'Mind, {x}.', 'Still, {x}.', 'But {x}, and I noticed.', "Though {x}, and that's not forgotten."],
+  formal: ['Though I have not forgotten that {x}.', 'That said, {x}, and I noticed.', 'I must add that {x}.', 'Though it did not escape me that {x}.', 'Even so, {x}.'],
+  warm: ['Though {x}, and that stung a little.', "Even so, {x}, and I wish it hadn't been so.", 'Only, {x}, and it hurt.', 'But {x}, and I minded.', 'Though {x}, and I am still a bit sore.'],
+  chatty: ['Though {x}, and I have not forgotten!', 'Mind you, {x}, hmph!', 'But {x}, honestly!', 'Except {x}, still cross!', 'Though {x}, ahem!'],
+  dreamy: ['Though {x}, and it has not settled yet.', 'And yet {x}; that sits in me still.', 'Only {x}, and the air has not cleared.', 'But {x}, a small stone in the shoe.', 'Though {x}, and I carry it.'],
 };
 
 export const TALK_ME: Record<string, Lines> = {

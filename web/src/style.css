@@ -589,3 +589,9 @@ body.phone .replies .chip.reply { min-height: 40px; }
 .dragged { position: absolute !important; z-index: 8; margin: 0; max-height: none; }
 .dragged.widget { display: flex; }
 .dragged.scroll { bottom: auto; }
+
+/* Bar round 3: the last exchanges stay above the current one, quieter. */
+.convo-history .exchange { opacity: 0.6; margin-bottom: 4px; }
+.convo-history .said { font-size: 13px; }
+.convo-history .said.them { padding: 4px 10px; background: rgba(255, 255, 255, 0.5); border-radius: 10px; }
+.convo-history .exchange { display: flex; flex-direction: column; gap: 3px; }

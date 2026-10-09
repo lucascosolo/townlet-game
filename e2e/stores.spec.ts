@@ -36,7 +36,8 @@ test('criterion 6: the board shows the winter stores, the HUD the granary, and t
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('granary-stock')).toBeHidden();
   // Juniper raises the quest within the first week or so; the considerate steward builds the granary.
-  await runTo(page, at(17, 9));
+  // Bar round 5: the considerate steward builds the granary on day 20 in this town now (was by day 17).
+  await runTo(page, at(21, 9));
   await page.getByTestId('tab-board').click();
   const card = page.getByTestId('stores-card');
   await expect(card).toContainText("Winter stores · Juniper's worry");
@@ -45,7 +46,7 @@ test('criterion 6: the board shows the winter stores, the HUD the granary, and t
     return { put: Math.floor(state.granary ?? 0), target: state.stores?.target ?? 0 };
   });
   expect(target).toBeGreaterThanOrEqual(150);
-  await expect(card.getByTestId('stores-progress')).toContainText(`${put} of ${target} food put by in the granary · 5 days to winter`);
+  await expect(card.getByTestId('stores-progress')).toContainText(`${put} of ${target} food put by in the granary · 1 day to winter`);
   await expect(page.getByTestId('granary-stock')).toBeVisible();
   await expect(page.getByTestId('granary-stock')).toContainText(`${put}/${target}`);
 });

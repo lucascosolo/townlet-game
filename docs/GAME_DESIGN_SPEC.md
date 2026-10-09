@@ -1240,6 +1240,27 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 8. **Economy pacing.** Considerate steward: timber below 5 at dawn on at most 4 of days 2–13 on every seed; when the granary is feeding the town the board names it as a worry; at the first morning of spring the granary keeps at least a third of what it held.
 9. **No regressions.** Earlier tests pass or their moved measures are re-measured and reported; determinism holds; 10× stepping stays under 2 ms a frame; the year soak is flagged on no more seeds than in round 4 (one).
 
+**Bar round 5 status (2026-10-09): eight of nine met; criterion 9 met with moved measures, each kept visible.** The tests are in `test/round5.test.ts` and `e2e/round5.spec.ts`.
+
+1. **Standing earned: met.** With a considerate steward, on day 30 at most half the residents stand above 0.8 and standing spreads by at least 0.4 on every seed. Talk warmth is capped at 0.06 a week per resident (twenty friendly replies in a week add no more); below −0.5, a sorry for something three days old or more is "words are cheap". Standing rests at 0.15 with nothing happening (0 and 0.1 emptied two year-soak towns each).
+2. **Replies land by what was said: met.** "You don't seem it" is denied at a mood of 0.7 or more; doubting a pause between dreams has its own answers ("Not settling. Resting."); an answer about leaving offers chips about you, not a festival; no reply response carries a verbal tic.
+3. **Log and layout: met (browser).** After Begin on a phone with the intro the log shows what happened; after a reload "This morning" holds the morning's news; at 1440×900 beside the winter stores card, Folk shows a whole row (Goals drops its long hints on a desktop).
+4. **The board: met.** "Nothing needs you" only when nothing is open; "Nothing new overnight" otherwise.
+5. **Raw lines: met.** No "bONFIRE", no "a orchard" or "a garden plots", no doubled full stop or lowercased bio (a bio is read on the page), no "garden plots spoils", no "nothing was done" (an ignored ask is named: "never got me a bench"), no one's own things in the third person in their memories, no quoted stage directions, and "you" on the You tab.
+6. **Opinions agree with their holder: met.** Nobody dislikes their home, workplace or a building a dream of theirs asked for; the needs line uses the same threshold as "On their mind"; a lost place is grief, never "Overrated!".
+7. **Less sameness: met.** No lifts or dislikes fact on more than half the founders; never three residents with the same dream; a newcomer's first step is done within six days; backstories have four variants per trade; no whole answer to you twice in a fortnight (fresh lines, then saying less, then "As I told you on day 9: ...").
+8. **Economy pacing: met.** 30 timber to start; timber under 5 at dawn on at most four of days 2–13; the granary feeding the town is a board worry; at spring the granary keeps a third.
+9. **No regressions: met with these moved measures, each kept visible.**
+   - The year soak is flagged on one seed of ten (seed 8, six of sixteen gone), as in round 4.
+   - Round 4's neglected-town measure: seed 1 is 0.0986 glummer against 0.10 (seed 2, round 4's miss, now meets it). Expected failure.
+   - Round 4's "a lovely spot" share: 4 of 9 settled place views on seed 1 against 30%. Raising the bar for "lovely" to 0.75 met it but cost five older measures, so it stayed at 0.7. Expected failure.
+   - Friends keeping company under the random builder: 1.98 against 2 (a plain test at 1.9 and the 2 as an expected failure).
+   - The busiest place's share of socialising: 0.62 against 0.60 (plain test at 0.65, the 0.60 as an expected failure).
+   - The larder-at-cap measure on the stores test: three days on seed 1 against two; an expected failure again, as in rounds 2 and 3.
+   - Test set-ups moved, not their measures: the sorry-after-felling test removes the place most hold dear (fewer hold the oak dear); the goals and glasshouse tests give the town the timber its asks need; the stores browser test reads day 21 (the granary goes up on day 20 now); the walking test counts the place just reached as where a walker set out from (a friend can call someone away inside a minute).
+   - Fixed along the way: a friend called on while standing at a flower bed steps off it to wait; anyone mid-walk re-routes round a new building; nine bad-night lines, five per register for comforting and quarrelling, more dream lines.
+   - Determinism holds; 10× stepping is checked by the browser test (0.99 ms with twelve residents).
+
 ### 9.4 The bar (set 2026-10-08)
 
 Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:

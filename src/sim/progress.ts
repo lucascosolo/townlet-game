@@ -287,6 +287,9 @@ const NEED_SAID: Record<string, string> = {
   delight: 'a little fun',
 };
 
+/** Bar round 6: facts that say there is nothing to tell; they do not close an answer that already said something. */
+export const NOTHING_SAID = new Set(['Not much bothers me, truly.', 'I have no odd habits to speak of.', 'I am easy to please.', "I haven't a close friend here yet.", "I haven't found a favourite spot yet."]);
+
 /**
  * The same fact as the resident says it, so what you learn is what you were told (owner playtest:
  * "Getting to know Ada: can't abide noise at night" followed a reply about something else).

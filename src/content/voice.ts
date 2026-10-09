@@ -574,3 +574,21 @@ addLines(THOUGHTS['lost_place-'], {
   chatty: ['{S}! Gone! I still can\'t believe it!', 'Bring back {s}!', 'I cried about {s}! Yes, I did!', 'The valley is wrong without {s}!'],
   dreamy: ['The shape of {s} is still in the air.', 'I visit the place {s} was, and it visits me.', '{S} left a quiet behind it.', 'The ground misses {s} too.'],
 });
+
+/**
+ * Bar round 6: the steward's reasons in several wordings ("Well, you listen." seven times in a
+ * month). Said of the steward in the third person; in the browser they are turned to "you".
+ */
+export const STEWARD_REASONS: Record<string, string[]> = {
+  listens_to_me: ['the steward listens', 'the steward hears me out', 'the steward takes the time to listen', 'when I ask, the steward answers'],
+  ignores_me: ["the steward doesn't listen", 'the steward lets things slide', 'asking the steward gets me nowhere', "the steward's ears are elsewhere"],
+  improves_town: ['the steward is making the town better', 'the valley looks better for the steward', 'the steward builds what we need', 'things are coming on, thanks to the steward'],
+  spoils_town: ["the steward doesn't think things through", 'the steward builds without thinking', 'the steward has made a muddle of the valley'],
+  decided_well: ['the steward makes good decisions', 'the steward chooses well', 'the steward has a good head for a decision'],
+  decided_badly: ['the steward makes poor decisions', 'the steward chooses badly', "the steward's choices leave me cold"],
+  granted_wish: ['the steward makes wishes come true', 'the steward helped with what mattered to me', 'the steward gave me what I hoped for'],
+  looks_out_for_me: ['the steward looks out for me', 'the steward keeps an eye on me', 'the steward thinks of me'],
+  went_hungry: ['the steward lets the larder run bare', 'the steward let us go hungry', 'the shelves went empty on the steward\'s watch'],
+  still_waiting: ['the steward keeps me waiting', 'the steward is slow to get round to things', 'what I ask for comes slowly, if at all'],
+  destroyed_place: ["the steward doesn't care what matters here", 'the steward pulls down what people love', 'the steward took away what mattered'],
+};

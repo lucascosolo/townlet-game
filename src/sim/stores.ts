@@ -24,6 +24,8 @@ export const WINTER_DAY = 3 * DAYS_PER_SEASON + 1;
 const AUTUMN_DAY = 2 * DAYS_PER_SEASON + 1;
 export const STORES_PER_RESIDENT = 30;
 export const MIN_STORES_TARGET = 150;
+/** Bar round 6: the granary ask quotes the winter stores, not whatever its keeper dreams of. */
+export const STORES_WHY = 'put enough by for winter';
 /** The larder counts as overflowing at this share of its cap. */
 const OVERFLOWING = 0.9;
 
@@ -146,7 +148,7 @@ export function storesDawn(h: AspirationHost): void {
         h.emitEvent({ t: state.tick, type: 'stores', phase: 'progress', who: q.by ?? k.id, stored: stored(), target: q.target, daysLeft: daysToWinter(state.tick) });
       }
     }
-    // Until there is room for the target, the keeper keeps asking for a granary (not while a request is waiting).
+        // Until there is room for the target, the keeper keeps asking for a granary (not while a request is waiting).
     if (q.asked && granaryRoom(state) < q.target) {
       const mine = state.requests.filter(
         (x) => x.kind === "aspiration" && x.wants === "granary",
@@ -156,7 +158,7 @@ export function storesDawn(h: AspirationHost): void {
         !mine.some((x) => x.status === "open") &&
         (!last || state.tick - (last.closedTick ?? 0) >= 3 * 1440)
       )
-        h.ask(k, "aspiration", "granary");
+        h.ask(k, "aspiration", "granary", STORES_WHY);
     }
     return;
   }

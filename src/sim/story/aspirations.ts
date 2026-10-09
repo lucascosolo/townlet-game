@@ -17,7 +17,7 @@ import { chooseDream, templateDream } from './dreams.js';
 
 /** What the aspiration engine needs beyond the storyteller's host. */
 export interface AspirationHost extends StoryHost {
-  ask(r: ResidentState, kind: Request['kind'], wants?: string): Request;
+  ask(r: ResidentState, kind: Request['kind'], wants?: string, why?: string): Request;
   depart(r: ResidentState): void;
 }
 
@@ -56,6 +56,9 @@ export interface AspirationDef {
 }
 
 const exists = (state: SimState, type: string) => liveBuildings(state).some((b) => b.type === type);
+/** Bar round 6: a dream's first step that needs nothing from the steward is done within this many days. */
+export const FIRST_STEP_DAYS = 4;
+
 const days = (h: AspirationHost, r: ResidentState) => (h.state.tick - r.aspiration.since) / TICKS_PER_DAY;
 const feel = (h: AspirationHost, r: ResidentState, p: Omit<Perception, 'source'>) => h.mind.perceive(h.mindContext(), r, { ...p, source: 'witnessed' });
 
@@ -197,6 +200,14 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
         together: true,
         check: (_h, r) => r.aspiration.minutes >= 4 * 60,
         enter: (h, r) => {
+          // Bar round 6: a search that ran out of days still ends with a pupil, the one Fen likes best
+          // ("someone has learned a great deal").
+          if (!r.aspiration.partner) {
+            const best = active(h.state)
+              .filter((x) => x !== r)
+              .sort((a, b) => rel(r, b.id).affinity - rel(r, a.id).affinity || (a.id < b.id ? -1 : 1))[0];
+            if (best) r.aspiration.partner = best.id;
+          }
           const p = r.aspiration.partner && (h.state.residents[r.aspiration.partner] as ResidentState | undefined);
           if (p) {
             adjust(r, p.id, { affinity: 0.12, trust: 0.1 }, h.state.tick);
@@ -507,7 +518,9 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
   const waitingOnYou = h.state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open');
   // Never a step that needs a building that is not there (bar round 4).
   const lacking = (stage.needs && !exists(h.state, stage.needs)) || (stage.place && stage.place !== 'home' && !exists(h.state, stage.place));
-  const longEnough = !stage.until && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= 9 * TICKS_PER_DAY;
+  // A first step is done within four days (bar round 6: "watch the trade cart come and go" was
+  // Marlow's bubble four days running, "find someone willing to learn" Fen's for three).
+  const longEnough = !stage.until && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS : 9) * TICKS_PER_DAY;
   if (!stage.check(h, r) && !longEnough) return;
   stage.enter?.(h, r);
   r.aspiration.stage++;

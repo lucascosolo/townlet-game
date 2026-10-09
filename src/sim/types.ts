@@ -109,6 +109,8 @@ export interface BuildingState {
   removed: boolean;
   /** Quarter turns clockwise, 0-3. Odd turns swap the footprint. */
   rot?: number;
+  /** Bar round 6: residents whose dream this building answered; they grieve it at full weight. */
+  dreamOf?: string[];
 }
 
 export interface ActivityState {

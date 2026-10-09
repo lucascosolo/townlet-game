@@ -489,9 +489,10 @@ const EVENTS: StoryEventDef[] = [
       const state = host.state;
       if (state.story.dilemmas.some((d) => d.status === 'open')) return null;
       const options = DILEMMAS.filter((d) => {
-        // After a yes, the same proposal waits a season; after a no or silence, a fortnight.
+        // The same proposal waits a month after it is answered, yes, no or silence (bar round 6: the
+        // tales night, the lantern walk and Pip's cart each came twice in a month, word for word).
         const lastSame = [...state.story.dilemmas].reverse().find((x) => x.type === d.type);
-        const wait = lastSame?.status === 'approved' ? 4 * DAYS_PER_SEASON : 14;
+        const wait = 4 * DAYS_PER_SEASON;
         if (lastSame && state.tick - lastSame.postedTick < wait * TICKS_PER_DAY) return false;
         return d.eligible(state) && d.proposer(state) !== null;
       });

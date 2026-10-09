@@ -15,10 +15,10 @@ import { FAVOUR_DONE, FAVOUR_NO, FAVOUR_YES, TALK_HOPE,
   TALK_HOPE_ONE, TALK_HOPE_DONE, TALK_HOPE_LET_GO, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON, TALK_BUT } from '../content/talk.js';
 import { firstPerson } from '../sim/mind/thoughts.js';
 import { opinion } from '../sim/mind/memory.js';
-import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
+import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, STEWARD_REASONS, THOUGHTS, type Lines } from '../content/voice.js';
 import { chance, deriveSeed, pick, type RngHolder } from '../sim/rng.js';
 import { subjectWords } from '../sim/story/aspirations.js';
-import { factSaid, factValue, goalLabel, nextFact, TIER_GIFT } from '../sim/progress.js';
+import { NOTHING_SAID, factSaid, factValue, goalLabel, nextFact, TIER_GIFT } from '../sim/progress.js';
 import type { Simulation } from '../sim/sim.js';
 import { DAWN_MINUTE, DAYS_PER_SEASON, clock, dayOf, minuteOf, seasonOf } from '../sim/time.js';
 import type { Belief, FavourKind, MindMention, Resource, ResidentDef, SimEvent, SimState, SubjectId, TalkAnswer } from '../sim/types.js';
@@ -156,6 +156,8 @@ export interface NarratorEntry {
 }
 
 const MAX_ENTRIES = 3000;
+/** Bar round 6: an answer to you runs to this many sentences, one more with a fact. */
+export const ANSWER_SENTENCES = 3;
 
 export interface NarratorOptions {
   /** Narrate every exchange instead of the notable ones. */
@@ -357,7 +359,8 @@ export class Narrator {
     let text = sentenceCase(fixArticles(this.fill(this.freshest(who, options, mineGapDays), FIRST_PERSON, vars)));
     // No tic on a line that already opens with an interjection, a name or a tic of its own
     // ("Honestly, you know, ..." read as a stammer).
-    const opensLoud = /^(Oh|Ha|Ooh|Hey|Listen|Kaboom|What)\b/.test(text) || (this.keepsCapital(text) && !/^I\b/.test(text)) || /^[A-Z][a-z']*( [a-z']+)?,/.test(text);
+    // Nor before a bare subject ("Kind of, the woodlot? I haven't made my mind up.", bar round 6).
+    const opensLoud = /^(Oh|Ha|Ooh|Hey|Listen|Kaboom|What)\b/.test(text) || /^[^.!?]{1,40}\?(\s|$)/.test(text) || (this.keepsCapital(text) && !/^I\b/.test(text)) || /^[A-Z][a-z']*( [a-z']+)?,/.test(text);
     const today = dayOf(this.state.tick);
     // Bar round 5: no tic on a reply's response ("I must say, allow me my opinion, steward.").
     const tics = opensLoud || noTic ? [] : def.voice.tics.filter((t) => !text.toLowerCase().includes(t.toLowerCase()) && this.ticUsed.get(`${who}|${t}`) !== today);
@@ -393,6 +396,9 @@ export class Narrator {
     const t = this.state.tick;
     return options.length > 0 && options.every((o) => t - (this.saidBy.get(`${who}|${o}`) ?? -Infinity) < 3 * 1440 || t - (this.saidAny.get(o) ?? -Infinity) < 720);
   }
+
+  /** The reason given in the last answer that gave one (bar round 6, for the repetition measure). */
+  lastReason: { who: string; t: number; text: string } | null = null;
 
   private freshest(who: string, options: string[], mineGapDays = 3): string {
     const t = this.state.tick;
@@ -433,6 +439,14 @@ export class Narrator {
       return `I hear ${this.tense(b, this.fill(template, { subj: name, obj: name, poss: `${name}'s` }, { s: this.subjectName(b.subject) }))}`;
     }
     return this.tense(b, this.fill(template, FIRST_PERSON, { s: this.subjectName(b.subject) }));
+  }
+
+  /** A reason given in an answer: about the steward, in a wording not used lately (bar round 6); otherwise the belief as spoken. */
+  private reason(who: string, b: Pick<Belief, 'subject' | 'aspect'>): string {
+    const held = this.state.residents[who]?.beliefs[`${b.subject}|${b.aspect}`];
+    const hearsay = !!held && held.sources.every((s) => s.kind === 'told');
+    const ways = b.subject === STEWARD_ID && !hearsay ? STEWARD_REASONS[b.aspect] : undefined;
+    return ways ? this.fill(this.freshest(who, ways, 14), FIRST_PERSON, {}) : this.spoken(who, b);
   }
 
   private thought(who: string, subject: SubjectId, aspect: string, valence: number): string | null {
@@ -744,8 +758,9 @@ export class Narrator {
         }
         const line = (e.early ? ASPIRATION_LINES[`${e.who}:${e.stage}:early`] : undefined) ?? ASPIRATION_LINES[`${e.who}:${e.stage}${e.outcome ? `:${e.outcome}` : ''}`];
         if (!line) break;
-        const partner = e.partner ? this.name(e.partner) : 'someone';
-        this.live(e.t, line.replace(/\{partner\}/g, partner).replace(/\{you\}/g, this.you ? 'you' : 'the steward'));
+        const partner = e.partner ? this.name(e.partner) : 'a friend';
+        // A sentence that starts with the partner starts with a capital, named or not (bar round 6).
+        this.live(e.t, line.replace(/\{partner\}/g, partner).replace(/\{you\}/g, this.you ? 'you' : 'the steward').replace(/(^|[.!?] )([a-z])/g, (_m, p: string, c: string) => `${p}${c.toUpperCase()}`));
         break;
       }
     }
@@ -1078,7 +1093,7 @@ export class Narrator {
         // One verdict per subject in one breath (bar round 4: "The flower bed is all right. The flower
         // bed is a lovely spot."; "You listen. Well, you listen."): the reason calls the subject "it"
         // (or by pronoun) when the head already named it, and goes when it only repeats the head.
-        let statement = a.because && a.band !== 'neutral' ? this.spoken(who, a.because) : '';
+        let statement = a.because && a.band !== 'neutral' ? this.reason(who, a.because) : '';
         const flat = (x: string) => this.toSteward(x).toLowerCase().replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
         if (statement && flat(head).includes(flat(statement))) statement = '';
         if (statement && a.because && a.because.subject === a.about && name !== 'that' && statement.toLowerCase().startsWith(name.toLowerCase()) && head.toLowerCase().includes(name.toLowerCase())) {
@@ -1088,6 +1103,7 @@ export class Narrator {
           statement = `${pron} ${pron === 'they' ? rest.replace(/^is\b/, 'are').replace(/^was\b/, 'were').replace(/^has\b/, 'have') : rest}`;
         }
         const why = statement ? this.utter(who, TALK_REASON, { statement }) : '';
+        if (why) this.lastReason = { who, t: this.state.tick, text: this.toSteward(why) };
         const but = a.but ? this.utter(who, TALK_BUT, { x: deedClause(a.but.note) }) : '';
         return [head, why, but].filter(Boolean).join(' ');
       }
@@ -1126,19 +1142,24 @@ export class Narrator {
     const tics = residentDef(e.who).voice.tics;
     let shown = told && a.question === 'mind' ? { ...a, topics: a.topics?.slice(0, 1) } : a;
     let head = this.toSteward(this.answer(e.who, shown));
+    // "Not much bothers me, truly." closed five answers that had already said plenty (bar round 6):
+    // a fact that there is nothing to tell is learned without being said.
+    if (told && NOTHING_SAID.has(told)) told = '';
     const total = () => sentenceCount([head, remembered, told].filter(Boolean).join(' '), tics);
-    if (total() > 4 && (shown.topics?.length ?? 0) > 1) {
+    // Bar round 6: three sentences, four with a fact (56 of 186 answers ran to four or five).
+    const cap = told ? ANSWER_SENTENCES + 1 : ANSWER_SENTENCES;
+    if (total() > cap && (shown.topics?.length ?? 0) > 1) {
       shown = { ...shown, topics: shown.topics?.slice(0, 1) };
       head = this.toSteward(this.answer(e.who, shown));
     }
-    if (total() > 4) remembered = '';
+    if (total() > cap) remembered = '';
     // "What do you think of me": the reason gives way before the concession does.
-    if (total() > 4 && shown.because) {
+    if (total() > cap && shown.because) {
       const { because: _b, ...rest } = shown;
       shown = rest;
       head = this.toSteward(this.answer(e.who, shown));
     }
-    if (total() > 4 && (shown.topics?.length ?? 0) > 0) {
+    if (total() > cap && (shown.topics?.length ?? 0) > 0) {
       shown = { ...shown, topics: [] };
       head = this.toSteward(this.answer(e.who, shown));
     }
@@ -1154,12 +1175,12 @@ export class Narrator {
       }
       if (i === 5 && (shown.topics?.length ?? 0) > 1) shown = { ...shown, topics: shown.topics?.slice(0, 1) };
       head = this.toSteward(this.answer(e.who, shown));
-      // A fresh pick can run longer: still four sentences at most.
-      if (total() > 4 && (shown.topics?.length ?? 0) > 0) {
+      // A fresh pick can run longer: still within the cap.
+      if (total() > cap && (shown.topics?.length ?? 0) > 0) {
         shown = { ...shown, topics: shown.topics?.slice(0, Math.max(0, (shown.topics?.length ?? 0) - 1)) };
         head = this.toSteward(this.answer(e.who, shown));
       }
-      if (total() > 4) remembered = '';
+      if (total() > cap) remembered = '';
       words = [head, remembered, told].filter(Boolean).join(' ');
     }
     // Still the same: they say so, and when ("As I told you on day 9: ...").

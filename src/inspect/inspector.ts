@@ -109,7 +109,9 @@ export function residentReport(sim: Simulation, id: string, names: Narrator = ne
       name: names.subjectName(s),
       value: opinion(r, s),
       beliefs: Object.values(r.beliefs)
-        .filter((b) => b.subject === s)
+        // Bar round 6: a view of the steward pulling against where they stand is not listed as
+        // settled ("The steward makes wishes come true." at -0.36, under "doesn't trust you").
+        .filter((b) => b.subject === s && !(s === 'steward' && Math.abs(r.rel.steward?.affinity ?? 0) > PAGE_AGAINST && Math.sign(b.valence) !== Math.sign(r.rel.steward?.affinity ?? 0)))
         .map((b) => ({
           statement: names.statement(id, b),
           strength: b.strength,
@@ -156,6 +158,9 @@ export function residentReport(sim: Simulation, id: string, names: Narrator = ne
     })),
   };
 }
+
+/** Standing beyond this either way hides settled views of the steward pulling the other way. */
+export const PAGE_AGAINST = 0.2;
 
 const bar = (v: number, width = 10) => '#'.repeat(Math.round(v * width)).padEnd(width, '.');
 const signed = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`;

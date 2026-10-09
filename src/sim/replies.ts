@@ -63,7 +63,14 @@ export interface ReplyOffer {
 }
 
 /** Grievances about a decision, which an explanation can answer. */
-const DECISION_GRIEVANCES = new Set(['turned_me_down', 'decided_badly', 'ignores_me']);
+const DECISION_GRIEVANCES = new Set(['turned_me_down', 'decided_badly']);
+/**
+ * Bar round 6: explain is for a proposal answered (or left unanswered), not for an ask left unmet
+ * ("Let me explain why I never got him a fuller larder" was accepted).
+ */
+export function explainable(aspect: string, note: string): boolean {
+  return DECISION_GRIEVANCES.has(aspect) || (aspect === 'ignores_me' && /\bidea\b/.test(note));
+}
 /** A second sorry for the same thing within this long changes nothing. */
 export const SORRY_GAP = 3 * TICKS_PER_DAY;
 
@@ -136,7 +143,7 @@ export function offersFor(r: ResidentState, answer: TalkAnswer, now = 0): ReplyO
   const g = carriedGrievance(r, answer, now);
   if (g) {
     offers.push({ kind: 'sorry', aspect: g.aspect, about: g.note });
-    if (DECISION_GRIEVANCES.has(g.aspect)) offers.push({ kind: 'explain', aspect: g.aspect, about: g.note });
+    if (explainable(g.aspect, g.note)) offers.push({ kind: 'explain', aspect: g.aspect, about: g.note });
   }
   return offers;
 }

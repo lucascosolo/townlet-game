@@ -137,6 +137,9 @@ export const FELT_CAP = 0.22;
 /** Bar round 4: the most anyone thinks of you while the larder has been low two dawns running. */
 export const LOW_LARDER_TOP = 0.85;
 /** Bar round 5: 30 timber to start (was 25): seventeen builds were refused for timber in the first fortnight. */
+/** Bar round 6: the woodlot yields this much more in the first fortnight (16 builds were refused for timber on days 3 to 14). */
+export const EARLY_TIMBER = 1.5;
+export const EARLY_TIMBER_DAYS = 14;
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 30 };
 /** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */
 /** How much telling a memory rehearses it: about as much as reminiscing with a friend. */
@@ -672,6 +675,15 @@ export class Simulation implements AspirationHost {
     const stewardActed = q.kind === 'quieter_home' || state.buildings.some((b) => b.placedBy === 'steward' && b.placedTick >= q.postedTick);
     q.status = stewardActed ? 'fulfilled' : 'resolved';
     q.closedTick = state.tick;
+    // Bar round 6: the building a dream asked for is theirs to grieve (Ada's sister's orchard went
+    // with "the view is rather the poorer for it").
+    if (q.kind === 'aspiration' && q.wants) {
+      const [hx, hy] = placeTile(getBuilding(state, r.homeId));
+      const built = liveBuildings(state)
+        .filter((b) => b.type === q.wants)
+        .sort((a, b) => Number(b.placedTick >= q.postedTick) - Number(a.placedTick >= q.postedTick) || distanceTo(a, hx, hy) - distanceTo(b, hx, hy))[0];
+      if (built && !built.dreamOf?.includes(r.id)) (built.dreamOf ??= []).push(r.id);
+    }
     if (stewardActed) this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'listens_to_me', valence: 1, base: 0.9, source: 'witnessed', note: ASK_THANKS[q.kind] });
     this.emit({ t: state.tick, type: 'request_closed', request: { ...q } });
     return true;
@@ -848,10 +860,11 @@ export class Simulation implements AspirationHost {
     }
 
     if (change.kind === 'removed') {
-      const op = attachment(r, `b:${b.id}`);
+      const dreamt = !!b.dreamOf?.includes(r.id);
+      const op = dreamt ? 1 : attachment(r, `b:${b.id}`);
       if (op > 0.15) {
-        this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect: 'lost_place', valence: -0.8, base: (0.7 + 0.8 * op) * heard, source, note: `the ${name} is gone` });
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'destroyed_place', valence: -0.7, base: (0.3 + 0.6 * op) * heard, source, note: `took away the ${name}` });
+        this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect: 'lost_place', valence: -0.8, base: (0.7 + 0.8 * op) * heard, source, note: dreamt ? `my dream's ${name} is gone` : `the ${name} is gone` });
+        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'destroyed_place', valence: -0.7, base: (0.3 + 0.6 * op) * heard, source, note: dreamt ? `took away my dream's ${name}` : `took away the ${name}` });
         this.emit({ t: state.tick, type: 'grief', who: r.id, building: b.id, btype: b.type, how });
         // Bar round 4: a loss weighs on mood for days, not only in feelings that fade by evening.
         r.lostPlace = { tick: state.tick, weight: Math.max(r.lostPlace && state.tick - r.lostPlace.tick < LOSS_DAYS * TICKS_PER_DAY ? r.lostPlace.weight : 0, clamp(0.5 + op)) };
@@ -988,7 +1001,7 @@ export class Simulation implements AspirationHost {
               // (bar round 4: a newcomer thanked you for garden plots built three weeks before she came).
               const forThem = state.tick - b.placedTick < TICKS_PER_DAY && (r.arrivedTick === undefined || b.placedTick >= r.arrivedTick);
               const what = buildingDef(b.type).name.toLowerCase();
-              this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'improves_town', valence: 0.6, base: 0.5, source: 'witnessed', note: forThem ? `built the ${what} for ${def.pronouns.obj}` : `gave ${def.pronouns.obj} work at the ${what}` });
+              this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'improves_town', valence: 0.6, base: 0.5, source: 'witnessed', note: forThem ? `built the ${what} for me` : `gave me work at the ${what}` });
             }
           }
           continue;
@@ -1068,7 +1081,7 @@ export class Simulation implements AspirationHost {
       const made = buildingDef(getBuilding(state, r.at).type).produces;
       if (made) {
         for (const [res, rate] of Object.entries(made) as Array<[Resource, number]>) {
-          const season = res === 'food' ? (FOOD_SEASON[getBuilding(state, r.at).type]?.[seasonOf(tick)] ?? 1) : 1;
+          const season = res === 'food' ? (FOOD_SEASON[getBuilding(state, r.at).type]?.[seasonOf(tick)] ?? 1) : tick < EARLY_TIMBER_DAYS * TICKS_PER_DAY ? EARLY_TIMBER : 1;
           const v = (rate / 60) * season * (0.5 + 0.5 * r.mood);
           this.addStock(res, v);
           this.addProduced(r.id, res, v);
@@ -1276,7 +1289,7 @@ export class Simulation implements AspirationHost {
         q.closedTick = tick;
         // Bar round 5: name what was not done ("(what the steward did: nothing was done)").
         const forWhat = q.kind === 'aspiration' && q.wants ? `${/^[aeiou]/i.test(buildingDef(q.wants).name) ? 'an' : 'a'} ${buildingDef(q.wants).name.toLowerCase()}` : WISH_LABELS[q.kind].toLowerCase();
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'ignores_me', valence: -0.7, base: before === 0 ? 0.6 : 0.3, source: 'witnessed', note: `never got ${def.pronouns.obj} ${forWhat}` });
+        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'ignores_me', valence: -0.7, base: before === 0 ? 0.6 : 0.3, source: 'witnessed', note: `never got me ${forWhat}` });
         this.emit({ t: tick, type: 'request_closed', request: { ...q } });
       }
     }
@@ -1352,10 +1365,11 @@ export class Simulation implements AspirationHost {
   }
 
   /** A resident asks the steward for something outside the usual asks (a dream, for now). */
-  ask(r: ResidentState, kind: Request['kind'], wants?: string): Request {
+  ask(r: ResidentState, kind: Request['kind'], wants?: string, why?: string): Request {
     const state = this.state;
-    // A dream ask carries the dream that asked, so its card quotes that dream, not a later one (bar round 4).
-    const dream = kind === 'aspiration' ? dreamTitle(state, r) : null;
+    // A dream ask carries the dream that asked, so its card quotes that dream, not a later one (bar
+    // round 4); an ask with a reason of its own (the winter stores) carries that (bar round 6).
+    const dream = why ?? (kind === 'aspiration' ? dreamTitle(state, r) : null);
     const q: Request = { id: state.nextRequestId++, by: r.id, kind, subject: `r:${r.id}`, postedTick: state.tick, status: 'open', ...(wants ? { wants } : {}), ...(dream ? { dream } : {}) };
     state.requests.push(q);
     this.emit({ t: state.tick, type: 'request_posted', request: { ...q } });

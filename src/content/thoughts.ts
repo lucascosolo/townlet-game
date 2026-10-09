@@ -111,11 +111,11 @@ export const MIND_LINES: Record<string, Lines> = {
     dreamy: ['I am a long way from everyone.'],
   },
   dream: {
-    plain: ['Next: {next}.', 'Keep thinking about it. Next, {next}.', 'One thing at a time. {next}.'],
+    plain: ['Next: {next}.', 'Keep at the plan. Next, {next}.', 'One thing at a time. {next}.'],
     formal: ['My next task is plain: {next}.', 'I must {next}. One step at a time.', 'I have a plan, and the next part is to {next}.'],
-    warm: ["I can't stop thinking about it. Next I need to {next}.", 'One day soon. First I have to {next}.', 'I keep picturing it. I just need to {next}.'],
+    warm: ["I can't stop thinking about my plan. Next I need to {next}.", 'One day soon. First I have to {next}.', 'I keep picturing my dream come true. I just need to {next}.'],
     chatty: ['Big plans! Next up: {next}!', "Guess what I'm doing next? I'm going to {next}!", 'Can I tell you my plan? First I {next}, then everything!'],
-    dreamy: ['If I can just {next}, the rest will follow.', 'Step by step. Next, I {next}.', 'It is waiting for me. I only have to {next}.'],
+    dreamy: ['If I can just {next}, the rest will follow.', 'Step by step. Next, I {next}.', 'My dream is waiting for me. I only have to {next}.'],
   },
   'dream:waiting': {
     plain: ['Asked the steward. Waiting.', 'Still waiting to hear from the steward.'],

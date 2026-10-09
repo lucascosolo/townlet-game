@@ -48,6 +48,10 @@ describe('criteria 2, 3 and 7: pacing, gentle friction, spread (soak, 10 seeds x
     const runs = report.runs;
     for (const m of runs) expect(m.minNegativeGapHours, `seed ${m.seed}`).toBeGreaterThanOrEqual(48);
     const meanRivals = runs.reduce((s, m) => s + m.rivalPairs, 0) / runs.length;
+    // This band swung with every small change in bar round 2 (0.7, then 0.3, then back over 0.5):
+    // the random builder's towns are near the edge of forming a rivalry at all. Kept as the plain
+    // band; if it goes red again that is the signal, not a reason to move it.
+    expect(meanRivals).toBeGreaterThanOrEqual(0.5);
     expect(meanRivals).toBeLessThanOrEqual(4);
     expect(runs.filter((m) => m.arguments > 0).length).toBeGreaterThanOrEqual(7);
     // Re-set in bar round 1 (2026-10-08), from 1 to 4 of 10. The soak's steward builds at random and
@@ -61,14 +65,6 @@ describe('criteria 2, 3 and 7: pacing, gentle friction, spread (soak, 10 seeds x
     expect(report.flagged).toBe(false);
   });
 
-  // Moved in bar round 2 and kept visible: the random builder's 28-day towns form 0.3 rival pairs a
-  // run against a band of at least 0.5 (they formed 0.7 before the round). Rivalries still form
-  // under the considerate steward (test/m3a.test.ts); why the random builder's towns are calmer is
-  // for round 3.
-  it.fails('random-builder towns form at least 0.5 rival pairs a run (missed: 0.3; see the note)', { timeout: 180_000 }, () => {
-    const report = soak({ scenario: 'quiet', seeds: 10, days: 28 });
-    expect(report.runs.reduce((s, m) => s + m.rivalPairs, 0) / report.runs.length).toBeGreaterThanOrEqual(0.5);
-  });
 
   // Regressed in bar round 1 (2026-10-08) and kept visible: the mean share of socialising at the
   // busiest place went from under 0.6 to 0.606, with one seed at 97% pulling the mean. Nothing in

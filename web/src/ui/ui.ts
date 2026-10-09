@@ -221,6 +221,7 @@ export class Ui {
   private morning: NarratorEntry[] = [];
   private rosterEl: HTMLElement | null = null;
   private journalBody: HTMLElement | null = null;
+  private lastJournalKey = '';
   private readonly lastStock: Partial<Record<'food' | 'timber', number>> = {};
   /** One talk panel per resident, kept across journal redraws so its choices stay put. */
   private readonly talkPanels = new Map<string, TalkPanel>();
@@ -1770,6 +1771,12 @@ export class Ui {
       return;
     }
     if (!force && document.activeElement instanceof HTMLSelectElement && this.journalEl.contains(document.activeElement)) return;
+    // Nothing moved since the last draw (a paused game, nothing said or done): leave the page as it
+    // is, so a button is not swapped out under a finger (bar round 2: clicks never landed at a low frame rate).
+    const sim = this.game.sim;
+    const journalKey = JSON.stringify([sim.tick, this.selected, this.residentView, this.game.narrator.lastReply?.t, this.game.narrator.lastSaid?.t, this.game.commandLog.length, sim.state.story.dilemmas.length, sim.state.requests.length, this.standingNotes.size]);
+    if (!force && journalKey === this.lastJournalKey) return;
+    this.lastJournalKey = journalKey;
     this.lastJournalRender = now;
     // The roster is built once and only updated, so a name isn't swapped out under a finger.
     if (!this.rosterEl) {

@@ -28,6 +28,9 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **Each clearing of wild land is told as the next one** ("A second stretch of wild land is open"), not with the same line twice in a week.
 - **A "nothing to tell" fact is learned without being said** at all: the criterion reads that it never closes an answer of two or more sentences, and every answer has a sentence of its own before it.
 - **Saves are replays of the commands**, so a reloaded town rebuilds every note in today's words; no migration was needed.
+- **A bare larder weighs up to 0.1 in mood (was 0.06), and the day's worries together up to 0.25 (was 0.22).** With food asks answered, a hungry week moved mood by as little as 0.009; the heavier worry alone lowered the mood a famine starts from, so the cap rose with it. Neither enters the decision to leave, and the year soak flags no seed.
+- **For "what do you think of me", a dated memory outlasts a stock reason** when the answer runs over three sentences.
+- **Goals scrolls inside its body with a fade when it and Folk cannot both fit**, which retires round 2's "Goals shows all of itself" at 1280×800 (kept visible as an expected failure).
 
 **Rejected:**
 - *Removing the late timber pile.* The review saw timber pile up once the famine ended, but a pile is the reward for a working woodlot; the early famine is what stopped play, so that is what changes.

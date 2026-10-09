@@ -1275,6 +1275,28 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 10. **Worn ground.** 21 days with no steward and 30 days considerate: worn tiles shown are at most a sixteenth of the settled valley and never a whole two-by-two block.
 11. **No regressions.** Earlier tests pass or their moved measures are re-measured and reported; determinism holds; 10× stepping stays under 2 ms a frame; the year soak is flagged on no more seeds than in round 5 (one).
 
+**Bar round 6 status (2026-10-09): all eleven met; criterion 11 met with moved measures, each kept visible.** The tests are in `test/round6.test.ts` and `e2e/round6.spec.ts`.
+
+1. **A rescue counts: met.** A food place built after a food ask answers it whatever the larder holds (the thanks are small while the larder is still bare); food asks lapse after seven days; timber under 5 at dawn on at most two of days 2–13 in quiet and bakery towns (the woodlot runs at two and a half times in the first fortnight while the store is under 20); a build refused for timber says it comes from the woodlot or a favour.
+2. **Grievances in the first person: met.** "Never got me a fuller larder", "built the bench for me"; no note about you, sorry or explain chip says him, her or them. Saves replay their commands, so a reload rebuilds every note in today's words.
+3. **Minds agree with themselves: met.** One taste per place (a view that settles retires its opposite); "I could not ask for a better steward" only above 0.6 and with nothing conceded; anyone cross with you who thinks well of you says what they hold against you; a shared memory makes a neighbour "civil", not unknown; About pages leave out views of you that pull against standing beyond 0.2.
+4. **A dream's building is grieved: met.** The building a dream asked for is its dreamer's ("took away my dream's glasshouse"); removing it is a loss at full weight.
+5. **Folk keeps a row: met (browser).** Goals gives way and scrolls; at 1440×900 beside the winter stores Folk shows a whole row on bakery seed 3 (days 14, 22, 27) and quiet seed 5 (day 21).
+6. **Raw lines: met.** A pupil is always named; no sentence starts "someone"; the granary ask reads "help with the winter stores"; dream lines name what they mean ("Has the steward seen my request yet?"); `?seed=7&new=1` opens seed 7.
+7. **No decision before the town: met (browser).** Tabs after Begin bring no proposal; a tap or drag on the town does, or two hours of play.
+8. **Less repetition: met.** No proposal twice in a month (they rest thirty days, and three new ones keep the town in decisions: a wild meadow, a quiet bell at ten, a shared supper); a dream's first step is done within four days unless it waits on you; answers run to three sentences, four with a fact, and at most one in ten runs to four; a "nothing to tell" fact is learned without being said; no tic before a bare subject; your reasons have three or four wordings each and none is more than a fifth of those given.
+9. **Explain is for decisions: met.** A lapsed ask offers sorry, not explain; a proposal answered or left unanswered offers both.
+10. **Worn ground: met.** At most a sixteenth of the valley shows wear, never a whole two-by-two block.
+11. **No regressions: met with these moved measures, each kept visible.**
+    - The year soak is flagged on no seed of ten (one in round 5).
+    - Three round-5 misses are met again and are plain tests: the busiest place under 60% of socialising, friends together twice as often under a careless steward, and the larder off its cap once the granary is asked for.
+    - Round 4's larder week: with the steward's new bakery answering the food asks, the drop is 0.030 to 0.081 by seed (the two twins also differ in the proposals they get). A plain test at 0.025 and the 0.06 as an expected failure (missed on seeds 2 and 4). A bare larder now weighs up to 0.1 and the day's worries together up to 0.25 (were 0.06 and 0.22), so a famine still lowers mood by 0.12 on every seed; neither enters the decision to leave.
+    - Round 2's "Goals shows all of itself" at 1280×800: Goals now scrolls inside its body with a fade when it and Folk cannot both fit. A plain test that nothing is cut by the widget and that scrolling shows the fade, and the old measure as an expected failure.
+    - Round 1's first-proposal test: opening a page no longer counts, a tap on the town does (criterion 7).
+    - Test set-ups moved, not their measures: round 2's felling test removes the place most hold dear (on four seeds nobody held the oak dear on day 8); the memory twin holds Fen's dream still; a newcomer's hope is asked on arrival; the steward's top band and a shared memory's "cool" are applied in the true-to-state test; round 4's dream-card test expects the stores ask to quote the stores.
+    - Fixed along the way: the low-larder cap on standing is checked every minute (an ask granted at seven slipped past the dawn check); Marlow's dream opens with a short step so his choice keeps its pace; a first step that only ran out of days is passed without a lift in mood; each clearing of wild land is told as the next one; for "what do you think of me" a dated memory outlasts a stock reason.
+    - Determinism holds; 10× stepping is checked by the browser test.
+
 ### 9.4 The bar (set 2026-10-08)
 
 Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:

@@ -138,7 +138,9 @@ export const FELT_CAP = 0.22;
 export const LOW_LARDER_TOP = 0.85;
 /** Bar round 5: 30 timber to start (was 25): seventeen builds were refused for timber in the first fortnight. */
 /** Bar round 6: the woodlot yields this much more in the first fortnight (16 builds were refused for timber on days 3 to 14). */
-export const EARLY_TIMBER = 2;
+export const EARLY_TIMBER = 2.5;
+/** ...while the store is low: a full woodyard needs no help. */
+export const EARLY_TIMBER_BELOW = 20;
 export const EARLY_TIMBER_DAYS = 14;
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 30 };
 /** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */
@@ -1081,7 +1083,7 @@ export class Simulation implements AspirationHost {
       const made = buildingDef(getBuilding(state, r.at).type).produces;
       if (made) {
         for (const [res, rate] of Object.entries(made) as Array<[Resource, number]>) {
-          const season = res === 'food' ? (FOOD_SEASON[getBuilding(state, r.at).type]?.[seasonOf(tick)] ?? 1) : tick < EARLY_TIMBER_DAYS * TICKS_PER_DAY ? EARLY_TIMBER : 1;
+          const season = res === 'food' ? (FOOD_SEASON[getBuilding(state, r.at).type]?.[seasonOf(tick)] ?? 1) : tick < EARLY_TIMBER_DAYS * TICKS_PER_DAY && state.stock.timber < EARLY_TIMBER_BELOW ? EARLY_TIMBER : 1;
           const v = (rate / 60) * season * (0.5 + 0.5 * r.mood);
           this.addStock(res, v);
           this.addProduced(r.id, res, v);

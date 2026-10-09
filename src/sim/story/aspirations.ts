@@ -47,6 +47,8 @@ export interface Stage {
    * finishes on the nine-day rule; it waits, and lets go after eight days like a dream ask.
    */
   needs?: string;
+  /** Not done by the passing of days before this day (bar round 6: Marlow's choice keeps its pace when his first step is quicker). */
+  notBefore?: number;
 }
 
 export interface AspirationDef {
@@ -318,6 +320,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
         id: 'decide',
         next: "Make up his mind before the cart's last visit of the year",
         check: (h) => dayOf(h.state.tick) >= 23,
+        notBefore: 19,
         enter: (h, r) => {
           // What he has here: friends, how settled he feels, how the steward treats him.
           const friends = friendsOf(r).length;
@@ -520,7 +523,7 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
   const lacking = (stage.needs && !exists(h.state, stage.needs)) || (stage.place && stage.place !== 'home' && !exists(h.state, stage.place));
   // A first step is done within four days: due after three, since steps move at the morning check (bar round 6: "watch the trade cart come and go" was
   // Marlow's bubble four days running, "find someone willing to learn" Fen's for three).
-  const longEnough = !stage.until && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 1 : 9) * TICKS_PER_DAY;
+  const longEnough = !stage.until && !lacking && !waitingOnYou && dayOf(h.state.tick) >= (stage.notBefore ?? 0) && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 1 : 9) * TICKS_PER_DAY;
   if (!stage.check(h, r) && !longEnough) return;
   stage.enter?.(h, r);
   r.aspiration.stage++;

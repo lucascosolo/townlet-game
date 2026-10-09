@@ -2,6 +2,7 @@
 // moves, no ghosts, opinions with an edge, answers without stock facts, no raw lines, dreams that
 // do not converge, worn ground that fades.
 import { describe, expect, it } from 'vitest';
+import { STORES_WHY } from '../src/sim/stores.js';
 import { buildingDef } from '../src/content/buildings.js';
 import { residentDef } from '../src/content/residents.js';
 import { TALK_HOPE_DONE, TALK_HOPE_LET_GO } from '../src/content/talk.js';
@@ -229,7 +230,8 @@ describe('round 4, criterion 3: no ghosts', () => {
             const stage = def?.stages.find((s) => s.id === e.stage);
             if (stage?.needs) expect(liveBuildings(sim.state).some((b) => b.type === stage.needs), `seed ${seed} ${e.who} finished "${stage.next}" without a ${stage.needs}`).toBe(true);
           }
-          if (e.type === 'request_posted' && e.request.kind === 'aspiration') quoted.set(e.request.id, dreamTitle(sim.state, sim.resident(e.request.by)));
+          // Bar round 6: the winter stores granary ask quotes the stores, not a dream.
+          if (e.type === 'request_posted' && e.request.kind === 'aspiration') quoted.set(e.request.id, e.request.wants === 'granary' ? STORES_WHY : dreamTitle(sim.state, sim.resident(e.request.by)));
         });
         // Someone leaves on day 12, so a dream about them has to be put away.
         let gone: string | null = null;

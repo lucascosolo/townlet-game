@@ -399,6 +399,7 @@ export class Narrator {
 
   /** The reason given in the last answer that gave one (bar round 6, for the repetition measure). */
   lastReason: { who: string; t: number; text: string } | null = null;
+  private plotsCleared?: number;
 
   private freshest(who: string, options: string[], mineGapDays = 3): string {
     const t = this.state.tick;
@@ -732,9 +733,13 @@ export class Narrator {
         this.live(e.t, lines[e.phase]);
         break;
       }
-      case 'plot_cleared':
-        this.live(e.t, `The wild land${e.by.length ? `, cleared by ${this.names(e.by)},` : ''} is open at last. There is room to build.`);
+      case 'plot_cleared': {
+        // Each clearing told as the next one (bar round 6: the same line twice in five days).
+        const n = (this.plotsCleared = (this.plotsCleared ?? 0) + 1);
+        const nth = ['second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'][n - 2];
+        this.live(e.t, n === 1 ? `The wild land${e.by.length ? `, cleared by ${this.names(e.by)},` : ''} is open at last. There is room to build.` : `${nth ? `A ${nth}` : 'Another'} stretch of wild land is open${e.by.length ? `, cleared by ${this.names(e.by)}` : ''}. More room to build.`);
         break;
+      }
       case 'dream_formed':
         this.live(e.t, `${this.name(e.who)} has a new hope: ${(this.you ? e.title.replace(/the steward/g, 'you') : e.title).replace(/^./, (c) => c.toLowerCase())}.`);
         break;

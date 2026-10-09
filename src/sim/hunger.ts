@@ -41,11 +41,14 @@ export function dayOfMeals(state: SimState): number {
 
 /**
  * A larder below a day's meals is a worry everyone shares (bar round 4: six food for eleven people
- * and "A quiet night. Nothing needs you."). Up to 0.06, nothing once there is a day's meals put by.
+ * and "A quiet night. Nothing needs you."). Up to LOW_LARDER_WEIGHT (bar round 6: 0.1, was 0.06), nothing once there is a day's meals put by.
  */
+/** Bar round 6: a bare larder weighs more once a steward's new bakery answers the asks (a hungry week moved mood 0.009 on one seed). */
+export const LOW_LARDER_WEIGHT = 0.1;
+
 export function lowLarder(state: SimState): number {
   const need = dayOfMeals(state);
   if (need <= 0) return 0;
   const have = state.stock.food + (state.granary ?? 0);
-  return have >= need ? 0 : 0.06 * (1 - have / need);
+  return have >= need ? 0 : LOW_LARDER_WEIGHT * (1 - have / need);
 }

@@ -2,7 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import { Narrator } from '../src/narrate/narrator.js';
 import { runScenario } from '../src/scenarios/index.js';
-import { beliefKey } from '../src/sim/mind/memory.js';
+import { attachment, beliefKey } from '../src/sim/mind/memory.js';
+import { buildingDef } from '../src/content/buildings.js';
 import { ownNote } from '../src/sim/replies.js';
 import { topicSign } from '../src/sim/talk.js';
 import { residentDef } from '../src/content/residents.js';
@@ -104,7 +105,13 @@ describe('round 2, criterion 1: replies that fit', () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'none');
       sim.runUntil(at(8, 9));
-      const oak = liveBuildings(sim.state).find((b) => b.type === 'oak')!;
+      // Bar round 6: the place most hold dear, as round 5 did for its own felling test (one view of a
+      // place per person now, and on four seeds nobody held the oak dear on day 8).
+      const holders = (b: { id: number }) => sim.state.order.filter((x) => attachment(sim.resident(x), `b:${b.id}`) > 0.15).length;
+      const oak = liveBuildings(sim.state)
+        .filter((b) => buildingDef(b.type).kind !== 'home' && b.type !== 'path')
+        .sort((a, b) => holders(b) - holders(a) || a.id - b.id)[0]!;
+      const name = oak.type === 'oak' ? 'old oak' : buildingDef(oak.type).name.toLowerCase();
       sim.remove(oak.x, oak.y);
       sim.runUntil(at(9, 12));
       const k = beliefKey(STEWARD, 'destroyed_place');
@@ -121,7 +128,7 @@ describe('round 2, criterion 1: replies that fit', () => {
           if (sorry) sim.reply(id, 'agree');
         }
         if (sorry?.aspect !== 'destroyed_place') continue;
-        expect(sorry.about).toMatch(/old oak/);
+        expect(sorry.about).toContain(name);
         expect(sim.reply(id, 'sorry')?.stance).toBe('forgiven');
         checked++;
       }

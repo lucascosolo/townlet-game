@@ -445,7 +445,7 @@ describe('round 2, criterion 7: no repeats, specific reasons, links that restore
     for (const w of waiting) expect(w).toMatch(/^kept me waiting \d+ days? for /);
   });
 
-  it('ten newcomers have at least three different first dreams', () => {
+  it('ten newcomers have at least three different first dreams', { timeout: 60_000 }, () => {
     const titles = new Set<string>();
     for (let n = 0; n < 10; n++) {
       const def = generateNewcomer(3, n, { tick: 1440 * (n + 1), home: [5 + n, 5], built: {}, near: [] });

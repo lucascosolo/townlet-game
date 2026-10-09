@@ -140,7 +140,6 @@ export function memoryAgrees(answer: TalkAnswer, memory: { subject: SubjectId; v
   const sign = Math.sign(memory.valence);
   if (sign === 0) return true;
   for (const t of answer.topics ?? []) if (t.about === memory.subject && topicSign(t.key) !== 0 && topicSign(t.key) !== sign) return false;
-  if (answer.but && memory.subject === STEWARD && sign > 0) return false;
   // "Bram is pleasant company" does not go on "it still weighs on me that Bram and I argued".
   if (answer.about === memory.subject && answer.band) {
     const bandSign = ['love', 'like'].includes(answer.band) ? 1 : ['dislike', 'hate'].includes(answer.band) ? -1 : 0;

@@ -50,7 +50,7 @@ const reasonSign = (v: number) => (v > 0.05 ? 1 : v < -0.05 ? -1 : 0);
 
 /** How a resident feels about someone or something, for "what do you think of…": people by affinity and belief, places by belief. */
 /** Where a neighbour's affinity starts to mean liking them (bar round 4). */
-export const PERSON_BASELINE = 0.2;
+export const PERSON_BASELINE = 0.25;
 
 export function feelingAbout(r: ResidentState, subject: SubjectId, now: number, state?: SimState): number {
   if (subject === STEWARD) return rel(r, STEWARD).affinity;

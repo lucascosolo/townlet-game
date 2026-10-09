@@ -51,7 +51,7 @@ const MILD_ASPECTS = new Set(['good_times', 'peaceful_spot', 'smells_lovely', 'n
  * thresholds sit on the spread (measured: a tenth below 0.22, half above 0.5): the top half is "a
  * lovely spot" (0.5 and 0.6 still left it 59% and 43% of settled place views), the bottom sixth a dislike (it was 0.35 and never, so 79% were lovely and 2% not).
  */
-export const LOVELY_ABOVE = 0.7;
+export const LOVELY_ABOVE = 0.75;
 export const DISLIKE_BELOW = 0.3;
 
 /**

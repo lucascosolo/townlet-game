@@ -478,6 +478,11 @@ export class Narrator {
             `${cap(place)} clatters through the night, and ${name} hears every minute of it.`,
             `${name} gives up on sleep and sits by the window; ${place} is at it again.`,
             `Another broken night for ${name}, courtesy of ${place}.`,
+            // Bar round 5: nine ways, so a week of bad nights never repeats one (five came round again in a week).
+            `${name} counts the hours by the din from ${place}.`,
+            `${name} pulls the blanket over ${p.poss} head. ${cap(place)} is louder than the blanket.`,
+            `Not much sleep for ${name}: ${place} again.`,
+            `${name} is still awake when the birds start, thanks to ${place}.`,
           ];
           this.live(e.t, this.freshLine(e.who, ways));
         }

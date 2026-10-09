@@ -511,6 +511,8 @@ export interface SimState {
   shortRun?: number;
   /** Dawns in a row with the larder below a day's meals (bar round 4). */
   lowRun?: number;
+  /** Until when standing is capped after a low larder (bar round 5). */
+  lowCapUntil?: number;
   /** The day each worn tile was last walked (bar round 4). */
   wearDay?: Record<string, number>;
   nextFavourId?: number;

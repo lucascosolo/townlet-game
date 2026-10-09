@@ -73,6 +73,7 @@ describe('paths', () => {
       const from = new Map<string, number>();
       // Calling round for a friend means walking to their door, in whatever they are at.
       const calling = new Map<string, number>();
+      const arriving = new Map<string, number>();
       sim.on((e) => {
         if (e.type !== 'invite') return;
         const f = sim.resident(e.b);
@@ -88,11 +89,15 @@ describe('paths', () => {
             from.set(id, r.at);
             calling.delete(id);
           }
+          // Bar round 5: someone can reach a place and be called away by a friend inside one minute,
+          // so the place they were walking to counts as where they set out from (Bram at the
+          // glasshouse door); the polling here never saw them "at" it.
+          if (r.pending && r.path.length <= 1) arriving.set(id, r.pending.placeId);
           if (r.departed || r.path.length === 0) continue;
           const on = solidAt(sim, r.x, r.y);
           if (on === null) continue;
           // Where they set out from, and where they are going.
-          const allowed = new Set([from.get(id), r.pending?.placeId, r.activity?.placeId, r.at, calling.get(id)]);
+          const allowed = new Set([from.get(id), r.pending?.placeId, r.activity?.placeId, r.at, calling.get(id), arriving.get(id)]);
           if (!allowed.has(on) && bad.length < 5) bad.push(`${id} on ${getBuilding(sim.state, on).type} at ${r.x},${r.y} t${sim.state.tick}`);
         }
       }

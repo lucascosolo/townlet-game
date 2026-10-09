@@ -394,6 +394,15 @@ export function seedWear(state: SimState): void {
   for (const k of Object.keys(wear)) wear[k] = Math.round((wear[k] as number) * steady * 0.3);
 }
 
+/** Whether a tile is under a building's footprint (paths and the commons do not count). */
+export function onFootprint(state: SimState, x: number, y: number): boolean {
+  return liveBuildings(state).some((b) => {
+    if (b.type === 'path' || b.type === 'commons') return false;
+    const [bw, bh] = sizeOf(b);
+    return x >= b.x && x < b.x + bw && y >= b.y && y < b.y + bh;
+  });
+}
+
 /** The nearest tile that is not under a building (paths and the commons count as open), searching outward. */
 export function nearestOpen(state: SimState, x: number, y: number): [number, number] | null {
   const live = liveBuildings(state).filter((b) => b.type !== 'path' && b.type !== 'commons');

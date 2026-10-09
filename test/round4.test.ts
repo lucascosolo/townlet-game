@@ -201,7 +201,8 @@ describe('round 4, criterion 2: everyday play moves mood', () => {
 });
 
 describe('round 4, criterion 2 as declared', () => {
-  it.fails('a neglected quiet town is at least 0.10 glummer on day 21 than day 2, and half say fair or worse, on every seed (missed on seed 2; see the note)', { timeout: 900_000 }, () => {
+  // Missed on seed 2 in round 4 and kept visible; met in round 5 (standing relaxes to no view, not mild liking), so a plain test.
+  it('a neglected quiet town is at least 0.10 glummer on day 21 than day 2, and half say fair or worse, on every seed', { timeout: 900_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'none');
       sim.runUntil(at(2, 12));
@@ -273,6 +274,8 @@ describe('round 4, criterion 4: opinions with an edge', () => {
       let cool = 0;
       let disliked = 0;
       for (const r of here(sim)) {
+        // Asleep at noon (a nap, a cold): not asked.
+        if (!awake(sim, r.id)) continue;
         for (const o of here(sim)) {
           if (o.id === r.id) continue;
           const a = sim.talk(r.id, 'opinion', `r:${o.id}`) as TalkAnswer;

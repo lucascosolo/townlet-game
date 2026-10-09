@@ -16,6 +16,24 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **Less sameness.** Love facts relative to the town as dislikes are; a dream title held by two at most; a newcomer's "get to know the neighbours" done after a few conversations; newcomer backstories vary with the seed; the same whole answer is not said to you twice in a fortnight.
 - **Economy pacing.** More timber at the start; the granary feeding the town is a worry on the board; at spring the granary carries a third of its stores forward instead of emptying in a day.
 
+**Settled while building:**
+- **Talk warmth is capped at 0.06 a week per resident.** Agreeing, encouraging, brushing off praise and being seen add 0.01 to 0.02 each up to that; only owning a complaint is remembered as something you did ("owned up to it"). With nothing happening, standing relaxes toward 0 (it relaxed toward 0.2, mild liking with no reason behind it).
+- **"Words are cheap"** below −0.5 standing, for a grievance whose last cause is three days old or more; a fresh wrong can still be forgiven.
+- **"You don't seem it" is denied at a mood of 0.7 or more** when they said they were well.
+- **The log reads what the narrator already holds** when the interface starts, and "This morning" is rebuilt from the entries since the last day header.
+- **The board's quiet line** is a pure function: "Nothing else new this morning" with worries, "Nothing new overnight" while anything is open, "A quiet night. Nothing needs you." only when nothing is.
+- **Goals drops its long hints on a desktop** (they stay as hover titles), so Folk keeps a row beside the winter stores.
+- **An ignored ask's note names it:** "never got me a bench" (was "nothing was done").
+- **A bio is read on the page:** the log says "You read Bram's story on his page." instead of reciting it lowercased.
+- **A look is told, not quoted:** "Otto nods slowly." in the log, without quote marks, and the same in the talk panel.
+- **The needs line uses the same threshold as "On their mind"** (below 0.65 of the setpoint, or 0.3).
+- **The "lifts" fact is relative to the town**, as the dislikes fact is; noise counts as a love only for someone who likes it.
+- **A dream is shared by two at most** (same kind about the same thing).
+- **A newcomer's first step is done** after talking with three neighbours, or after five days.
+- **Newcomer backstories have four variants per trade** (were two), and "fixes things nobody asked them to" is "nobody asked to be fixed".
+- **The same whole answer is not given twice in a fortnight:** the lines are picked again, then the reason and a second topic are dropped; when it must repeat, they say so ("As I told you on day 9: ...").
+- **35 timber to start** (was 25); **the granary feeding the town is a board worry**; **at spring two thirds of the granary is shared out** and a third kept.
+
 **Rejected:**
 - *Making the steward's standing decay to zero.* A good steward should be liked; the fix is that liking follows what you did, not how often you chatted.
 

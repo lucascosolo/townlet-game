@@ -390,7 +390,7 @@ body.phone .desk-only, body.phone .dash-left, body.phone .widget-menu { display:
 body:not(.phone) .dock { left: 324px; max-width: calc(100vw - 324px - 400px); }
 /* One row, however narrow (owner: it was squeezed into a tall box): the buttons keep their size and the hint gives way, on one line. */
 body:not(.phone) .dock button { flex: none; white-space: nowrap; }
-body:not(.phone) .dock .status { flex: 1 1 auto; min-width: 0; white-space: normal; font-size: 12px; line-height: 1.2; max-height: 2.4em; }
+body:not(.phone) .dock .status { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; font-size: 12px; }
 body:not(.phone) .menu { left: 324px; right: 394px; }
 /* The scroll hangs below the top bar, rolled or not (owner: the rolled journal sat over the bar's end). */
 body:not(.phone) .scroll { top: 70px; }

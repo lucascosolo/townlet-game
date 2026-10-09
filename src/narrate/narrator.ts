@@ -90,7 +90,6 @@ export function importanceOf(e: SimEvent): Importance {
     case 'left_town':
     case 'disturbed_sleep':
     case 'shortage':
-    case 'forage':
     case 'dream_let_go':
     case 'aspiration':
     case 'plot_cleared':

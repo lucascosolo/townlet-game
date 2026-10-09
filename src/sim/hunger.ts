@@ -9,6 +9,8 @@ import type { SimState } from './types.js';
 export function townHunger(state: SimState): number {
   const run = state.shortRun ?? 0;
   if (run === 0 || state.lastShortageDay < dayOf(state.tick) - 1) return 0;
-  return Math.min(0.14, 0.035 * run);
+  // Past ten days it is how things are: resignation, at half the weight (the year soak's neglected
+  // towns otherwise emptied under a famine that never ends).
+  return Math.min(0.14, 0.035 * run) * (run > 10 ? 0.5 : 1);
 }
 

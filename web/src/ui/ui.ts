@@ -473,13 +473,14 @@ export class Ui {
     this.view.setGhost(tool.kind === 'build' ? tool.type : null, null, false, this.rotation);
     this.view.highlightBuilding(null);
     this.status(
+      // One short line each (bar round 3: the hint was cut at "right-drag to turn, w…").
       tool.kind === 'build' && tool.type === 'path'
-        ? 'Drag across the ground to lay a path (free). Remove takes tiles up · Esc stops.'
+        ? 'Drag to lay path (free) · Esc stops'
         : tool.kind === 'build'
-        ? `Placing a ${buildingDef(tool.type).name.toLowerCase()} (${buildingDef(tool.type).cost ?? 0} timber). R rotates · Esc stops.`
+        ? `${buildingDef(tool.type).name} · ${buildingDef(tool.type).cost ?? 0} timber · R rotates · Esc stops`
         : tool.kind === 'remove'
-          ? 'Click a building to remove it (half its timber back). Homes stay. Esc stops.'
-          : 'Click anyone or anything. Drag to pan, right-drag to turn, wheel to zoom.',
+          ? 'Click to remove (half timber back) · Esc stops'
+          : 'Click anyone · drag to pan · right-drag to turn',
     );
   }
 

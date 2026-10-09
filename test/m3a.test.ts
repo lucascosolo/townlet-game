@@ -1,5 +1,6 @@
 // M3a criteria 1-4 (spec 9.3, predeclared 2026-10-03): alive minds.
 import { describe, expect, it } from 'vitest';
+import { currentStage } from '../src/sim/story/aspirations.js';
 import { ASPIRATION_LINES } from '../src/content/story.js';
 import { MIND_LINES } from '../src/content/thoughts.js';
 import { Narrator } from '../src/narrate/narrator.js';
@@ -70,8 +71,10 @@ describe("criterion 2: Marlow's choice", () => {
     for (const seed of SEEDS) {
       for (const isolate of [false, true]) {
         const sim = runScenario('quiet', seed, 'considerate');
-        sim.runUntil(at(22, 12));
+        // Bar round 3: he decides within nine days of starting to think it over, so the twin is
+        // made the morning that step begins rather than on day 22.
         const m = sim.resident('marlow');
+        while (sim.tick < at(26, 0) && currentStage(sim.state, m)?.id !== 'decide' && !m.aspiration.done) sim.runUntil(sim.tick + 60);
         if (isolate) {
           // The twin: same town, same day, but nobody close and nothing holding him.
           for (const [id, x] of Object.entries(m.rel)) {
@@ -97,13 +100,13 @@ describe("criterion 2: Marlow's choice", () => {
           if (e.type === 'aspiration' && e.who === 'marlow' && e.outcome && !outcome) outcome = e.outcome;
         });
         if (m.aspiration.outcome) outcome = m.aspiration.outcome;
-        sim.runUntil(at(24, 12));
+        sim.runUntil(Math.max(at(24, 12), sim.tick + 10 * 1440));
         expect(firstDreamDone(sim, 'marlow'), `seed ${seed}`).toBe(true);
         // Bar round 3: a step that needs nothing from you finishes within nine days, so he may decide
         // earlier than day 23 and move on to a new dream; the decision is read from when he made it.
         expect(outcome, `seed ${seed} isolated=${isolate}`).toBe(isolate ? 'leave' : 'stay');
         expect(m.leaving !== null || m.departed, `seed ${seed} isolated=${isolate}: thinking of leaving`).toBe(isolate);
-        sim.runUntil(at(32, 12));
+        sim.runUntil(sim.tick + 8 * 1440);
         expect(sim.resident('marlow').departed, `seed ${seed} isolated=${isolate}`).toBe(isolate && !stayed);
       }
     }

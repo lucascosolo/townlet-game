@@ -316,7 +316,8 @@ export class Narrator {
   }
 
   /** A line in a resident's own voice, with an occasional verbal tic, in quotes. */
-  voice(who: string, lines: Lines | undefined, vars: Record<string, string> = {}, mineGapDays = 3): string {
+  // A spoken line in a scene rests eight days for its speaker (bar round 3: the same apology twice in a week).
+  voice(who: string, lines: Lines | undefined, vars: Record<string, string> = {}, mineGapDays = 8): string {
     return `"${this.utter(who, lines, vars, mineGapDays)}"`;
   }
 

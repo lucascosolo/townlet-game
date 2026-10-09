@@ -1207,8 +1207,7 @@ export class Simulation implements AspirationHost {
     // (bar round 3): their asks are withdrawn and the nightly "kept me waiting" stops. Neglect
     // wounds once and settles into a low opinion, rather than bleeding every night until they go.
     const givenUp = (r.gaveUpUntil ?? -1) > tick;
-    // Two in a fortnight is enough: an ask lapses after a week, so three never fit (recorded in DECISIONS.md).
-    if (!givenUp && allLapses(state, r.id, tick) >= 2) {
+    if (!givenUp && allLapses(state, r.id, tick) >= 3) {
       r.gaveUpUntil = tick + 7 * TICKS_PER_DAY;
       for (const q of state.requests) {
         if (q.by !== r.id || q.status !== 'open') continue;

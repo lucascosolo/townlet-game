@@ -112,6 +112,7 @@ export const ASPIRATION_LINES: Record<string, string> = {
   'wren:ask': 'Wren asks {you}, quietly, for a banner pole on the green.',
   'wren:paint': "Wren's banner goes up. Everyone finds their own house in it.",
   'wren:paint:early': 'Wren finds a banner pole already standing on the green, waiting. "For me?" The banner goes up that same day, and everyone finds their own house in it.',
+  'marlow:asking': 'Marlow has been asking everyone where the trade cart goes after the valley. Nobody quite knows, which seems to please him.',
   'marlow:restless': 'Marlow watches the trade cart leave again. He stands there a long time after it has gone.',
   'marlow:decide:stay': 'Marlow lets the trade cart go without him. "Turns out I live here."',
   'marlow:decide:leave': 'Marlow climbs onto the trade cart with his bag. He waves until the bend in the road.',

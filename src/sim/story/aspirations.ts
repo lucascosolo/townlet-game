@@ -47,8 +47,6 @@ export interface Stage {
    * finishes on the nine-day rule; it waits, and lets go after eight days like a dream ask.
    */
   needs?: string;
-  /** Not done by the passing of days before this day (bar round 6: Marlow's choice keeps its pace when his first step is quicker). */
-  notBefore?: number;
 }
 
 export interface AspirationDef {
@@ -311,6 +309,13 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
     who: 'marlow',
     title: 'Decide whether to stay, or follow the trade cart',
     stages: [
+      // Bar round 6: a first step done in a day or two, so "watch the trade cart" is not his bubble
+      // four days running, and his choice keeps its old pace after it.
+      {
+        id: 'asking',
+        next: 'Ask around about where the trade cart goes',
+        check: (h, r) => days(h, r) >= 2,
+      },
       {
         id: 'restless',
         next: 'Watch the trade cart come and go',
@@ -320,7 +325,6 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
         id: 'decide',
         next: "Make up his mind before the cart's last visit of the year",
         check: (h) => dayOf(h.state.tick) >= 23,
-        notBefore: 19,
         enter: (h, r) => {
           // What he has here: friends, how settled he feels, how the steward treats him.
           const friends = friendsOf(r).length;
@@ -523,8 +527,12 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
   const lacking = (stage.needs && !exists(h.state, stage.needs)) || (stage.place && stage.place !== 'home' && !exists(h.state, stage.place));
   // A first step is done within four days: due after three, since steps move at the morning check (bar round 6: "watch the trade cart come and go" was
   // Marlow's bubble four days running, "find someone willing to learn" Fen's for three).
-  const longEnough = !stage.until && !lacking && !waitingOnYou && dayOf(h.state.tick) >= (stage.notBefore ?? 0) && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 1 : 9) * TICKS_PER_DAY;
-  if (!stage.check(h, r) && !longEnough) return;
+  const longEnough = !stage.until && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 1 : 9) * TICKS_PER_DAY;
+  const passed = stage.check(h, r);
+  if (!passed && !longEnough) return;
+  // Bar round 6: a first step that only ran out of days is moved past, not celebrated (the quicker
+  // first steps lifted a neglected town's mood).
+  const quiet = !passed && r.aspiration.stage === 0;
   stage.enter?.(h, r);
   r.aspiration.stage++;
   r.aspiration.since = h.state.tick;
@@ -535,8 +543,10 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
     r.aspiration.doneTick = h.state.tick;
   }
   // Every step forward feels like something.
-  addEmotion(r, { kind: r.aspiration.done ? 'pride' : 'joy', intensity: r.aspiration.done ? 0.8 : 0.4, tick: h.state.tick });
-  r.needs.purpose = clamp(r.needs.purpose + (r.aspiration.done ? 0.4 : 0.15));
+  if (!quiet) {
+    addEmotion(r, { kind: r.aspiration.done ? 'pride' : 'joy', intensity: r.aspiration.done ? 0.8 : 0.4, tick: h.state.tick });
+    r.needs.purpose = clamp(r.needs.purpose + (r.aspiration.done ? 0.4 : 0.15));
+  }
   h.emitEvent({
     t: h.state.tick,
     type: 'aspiration',

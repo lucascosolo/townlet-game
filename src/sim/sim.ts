@@ -455,10 +455,7 @@ export class Simulation implements AspirationHost {
         // Bar round 5: and for three days after, so a hungry week is not forgotten overnight.
         if (state.lowRun >= 2) state.lowCapUntil = state.tick + 3 * TICKS_PER_DAY;
       } else state.lowRun = 0;
-      if ((state.lowCapUntil ?? -1) > state.tick) for (const r of this.activeResidents()) {
-        const x = r.rel[STEWARD];
-        if (x && x.affinity > LOW_LARDER_TOP) x.affinity = LOW_LARDER_TOP;
-      }
+      this.capAfterLowLarder();
       storesDawn(this);
       progressDawn(this);
       wearDawn(state);
@@ -1378,7 +1375,17 @@ export class Simulation implements AspirationHost {
     return q;
   }
 
+  /** While a low larder is remembered, nobody stands above LOW_LARDER_TOP with you: checked at dawn and each hour (bar round 6: a granted ask at 07:00 slipped past the dawn check). */
+  private capAfterLowLarder(): void {
+    if ((this.state.lowCapUntil ?? -1) <= this.state.tick) return;
+    for (const r of this.activeResidents()) {
+      const x = r.rel[STEWARD];
+      if (x && x.affinity > LOW_LARDER_TOP) x.affinity = LOW_LARDER_TOP;
+    }
+  }
+
   private hourly(): void {
+    this.capAfterLowLarder();
     // Orchards and glasshouses grow on their own, by season.
     const season = seasonOf(this.state.tick);
     for (const b of liveBuildings(this.state)) {

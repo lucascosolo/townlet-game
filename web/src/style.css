@@ -18,7 +18,8 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: #9db8c8; }
 #app { position: fixed; inset: 0; }
 #stage { position: absolute; inset: 0; }
-#stage canvas { display: block; touch-action: none; }
+/* Always the whole stage, even before the renderer catches up with a new size (the drawing stretches for a frame instead of sitting in a box). */
+#stage canvas { display: block; touch-action: none; width: 100% !important; height: 100% !important; }
 .paper {
   background: var(--paper);
   border: 1px solid var(--paper-edge);

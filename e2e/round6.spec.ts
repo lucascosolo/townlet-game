@@ -83,3 +83,35 @@ test('?new=1 with a named seed starts that seed', async ({ page }) => {
   const seed = await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.sim.state.seed);
   expect(seed).toBe(7);
 });
+
+test('the town fills the stage on a phone, and follows the stage when it changes size without a resize event', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.goto('/?intro=0&scenario=quiet&seed=1&speed=0');
+  await page.waitForFunction(() => (window as unknown as { __townlet?: unknown }).__townlet !== undefined);
+  await frames(page);
+  const fits = () =>
+    page.evaluate(() => {
+      const stage = document.getElementById('stage')!.getBoundingClientRect();
+      const canvas = document.querySelector('#stage canvas')!;
+      const c = canvas.getBoundingClientRect();
+      return { stage: [stage.width, stage.height], css: [c.width, c.height], buffer: [(canvas as HTMLCanvasElement).width, (canvas as HTMLCanvasElement).height], ratio: window.devicePixelRatio };
+    });
+  let f = await fits();
+  expect(f.css).toEqual(f.stage);
+  // The stage shrinks and grows back with no window resize (as iOS does when it restores a tab).
+  await page.evaluate(() => {
+    document.getElementById('stage')!.style.bottom = '400px';
+  });
+  await frames(page);
+  f = await fits();
+  expect(f.css).toEqual(f.stage);
+  await page.evaluate(() => {
+    document.getElementById('stage')!.style.bottom = '';
+  });
+  await frames(page);
+  f = await fits();
+  expect(f.css).toEqual(f.stage);
+  expect(Math.abs(f.buffer[1]! / f.stage[1]! - f.buffer[0]! / f.stage[0]!)).toBeLessThan(0.05);
+  await ctx.close();
+});

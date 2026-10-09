@@ -287,10 +287,14 @@ export class TownView {
     for (const l of this.lamps) l.intensity = night * 2.2;
   }
 
+  /** The stage size the renderer was last fitted to. */
+  private sized: [number, number] = [0, 0];
+
   resize(): void {
     const el = this.renderer.domElement.parentElement as HTMLElement;
     const w = el.clientWidth || window.innerWidth;
     const h = el.clientHeight || window.innerHeight;
+    this.sized = [el.clientWidth, el.clientHeight];
     this.renderer.setSize(w, h);
     this.composer?.setSize(w, h);
     const view = 15;
@@ -748,6 +752,10 @@ export class TownView {
   private frames = 0;
 
   frame(dt: number): void {
+    // The stage can change size without a resize event (iOS Safari restoring a tab or folding its
+    // toolbar left the town drawn in a box at the top of the screen, 2026-10-09): check every frame.
+    const el = this.renderer.domElement.parentElement as HTMLElement | null;
+    if (el && (el.clientWidth !== this.sized[0] || el.clientHeight !== this.sized[1])) this.resize();
     this.syncBuildings();
     this.syncResidents(dt);
     this.placeCamera(dt);

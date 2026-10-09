@@ -224,11 +224,11 @@ export const SPEECH: Record<string, Lines> = {
     dreamy: ['I said things I did not mean, {other}.'],
   },
   thinSupper: {
-    plain: ['Thin pickings.', 'That was not a supper.', 'Bread and not much else.'],
-    formal: ['One does not complain. One does, however, notice.', 'A thin supper, and the larder bare. We have had better evenings.', 'I shall go to bed hungry, I think.'],
-    warm: ['Not much on the plate tonight, is there.', 'We will manage. We always do. But I am hungry.', 'I gave the last of mine to the cat. Silly of me.'],
-    chatty: ['Is that it? Is that ALL?', 'My stomach is writing a strongly worded letter!', 'Thin soup again! Who is running this town?'],
-    dreamy: ['The plate is mostly plate tonight.', 'Hunger has a sound. It is a sort of hum.', 'I dreamt of bread last night. I may again.'],
+    plain: ['Thin pickings.', 'That was not a supper.', 'Bread and not much else.', 'Half a bowl. Again.', 'Stomach still empty.', 'Not enough to go round.', 'Seen better meals in a ditch.', 'Water and crusts, then.'],
+    formal: ['One does not complain. One does, however, notice.', 'A thin supper, and the larder bare. We have had better evenings.', 'I shall go to bed hungry, I think.', 'This is not what one would call a meal.', 'I have eaten more at a funeral.', 'We are reduced to scraps, it seems.', 'I shall not pretend that was sufficient.', 'Supper was brief, and so, I fear, is my patience.'],
+    warm: ['Not much on the plate tonight, is there.', 'We will manage. We always do. But I am hungry.', 'I gave the last of mine to the cat. Silly of me.', "I'm trying not to think about proper food.", 'Hardly enough to warm the bowl.', "I'll dream of stew, I expect.", "We'll laugh about this one day. Not yet.", 'Another hungry evening. I hate this.'],
+    chatty: ['Is that it? Is that ALL?', 'My stomach is writing a strongly worded letter!', 'Thin soup again! Who is running this town?', 'I could eat the table! Legs and all!', 'Supper? That was a rumour of supper!', 'My belly is shouting at me! Rudely!', 'Crumbs! Literally crumbs!', 'If this is supper, I am a duck!'],
+    dreamy: ['The plate is mostly plate tonight.', 'Hunger has a sound. It is a sort of hum.', 'I dreamt of bread last night. I may again.', 'The bowl echoes when I set it down.', 'Supper was a memory of supper.', 'I am hollow as an old tree.', 'Even the candle looks hungry.', 'The night tastes of nothing.'],
   },
   forage: {
     plain: ["Found some. Won't last.", 'A basketful. Just about.', 'Nettles and a few eggs. It is food.', 'Better than an empty pot.', 'That is tonight sorted, no more.'],

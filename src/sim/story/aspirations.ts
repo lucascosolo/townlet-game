@@ -456,7 +456,11 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
   // A step that has waited on the steward for over a week is let go (bar round 2): the dreamer
   // makes do, says so, and in time dreams something else, rather than parking an ask for a month.
   if (letGo(h, r)) return;
-  if (!stage.check(h, r)) return;
+  // A step that needs nothing from the steward is done within nine days of trying, one way or
+  // another (bar round 3: "get to know the neighbours" from day 4 to day 29).
+  const waitingOnYou = h.state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open');
+  const longEnough = !stage.until && !waitingOnYou && h.state.tick - r.aspiration.since >= 9 * TICKS_PER_DAY;
+  if (!stage.check(h, r) && !longEnough) return;
   stage.enter?.(h, r);
   r.aspiration.stage++;
   r.aspiration.since = h.state.tick;

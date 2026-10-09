@@ -322,6 +322,18 @@ export const WEAR_KEEP = 0.8;
 /** Wear below this is not drawn: a track takes real, repeated traffic to show (bar round 1). */
 export const WEAR_SHOW = 6;
 
+/**
+ * The worn tiles drawn: those walked at least WEAR_SHOW, and of those only the most-walked eighth
+ * of the settled valley (bar round 3: a brown slab over the centre from day 5).
+ */
+export function shownWear(state: SimState): Map<string, number> {
+  const settled = state.settled ?? { width: state.width, height: state.height };
+  const cap = Math.floor((settled.width * settled.height) / 8);
+  const worn = Object.entries(state.wear ?? {}).filter(([, w]) => (w as number) >= WEAR_SHOW) as Array<[string, number]>;
+  worn.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  return new Map(worn.slice(0, cap));
+}
+
 /** A footstep off the laid paths wears the ground a little. */
 export function wearStep(state: SimState, x: number, y: number): void {
   // Only open ground wears (bar round 2): the commons and every other footprint stay as drawn.

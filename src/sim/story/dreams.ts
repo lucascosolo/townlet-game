@@ -342,7 +342,9 @@ export function chooseDream(state: SimState, r: ResidentState): { kind: string; 
   const options: Array<{ kind: string; subject: SubjectId; weight: number }> = [];
   for (const a of attachments(state, r).slice(0, DREAM_SOURCES)) {
     if (a.subject === lastSubject) continue;
-    const t = DREAM_TEMPLATES.find((x) => !recent.has(x.id) && x.fits(state, r, a));
+    // Two people making something for someone is plenty at once (bar round 3: eight of ten).
+    const gifting = Object.values(state.residents).filter((o) => o.id !== r.id && !o.departed && !o.aspiration.done && o.aspiration.kind === 'gift').length;
+    const t = DREAM_TEMPLATES.find((x) => !recent.has(x.id) && !(x.id === 'gift' && gifting >= 2) && x.fits(state, r, a));
     if (t) options.push({ kind: t.id, subject: a.subject, weight: a.strength + (t.id === 'remember_gone' ? 2 : 0) });
   }
   const pick = weighted(r, options, (o) => o.weight);

@@ -323,7 +323,7 @@ export type TalkQuestion = 'how' | 'mind' | 'hope' | 'opinion' | 'me';
 export type FavourKind = 'timber' | 'catch' | 'garden' | 'clear' | 'visit' | 'mend';
 
 /** Why a resident says no, always drawn from their state. */
-export type RefusalReason = 'asleep' | 'busy' | 'unwell' | 'tired' | 'low' | 'asked_often' | 'distrust' | 'not_speaking' | 'nowhere' | 'gone';
+export type RefusalReason = 'asleep' | 'busy' | 'unwell' | 'tired' | 'low' | 'asked_often' | 'distrust' | 'not_speaking' | 'nowhere' | 'gone' | 'hungry';
 
 export interface Favour {
   id: number;

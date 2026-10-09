@@ -113,6 +113,12 @@ export function considerFavour(state: SimState, r: ResidentState, kind: FavourKi
     if (kind === 'mend' && toward.affinity < -0.6) return no('not_speaking');
   }
   const steward = rel(r, STEWARD);
+  // Bar round 3: someone who thinks ill of you will not do you favours, and someone going hungry
+  // will only go after food.
+  const food = kind === 'garden' || kind === 'catch';
+  if (steward.affinity < 0 && !food) return no('distrust');
+  const day = Math.floor(state.tick / 1440) + 1;
+  if ((r.hungryRun ?? 0) >= 2 && (r.lastHungryDay ?? -9) >= day - 1 && !food) return no('hungry');
   // Each pressure on the answer, signed; the biggest negative one is the reason for a no.
   const parts: Array<[RefusalReason | 'plus', number]> = [
     ['plus', 0.5 + 0.2 * (steward.trust - 0.5) + 0.15 * unit(def.traits.generous) + 0.1 * def.values.community],

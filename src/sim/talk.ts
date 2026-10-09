@@ -3,7 +3,10 @@
 // steward action: the first talk of the day is a little company for them, and a little
 // acquaintance with the steward; asking again the same day changes nothing.
 
-import { opinion } from './mind/memory.js';
+import { attachment, opinion } from './mind/memory.js';
+import { buildingDef } from '../content/buildings.js';
+import { residentDef } from '../content/residents.js';
+import { ambientPrefs } from './needs.js';
 import { townHunger } from './hunger.js';
 import { freshGrievance } from './mind/thoughts.js';
 import { TICKS_PER_DAY } from './time.js';
@@ -46,7 +49,7 @@ function strongestBelief(r: ResidentState, subject: SubjectId, skip: Record<stri
 const reasonSign = (v: number) => (v > 0.05 ? 1 : v < -0.05 ? -1 : 0);
 
 /** How a resident feels about someone or something, for "what do you think of…": people by affinity and belief, places by belief. */
-export function feelingAbout(r: ResidentState, subject: SubjectId, now: number): number {
+export function feelingAbout(r: ResidentState, subject: SubjectId, now: number, state?: SimState): number {
   if (subject === STEWARD) return rel(r, STEWARD).affinity;
   if (subject.startsWith('r:')) {
     const x = r.rel[subject.slice(2)];
@@ -55,7 +58,29 @@ export function feelingAbout(r: ResidentState, subject: SubjectId, now: number):
     // between me and Ada" one day, "I haven't felt anything about Ada yet" the next).
     return x && x.lastArgue >= 0 && now - x.lastArgue < 2 * TICKS_PER_DAY ? Math.min(v, -0.1) : v;
   }
-  return opinion(r, subject);
+  // A place: what they have decided, half of what they are still deciding, and their taste for
+  // what it is (bar round 3: nine in ten answers about places were "no view").
+  return Math.max(-1, Math.min(1, attachment(r, subject) + (state ? taste(state, r, subject) : 0)));
+}
+
+/**
+ * A first leaning about a building from what someone values: what it gives off against what they
+ * like (green, quiet, bustle...), and its kind against their values. Small: a first impression
+ * that experience soon outweighs. Steady across days, so the same person says the same thing.
+ */
+export function taste(state: SimState, r: ResidentState, subject: SubjectId): number {
+  if (!subject.startsWith('b:')) return 0;
+  const b = state.buildings.find((x) => `b:${x.id}` === subject);
+  if (!b || b.removed) return 0;
+  const def = buildingDef(b.type);
+  const rd = residentDef(r.id);
+  const prefs = ambientPrefs(rd);
+  const e = def.emits ?? {};
+  let v = 0;
+  for (const q of Object.keys(e) as Array<keyof typeof prefs>) v += (e[q] ?? 0) * (prefs[q] ?? 0);
+  const kindValue: Record<string, number> = { work: rd.values.craft + 0.5 * rd.values.prosperity - 0.6, social: rd.values.community - 0.4, nature: rd.values.nature - 0.3, decor: rd.values.beauty - 0.3 };
+  v += 0.5 * (kindValue[def.kind] ?? 0);
+  return Math.max(-0.25, Math.min(0.25, 0.4 * v));
 }
 
 export function talkAnswer(state: SimState, r: ResidentState, question: TalkQuestion, about?: SubjectId): TalkAnswer {
@@ -88,7 +113,7 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
       return { question, hope: { title: dreamTitle(state, r) ?? '', next: nextStep(state, r), done: r.aspiration.done } };
     case 'opinion': {
       const subject = about ?? STEWARD;
-      const v = feelingAbout(r, subject, state.tick);
+      const v = feelingAbout(r, subject, state.tick, state);
       const b = strongestBelief(r, subject, {}, reasonSign(v), state.tick);
       return { question, about: subject, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
     }

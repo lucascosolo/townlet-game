@@ -11,7 +11,9 @@ import { needIsLow } from '../src/sim/needs.js';
 import { wishProgress } from '../src/sim/story/director.js';
 import { at } from '../src/sim/time.js';
 import { STEWARD, type TalkQuestion } from '../src/sim/types.js';
-import { canPlace, liveBuildings } from '../src/sim/world.js';
+import { canPlace, liveBuildings, shownWear } from '../src/sim/world.js';
+import { addLedgerNote, groupAsks, reasonStem, type LedgerNote } from '../src/narrate/board.js';
+import { considerFavour } from '../src/sim/favours.js';
 import { SEEDS } from './helpers.js';
 
 const awake = (sim: ReturnType<typeof runScenario>, id: string) => {
@@ -276,5 +278,122 @@ describe('round 3, criteria 4 and 5: replies with substance, shorter answers', (
       }
       for (const [line, c] of counts) expect(c, `seed ${seed}: "${line}" ${c} times`).toBeLessThanOrEqual(4);
     }
+  });
+});
+
+describe('round 3, criterion 6: a board that does not repeat', () => {
+  it('one card per kind of ask, ledger lines that update, and no narrated line twice in a week', { timeout: 900_000 }, () => {
+    for (const steward of ['favours', 'considerate', 'none'] as const) {
+      const sim = runScenario('quiet', 7, steward);
+      const n = new Narrator(sim, { stewardIsYou: true });
+      const ledgers = new Map<string, LedgerNote[]>();
+      const lastLine = new Map<string, number>();
+      n.onEntry((e) => {
+        if (e.kind === 'day') return;
+        const t = lastLine.get(e.text);
+        if (t !== undefined) expect(e.t - t, `${steward}: "${e.text}" twice in a week`).toBeGreaterThanOrEqual(7 * 1440);
+        lastLine.set(e.text, e.t);
+      });
+      sim.on((e) => {
+        if (e.type !== 'standing') return;
+        const day = Math.floor(e.t / 1440) + 1;
+        const notes = addLedgerNote(ledgers.get(e.who) ?? [], { day, up: e.delta > 0, reasons: e.reasons, also: e.also ?? [] });
+        ledgers.set(e.who, notes);
+        const recent = notes.filter((x) => day - x.day < 7).flatMap((x) => [...x.reasons, ...x.also].map(reasonStem));
+        expect(new Set(recent).size, `${steward} ${e.who}: ${recent.join(' | ')}`).toBe(recent.length);
+      });
+      for (let day = 1; day <= 30; day++) {
+        sim.runUntil(at(day, 9));
+        const kinds = groupAsks(sim.state.requests.filter((q) => q.status === 'open')).map((g) => (g[0]!.kind === 'aspiration' ? `${g[0]!.kind}|${g[0]!.wants ?? g[0]!.by}` : g[0]!.kind));
+        expect(new Set(kinds).size).toBe(kinds.length);
+      }
+    }
+  });
+});
+
+describe('round 3, criterion 7: approval earned, favours refused', () => {
+  it('nobody above 0.45 standing before day 4 with a considerate steward', { timeout: 600_000 }, () => {
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'considerate');
+      for (let d = 1; d <= 3; d++) {
+        sim.runUntil(at(d, 23));
+        for (const id of sim.state.order) expect(sim.resident(id).rel[STEWARD]?.affinity ?? 0, `seed ${seed} day ${d} ${id}`).toBeLessThanOrEqual(0.45);
+      }
+    }
+  });
+
+  it('below zero standing or hungry two days running, a non-food favour is refused, and says why', () => {
+    const sim = runScenario('quiet', 1, 'none');
+    sim.runUntil(at(3, 10));
+    const r = sim.resident('ada');
+    r.rel[STEWARD]!.affinity = -0.1;
+    expect(considerFavour(sim.state, r, 'timber').reason).toBe('distrust');
+    expect(considerFavour(sim.state, r, 'garden').reason).not.toBe('distrust');
+    r.rel[STEWARD]!.affinity = 0.5;
+    r.hungryRun = 2;
+    r.lastHungryDay = 3;
+    expect(considerFavour(sim.state, r, 'timber').reason).toBe('hungry');
+    expect(considerFavour(sim.state, r, 'catch').reason).not.toBe('hungry');
+  });
+
+  it('with the favours steward, every seed sees a refusal for standing or hunger', { timeout: 600_000 }, () => {
+    for (const seed of SEEDS) {
+      const sim = runScenario('bakery', seed, 'favours', { scripted: false });
+      let named = false;
+      sim.on((e) => {
+        if (e.type === 'favour' && e.phase === 'refused' && (e.reason === 'distrust' || e.reason === 'hungry')) named = true;
+      });
+      sim.runUntil(at(31, 0));
+      expect(named, `seed ${seed}`).toBe(true);
+    }
+  });
+});
+
+describe('round 3, criteria 8 to 10: dreams, worn ground, places', () => {
+  it('never more than two "make something for" dreams at once; no building-free step over ten days', { timeout: 600_000 }, () => {
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'considerate');
+      for (let day = 2; day <= 30; day++) {
+        sim.runUntil(at(day, 8));
+        const rs = sim.state.order.map((id) => sim.resident(id)).filter((r) => !r.departed);
+        expect(rs.filter((r) => !r.aspiration.done && r.aspiration.kind === 'gift').length, `seed ${seed} day ${day}`).toBeLessThanOrEqual(2);
+        for (const r of rs) {
+          if (r.aspiration.done) continue;
+          const waiting = sim.state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open');
+          if (!waiting) expect((sim.state.tick - r.aspiration.since) / 1440, `seed ${seed} day ${day} ${r.id}`).toBeLessThanOrEqual(10);
+        }
+      }
+    }
+  });
+
+  it('worn tiles shown are at most an eighth of the settled valley on day 12 of a considerate bakery town', { timeout: 300_000 }, () => {
+    for (const seed of SEEDS) {
+      const sim = runScenario('bakery', seed, 'considerate', { scripted: false });
+      sim.runUntil(at(12, 12));
+      const settled = sim.state.settled ?? { width: sim.state.width, height: sim.state.height };
+      expect(shownWear(sim.state).size).toBeLessThanOrEqual(Math.floor((settled.width * settled.height) / 8));
+    }
+  });
+
+  it('day 10: at most 30% of answers about buildings are neutral, and they come in at least three shapes', { timeout: 600_000 }, () => {
+    let neutral = 0;
+    let all = 0;
+    const shapes = new Set<string>();
+    for (const seed of SEEDS) {
+      const sim = runScenario('quiet', seed, 'considerate');
+      const n = new Narrator(sim, { stewardIsYou: true });
+      sim.runUntil(at(10, 12));
+      for (const id of sim.state.order) {
+        if (!awake(sim, id)) continue;
+        for (const b of liveBuildings(sim.state).filter((x) => !['path', 'brook', 'wild', 'tent', 'cottage'].includes(x.type))) {
+          const a = sim.talk(id, 'opinion', `b:${b.id}`)!;
+          all++;
+          if (a.band === 'neutral') neutral++;
+          shapes.add((n.lastReply?.text ?? '').replace(n.subjectName(`b:${b.id}`), 'X').split(/[.!?]/)[0] ?? '');
+        }
+      }
+    }
+    expect(neutral / all).toBeLessThanOrEqual(0.3);
+    expect(shapes.size).toBeGreaterThanOrEqual(3);
   });
 });

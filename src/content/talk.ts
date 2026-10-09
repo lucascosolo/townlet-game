@@ -256,6 +256,13 @@ export const FAVOUR_YES: Record<FavourKind, Lines> = {
 };
 
 export const FAVOUR_NO: Record<RefusalReason, Lines> = {
+  hungry: {
+    plain: ["Can't. Not on an empty stomach.", "Feed us first. Then ask.", "Too hungry to haul anything."],
+    formal: ['I am afraid I cannot work on an empty stomach.', 'Perhaps when there is food in the larder.', 'I must look to my supper before your errand.'],
+    warm: ["I'm sorry, I'm just too hungry to be much use.", "Ask me again when we've eaten properly.", "I can barely think for hunger, love."],
+    chatty: ['Work? On THIS stomach? No!', 'Feed me and I am yours! Until then, no!', 'I would faint halfway! Truly!'],
+    dreamy: ['Hunger has made the errand very far away.', 'I cannot carry anything but this emptiness.', 'When the larder sings again, ask me.'],
+  },
   asleep: { plain: ['...'] },
   gone: { plain: ['...'] },
   busy: {

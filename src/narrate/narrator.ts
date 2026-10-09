@@ -210,8 +210,16 @@ export class Narrator {
   }
 
   private entry(kind: EntryKind, t: number, text: string): void {
+    const importance = kind === 'day' || kind === 'note' ? 'normal' : kind === 'thought' ? 'minor' : this.importance;
+    // The same sentence twice in a week is skipped unless it matters (bar round 3: "Goal done:
+    // ask someone a favour" fourteen times in a month). The day headers are not sentences.
+    if (kind !== 'day' && importance !== 'major') {
+      const last = this.lastSaidLine.get(text);
+      if (last !== undefined && t - last < 7 * 1440) return;
+      this.lastSaidLine.set(text, t);
+    }
     const who = this.state.order.filter((id) => new RegExp(`\\b${this.name(id)}\\b`).test(text));
-    const e: NarratorEntry = { t, kind, text, who, importance: kind === 'day' || kind === 'note' ? 'normal' : kind === 'thought' ? 'minor' : this.importance };
+    const e: NarratorEntry = { t, kind, text, who, importance };
     this.entries.push(e);
     if (this.entries.length > MAX_ENTRIES) this.entries.splice(0, this.entries.length - MAX_ENTRIES);
     for (const l of this.entryListeners) l(e);
@@ -308,8 +316,16 @@ export class Narrator {
   }
 
   /** A line in a resident's own voice, with an occasional verbal tic, in quotes. */
-  voice(who: string, lines: Lines | undefined, vars: Record<string, string> = {}): string {
-    return `"${this.utter(who, lines, vars)}"`;
+  voice(who: string, lines: Lines | undefined, vars: Record<string, string> = {}, mineGapDays = 3): string {
+    return `"${this.utter(who, lines, vars, mineGapDays)}"`;
+  }
+
+  /** One of several ways of telling the same thing, the one this resident's story used longest ago. */
+  private freshLine(who: string, ways: string[]): string {
+    const t = this.state.tick;
+    const line = [...ways].sort((a, b) => (this.saidBy.get(`${who}|${a}`) ?? -Infinity) - (this.saidBy.get(`${who}|${b}`) ?? -Infinity))[0] as string;
+    this.saidBy.set(`${who}|${line}`, t);
+    return line;
   }
 
   /** The words of a line in a resident's voice, without quotes, so lines can be joined. */
@@ -426,7 +442,21 @@ export class Narrator {
         }
         break;
       case 'disturbed_sleep':
-        this.live(e.t, `Noise from ${this.subjectName(`b:${e.building}`)} wakes ${this.name(e.who)}. ${cap(residentDef(e.who).pronouns.subj)} lie${residentDef(e.who).pronouns.subj === 'they' ? '' : 's'} awake till dawn.`);
+        {
+          // Several ways to tell a bad night, so a week of them does not read the same (bar round 3).
+          const p = residentDef(e.who).pronouns;
+          const they = p.subj === 'they';
+          const place = this.subjectName(`b:${e.building}`);
+          const name = this.name(e.who);
+          const ways = [
+            `Noise from ${place} wakes ${name}. ${cap(p.subj)} lie${they ? '' : 's'} awake till dawn.`,
+            `${name} is up in the small hours again, kept awake by ${place}.`,
+            `${cap(place)} clatters through the night, and ${name} hears every minute of it.`,
+            `${name} gives up on sleep and sits by the window; ${place} is at it again.`,
+            `Another broken night for ${name}, courtesy of ${place}.`,
+          ];
+          this.live(e.t, this.freshLine(e.who, ways));
+        }
         break;
       case 'reaction': {
         const b = this.state.buildings.find((x) => x.id === e.building);
@@ -452,7 +482,7 @@ export class Narrator {
         break;
       }
       case 'shortage':
-        this.live(e.t, `The larder is bare. ${this.name(e.who)} makes do with a thin supper. ${this.voice(e.who, SPEECH.thinSupper)}`);
+        this.live(e.t, `The larder is bare. ${this.name(e.who)} makes do with a thin supper. ${this.voice(e.who, SPEECH.thinSupper, {}, 8)}`);
         break;
       case 'forage':
         this.live(e.t, `${this.name(e.who)} goes ${this.at(e.placeId)} with a basket and comes back with ${e.food} food. ${this.voice(e.who, SPEECH.forage)}`);
@@ -836,7 +866,9 @@ export class Narrator {
         break;
       }
       case 'apologize':
-        text = e.ok ? `${at}${a} finds ${b}. ${this.voice(e.a, SPEECH.apologize, { other: b })}` : `${a} tries to apologise to ${b}, who isn't ready to hear it.`;
+        text = e.ok
+          ? `${at}${a} finds ${b}. ${this.voice(e.a, SPEECH.apologize, { other: b })}`
+          : this.freshLine(e.a, [`${a} tries to apologise to ${b}, who isn't ready to hear it.`, `${a} starts to say sorry, but ${b} walks off.`, `${b} hears ${a} out, and says nothing back.`, `${a}'s apology lands on stony ground with ${b}.`, `${b} isn't ready to make it up with ${a} yet.`]);
         break;
       case 'tease':
         if (!e.ok) text = `${at}${a} teases ${b}, and it lands badly.`;
@@ -955,6 +987,8 @@ export class Narrator {
   lastReply: { who: string; t: number; text: string } | null = null;
   /** What the steward last said in reply, in words (bar round 2: the chips and the chat show the same). */
   lastSaid: { who: string; t: number; text: string } | null = null;
+  /** When each log line was last written, so a minor line is not written twice in a week. */
+  private readonly lastSaidLine = new Map<string, number>();
 
   /** An answer to the steward, in the resident's voice (the words only). */
   answer(who: string, a: TalkAnswer): string {

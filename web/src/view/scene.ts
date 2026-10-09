@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { buildingDef } from '../../../src/content/buildings.js';
 import { minuteOf, seasonOf, type Season } from '../../../src/sim/time.js';
 import type { BuildingState, ResidentState, SimState } from '../../../src/sim/types.js';
-import { WEAR_SHOW, brookSide, footprint, placeTile, sizeOf } from '../../../src/sim/world.js';
+import { WEAR_SHOW, brookSide, footprint, placeTile, shownWear, sizeOf } from '../../../src/sim/world.js';
 import type { Game } from '../game.js';
 import { buildingMesh, glow, mat, residentMesh, seasonalLeaf } from './meshes.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -373,12 +373,10 @@ export class TownView {
     const key = String(Math.floor(state.tick / 30));
     if (key === this.pathsKey) return;
     this.pathsKey = key;
-    const wear = state.wear ?? {};
     const ctx = this.pathCanvas.getContext('2d') as CanvasRenderingContext2D;
     ctx.clearRect(0, 0, this.pathCanvas.width, this.pathCanvas.height);
-    for (const [k, w] of Object.entries(wear)) {
-      // Only real traffic shows (bar round 1: the whole centre was mud by day 12).
-      if (w < WEAR_SHOW) continue;
+    // Only real traffic shows, and only the most-walked tiles (bar rounds 1 and 3).
+    for (const [k, w] of shownWear(state)) {
       const [x, y] = k.split(',').map(Number) as [number, number];
       // Worn more, paler. Kept to about half strength since paths can be laid (owner's choice):
       // a hint, not a road.

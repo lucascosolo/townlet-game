@@ -223,6 +223,7 @@ export class Ui {
   private rosterEl: HTMLElement | null = null;
   private journalBody: HTMLElement | null = null;
   private lastJournalKey = '';
+  private pendingDay: NarratorEntry | null = null;
   private readonly lastStock: Partial<Record<'food' | 'timber', number>> = {};
   /** One talk panel per resident, kept across journal redraws so its choices stay put. */
   private readonly talkPanels = new Map<string, TalkPanel>();
@@ -729,13 +730,31 @@ export class Ui {
   }
 
   /** A short note that floats in at the top and fades (goals done, things learned). */
+  /** Toasts come one at a time (bar round 3: three stacked over the town); a long queue keeps the latest few. */
+  private toastQueue: Array<{ html: string; kind: string }> = [];
+  private toastShowing = false;
+
   private toast(html: string, kind = ''): void {
-    const t = el('div', { class: `toast ${kind}` });
-    t.innerHTML = html;
-    this.toasts.appendChild(t);
-    while (this.toasts.childElementCount > 3) this.toasts.firstElementChild?.remove();
-    setTimeout(() => t.classList.add('out'), 2800);
-    setTimeout(() => t.remove(), 3300);
+    this.toastQueue.push({ html, kind });
+    if (this.toastQueue.length > 4) this.toastQueue.splice(0, this.toastQueue.length - 4);
+    if (!this.toastShowing) this.nextToast();
+  }
+
+  private nextToast(): void {
+    const next = this.toastQueue.shift();
+    if (!next) {
+      this.toastShowing = false;
+      return;
+    }
+    this.toastShowing = true;
+    const t = el('div', { class: `toast ${next.kind}` });
+    t.innerHTML = next.html;
+    this.toasts.replaceChildren(t);
+    setTimeout(() => t.classList.add('out'), 2200);
+    setTimeout(() => {
+      t.remove();
+      this.nextToast();
+    }, 2600);
   }
 
   // ---------------------------------------------------------------- goals and the Folk album (M4)
@@ -1257,7 +1276,11 @@ export class Ui {
   private rerenderLog(): void {
     this.logList.replaceChildren();
     this.logGroup = null;
-    const shown = this.game.narrator.entries.filter((e) => this.passes(e)).slice(-400);
+    const passing = this.game.narrator.entries.filter((e) => this.passes(e));
+    // Drop a day header with nothing under it; the last one waits for its first line.
+    const shown = passing.filter((e, i) => e.kind !== 'day' || (i + 1 < passing.length && passing[i + 1]!.kind !== 'day')).slice(-400);
+    const lastIsDay = passing.length > 0 && passing[passing.length - 1]!.kind === 'day';
+    this.pendingDay = lastIsDay ? (passing[passing.length - 1] as NarratorEntry) : null;
     for (const e of shown) this.appendLog(e);
     this.logEl.scrollTop = this.logEl.scrollHeight;
   }
@@ -1308,8 +1331,14 @@ export class Ui {
   private onEntry(e: NarratorEntry): void {
     if (e.kind === 'day') this.morning = [];
     if (e.kind === 'board') this.morning.push(e);
-    if (this.passes(e)) {
+    // A day's header waits for the day's first line that passes the filter (bar round 3: empty days in Highlights).
+    if (e.kind === 'day') this.pendingDay = e;
+    else if (this.passes(e)) {
       const atBottom = this.logEl.scrollTop + this.logEl.clientHeight >= this.logEl.scrollHeight - 30;
+      if (this.pendingDay) {
+        this.appendLog(this.pendingDay);
+        this.pendingDay = null;
+      }
       this.appendLog(e);
       if (atBottom) this.logEl.scrollTop = this.logEl.scrollHeight;
     }
@@ -1352,7 +1381,8 @@ export class Ui {
     who.style.background = cssColor(residentColor(id));
     // A long line is cut at a sentence, never mid-word and never with an ellipsis (bar round 2):
     // whole sentences up to the limit, or the first sentence alone when even that runs over.
-    const limit = this.phone ? 110 : 140;
+    // Three lines at most (bar round 3): whole sentences up to the width, or the first clause of a long first sentence.
+    const limit = this.phone ? 90 : 120;
     let cut = text;
     if (text.length > limit) {
       const sentences = text.match(/[^.!?]+[.!?]+["”]?\s*|[^.!?]+$/g) ?? [text];
@@ -1362,6 +1392,10 @@ export class Ui {
         kept += sentence;
       }
       cut = kept.trim() || text;
+      if (cut.length > limit) {
+        const at = Math.max(cut.lastIndexOf(', ', limit), cut.lastIndexOf('; ', limit), cut.lastIndexOf(': ', limit));
+        if (at > 20) cut = `${cut.slice(0, at)}.`;
+      }
     }
     b.el.replaceChildren(who, document.createTextNode(cut));
     b.el.dataset.who = id;

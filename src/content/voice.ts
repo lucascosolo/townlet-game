@@ -214,12 +214,13 @@ export const SPEECH: Record<string, Lines> = {
     chatty: ['{S}? Really? You LIKE {s}, {other}?!', 'Oh, come off it, {other}! {S} is a disaster!'],
     dreamy: ['You never listen, {other}. {S} is not what you think.', 'You only see the bright side of {s}, {other}.'],
   },
+  // Bar round 5: five each, so a week of quarrels does not repeat one ("You never listen, Ada" twice in a week).
   argue: {
-    plain: ['Leave it, {other}.'],
-    formal: ['I really must disagree, {other}.'],
-    warm: ['That is not fair, {other}.'],
-    chatty: ['Oh, come off it, {other}!'],
-    dreamy: ['You never listen, {other}.'],
+    plain: ['Leave it, {other}.', "Drop it, {other}. I mean it.", 'Not this again, {other}.', "You're wrong, {other}, and that's that.", 'Enough, {other}.'],
+    formal: ['I really must disagree, {other}.', 'I will not be spoken to like that, {other}.', 'You go too far, {other}.', 'We shall have to differ, {other}, and loudly.', 'That is quite enough, {other}.'],
+    warm: ['That is not fair, {other}.', "Why are you being like this, {other}?", "I thought better of you, {other}.", "You always do this, {other}.", "Please, {other}, just stop."],
+    chatty: ['Oh, come off it, {other}!', "Unbelievable! Truly, {other}!", "No! No no no, {other}!", "Who asked you, {other}?!", "Oh, here we go, {other}!"],
+    dreamy: ['You never listen, {other}.', 'We are talking past each other, {other}.', 'There is a wall between us today, {other}.', 'You hear the words and miss the meaning, {other}.', 'Let it go cold, {other}. I am tired of it.'],
   },
   apologize: {
     plain: ['About before. Sorry.', "Wasn't fair, what I said. Sorry, {other}.", '{other}. My fault. Sorry.', "Shouldn't have said it. Sorry.", 'Sorry, {other}. Let it lie?'],

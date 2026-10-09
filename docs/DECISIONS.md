@@ -18,6 +18,17 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **Explain is for decisions.** Explain is offered for a proposal answered, not for an ask left unmet; sorry still is.
 - **Worn ground is tracks, not a slab.** At most a sixteenth of the valley shows wear, and never a whole two-by-two block.
 
+**Settled while building:**
+- **A food place built after a food ask answers it**, but while the larder is still below a day's meals the thanks are small ("built food for us"); full thanks waited on full plates. Crediting the rescue in full let a hungry week weigh almost nothing (a 0.02 mood drop on two seeds), because everyone felt listened to.
+- **The early woodlot runs at two and a half times its yield in the first fortnight, only while the store is under 20.** A flat boost (1.5 then 2) either left a town short or filled the favours steward's store to its cap.
+- **A first step that needs nothing from the steward is due after three days**, so the next morning's check always lands within four. One that only ran out of days is passed quietly, with no joy or purpose: quick first steps that each lifted mood made a neglected town too cheerful.
+- **Marlow's dream opens with a short step of its own** ("ask around about where the trade cart goes"), so his choice keeps its old pace; making his first step quicker brought his stay-or-go decision to day 13, and he left towns that should have kept him.
+- **A proposal rests thirty days after any answer**, and three new ones (a wild meadow, a quiet bell at ten, a shared supper from the larder) keep the town in decisions to disagree about: with seven kinds resting a month, standing drifted up for want of them (four of six above 0.8 on one seed).
+- **The low-larder cap on standing is checked every minute while it holds**, not only at dawn: an ask granted at seven in the morning slipped past it.
+- **Each clearing of wild land is told as the next one** ("A second stretch of wild land is open"), not with the same line twice in a week.
+- **A "nothing to tell" fact is learned without being said** at all: the criterion reads that it never closes an answer of two or more sentences, and every answer has a sentence of its own before it.
+- **Saves are replays of the commands**, so a reloaded town rebuilds every note in today's words; no migration was needed.
+
 **Rejected:**
 - *Removing the late timber pile.* The review saw timber pile up once the famine ended, but a pile is the reward for a working woodlot; the early famine is what stopped play, so that is what changes.
 - *A "promise" reply for a neglected ask.* The review suggested it; sorry already answers a neglected ask, and a promise needs a way to be held to it, which is a larger piece of work.

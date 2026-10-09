@@ -401,7 +401,9 @@ body:not(.phone) .scroll .rod.top .roll.desk-only { order: 3; display: inline-fl
 @media (max-width: 1150px) {
   .dash-left { width: 250px; }
   .widget-menu { left: 274px; }
-  body:not(.phone) .dock { left: 274px; max-width: calc(100vw - 274px - 400px); }
+  /* Bar round 3: the hint had 142px here; the buttons go to icons (titled) and the dock runs to the narrower scroll. */
+  body:not(.phone) .dock { left: 274px; max-width: calc(100vw - 274px - 364px); }
+  body:not(.phone) .dock button span { display: none; }
   body:not(.phone) .menu { left: 274px; }
   body:not(.phone) .scroll { width: 340px; }
 }

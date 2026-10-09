@@ -286,11 +286,11 @@ function click(cx: number, cy: number): void {
       return;
     }
     if (!game.sim.canAfford(tool.type)) {
-      ui.status(`Not enough timber (${buildingDef(tool.type).cost} needed). The woodlot makes more.`);
+      ui.status(`Need ${buildingDef(tool.type).cost} timber · the woodlot makes more`);
       return;
     }
     game.command({ kind: 'build', type: tool.type, x, y, ...(ui.rotation ? { rot: ui.rotation } : {}) });
-    ui.status(`${buildingDef(tool.type).name} placed. Click again for another · R rotates · Esc stops.`);
+    ui.status(`${buildingDef(tool.type).name} placed · Esc to stop`);
     return;
   }
   const p = view.pick(cx, cy, { people: tool.kind !== 'remove', paths: tool.kind === 'remove' });

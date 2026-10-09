@@ -1343,7 +1343,8 @@ export class Simulation implements AspirationHost {
       // Something to look forward to: a place in town they are fond of, that still stands.
       const fond = this.hasFondPlace(r) ? 1 : 0.4;
       r.mood = clamp(MOOD_MIX.needs * needsWellbeing(r.needs, r.setpoints, def) + MOOD_MIX.feelings * (0.5 + 0.5 * emotionBalance(r)) + MOOD_MIX.home * home + MOOD_MIX.fond * fond + MOOD_MIX.standing * standing - townHunger(this.state));
-      r.dayMoodSum += r.mood;
+      // Bar round 3: a famine lowers mood and talk, but the slow decision to leave is weighed without it.
+      r.dayMoodSum += r.mood + townHunger(this.state);
       r.dayMoodN++;
     }
   }

@@ -391,10 +391,10 @@ export class Ui {
     const look = el('button', { 'data-testid': 'tool-select', title: 'Look and inspect (Esc)' });
     look.innerHTML = `${ICONS.look}<span>Look</span>`;
     look.addEventListener('click', () => this.setTool({ kind: 'select' }));
-    const build = el('button', { 'data-testid': 'open-build' });
+    const build = el('button', { 'data-testid': 'open-build', title: 'Build' });
     build.innerHTML = `${ICONS.build}<span>Build</span>`;
     build.addEventListener('click', () => this.toggleMenu());
-    const remove = el('button', { 'data-testid': 'tool-remove' });
+    const remove = el('button', { 'data-testid': 'tool-remove', title: 'Remove' });
     remove.innerHTML = `${ICONS.remove}<span>Remove</span>`;
     remove.addEventListener('click', () => this.setTool({ kind: 'remove' }));
     this.statusEl = el('div', { class: 'status', 'data-testid': 'palette-status' });
@@ -475,12 +475,12 @@ export class Ui {
     this.status(
       // One short line each (bar round 3: the hint was cut at "right-drag to turn, w…").
       tool.kind === 'build' && tool.type === 'path'
-        ? 'Drag to lay path (free) · Esc stops'
+        ? 'Drag to lay path (free) · Esc'
         : tool.kind === 'build'
-        ? `${buildingDef(tool.type).name} · ${buildingDef(tool.type).cost ?? 0} timber · R rotates · Esc stops`
+        ? `${buildingDef(tool.type).name} · ${buildingDef(tool.type).cost ?? 0} timber · R turns · Esc`
         : tool.kind === 'remove'
-          ? 'Click to remove (half timber back) · Esc stops'
-          : 'Click anyone · drag to pan · right-drag to turn',
+          ? 'Click to remove (half timber back) · Esc'
+          : 'Click anyone · drag pans · right-drag turns',
     );
   }
 

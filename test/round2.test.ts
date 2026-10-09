@@ -227,10 +227,9 @@ describe('round 2, criterion 3: troubles reach mood', () => {
     expect(drops.every((d) => d >= 0.05), `drops by seed: ${drops.map((d) => d.toFixed(3)).join(', ')}`).toBe(true);
   });
 
-  // Missed on one seed and kept visible: with foragers eating as they pick (needed so a hungry
-  // town does not starve in the year soak), seed 1's hungry week lowers mean mood by 0.08, not 0.10.
-  // Weighing hunger harder (3 against 2.5) got it to 0.09 and made a year-soak town lose nine of 23.
-  it.fails('a larder forced empty for a week lowers mean mood by 0.10 on every seed (missed on some seeds; see the note)', { timeout: 900_000 }, () => {
+  // Missed in round 2 (seed 1 at 0.08) and kept visible as an expected failure. Met in round 3:
+  // the town-hunger term in mood (a shortage everyone shares) brings every seed to 0.10 or more.
+  it('a larder forced empty for a week lowers mean mood by 0.10 on every seed', { timeout: 900_000 }, () => {
     const drops: number[] = [];
     for (const seed of SEEDS) {
       const sim = runScenario('bakery', seed, 'none', { scripted: false });

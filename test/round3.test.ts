@@ -156,7 +156,7 @@ describe('round 3, criterion 2: hunger hurts', () => {
 });
 
 describe('round 3, criterion 3: the neglected stop expecting', () => {
-  it('anyone who has given up (two or more asks lapsed in a fortnight) has no open ask and no "kept me waiting" pang for the following week', { timeout: 600_000 }, () => {
+  it('anyone who has given up (three asks lapsed in a fortnight) has no open ask and no "kept me waiting" pang for the following week', { timeout: 600_000 }, () => {
     let gaveUp = 0;
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'none');

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { residentDef } from '../src/content/residents.js';
 import { Narrator } from '../src/narrate/narrator.js';
 import { runScenario } from '../src/scenarios/index.js';
-import { beliefKey } from '../src/sim/mind/memory.js';
+import { attachment, beliefKey } from '../src/sim/mind/memory.js';
 import { dilemmaDef, stanceScore } from '../src/sim/story/dilemmas.js';
 import { offersFor } from '../src/sim/replies.js';
 import type { Simulation } from '../src/sim/sim.js';
@@ -202,8 +202,16 @@ describe('round 1, criterion 3: talking back', () => {
       const sim = runScenario('quiet', seed, 'none');
       const n = new Narrator(sim, { stewardIsYou: true });
       sim.runUntil(at(8, 9));
-      const oak = liveBuildings(sim.state).find((b) => b.type === 'oak')!;
-      sim.remove(oak.x, oak.y);
+      // Bar round 5: the place most residents hold dear (the oak, in most towns; fewer hold it dear
+      // since a lovely spot needs a better visit, and on some seeds nobody awake grieved it).
+      let loved = liveBuildings(sim.state).find((b) => b.type === 'oak')!;
+      let most = 0;
+      for (const b of liveBuildings(sim.state)) {
+        if (['path', 'cottage'].includes(b.type)) continue;
+        const holders = sim.state.order.filter((x) => attachment(sim.resident(x), `b:${b.id}`) > 0.15).length;
+        if (holders > most) [loved, most] = [b, holders];
+      }
+      sim.remove(loved.x, loved.y);
       sim.runUntil(at(10, 12));
       const id = sim.state.order.find((x) => awake(sim, x) && (sim.resident(x).beliefs[beliefKey(STEWARD, 'destroyed_place')] || sim.resident(x).traces[beliefKey(STEWARD, 'destroyed_place')]));
       if (!id) continue;

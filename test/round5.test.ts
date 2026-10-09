@@ -161,7 +161,8 @@ describe('round 5, criterion 5: no raw lines', () => {
           expect(text, tag).not.toMatch(/\b[a-z][A-Z]{2,}/);
           expect(text, tag).not.toMatch(/\ba (orchard|old oak|apiary|inn)\b/i);
           expect(text, tag).not.toMatch(/\ba (garden plots|beehives)\b/i);
-          expect(text, tag).not.toMatch(/\.\./);
+          // A doubled full stop, not an ellipsis ("The bakery again... I barely slept." is written so).
+          expect(text, tag).not.toMatch(/[^.]\.\.(?!\.)/);
           expect(text, tag).not.toMatch(/\b(garden plots|beehives) (spoils|isn't|is)\b/i);
           expect(text, tag).not.toMatch(/"\(/);
           for (const r of here(sim)) {

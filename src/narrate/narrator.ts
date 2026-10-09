@@ -1154,6 +1154,12 @@ export class Narrator {
       }
       if (i === 5 && (shown.topics?.length ?? 0) > 1) shown = { ...shown, topics: shown.topics?.slice(0, 1) };
       head = this.toSteward(this.answer(e.who, shown));
+      // A fresh pick can run longer: still four sentences at most.
+      if (total() > 4 && (shown.topics?.length ?? 0) > 0) {
+        shown = { ...shown, topics: shown.topics?.slice(0, Math.max(0, (shown.topics?.length ?? 0) - 1)) };
+        head = this.toSteward(this.answer(e.who, shown));
+      }
+      if (total() > 4) remembered = '';
       words = [head, remembered, told].filter(Boolean).join(' ');
     }
     // Still the same: they say so, and when ("As I told you on day 9: ...").

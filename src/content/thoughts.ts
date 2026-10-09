@@ -306,6 +306,14 @@ addLines(MIND_LINES.dream, {
   chatty: ['Progress report: next I {next}!', "Nearly there! Well, sort of! I've got to {next}!"],
   dreamy: ['The next stone on the path: {next}.', 'I need to {next}, and then we will see.'],
 });
+// Bar round 5: newcomers sit on their first steps longer, so more ways to say what is next.
+addLines(MIND_LINES.dream, {
+  plain: ['Working at it. {next}.', 'Not there yet. {next} first.', 'Day by day. {next}.', 'Plenty to do. {next}, mainly.'],
+  formal: ['There is a next step, and it is to {next}.', 'I am resolved to {next}.', 'First things first: I must {next}.', 'It is in hand. Next, to {next}.'],
+  warm: ["Today I'm hoping to {next}.", "Little by little. I want to {next}.", "It's on my mind all day. I need to {next}.", "If I can {next}, I'll be so pleased."],
+  chatty: ["Today's mission: {next}!", "On my list! Top of it! {next}!", "Watch me! I'm going to {next}!", "Next stop: {next}! Choo choo!"],
+  dreamy: ['The way leads on: I {next}.', 'Today the next thing is to {next}.', 'I am walking toward it. Next, I {next}.', 'One more turning: {next}.'],
+});
 addLines(MIND_LINES['need:crowded'], {
   plain: ['Bit much, all this.', 'Need a quiet hour.'],
   formal: ['I find myself in want of solitude.'],

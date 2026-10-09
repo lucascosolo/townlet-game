@@ -17,7 +17,7 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **Economy pacing.** More timber at the start; the granary feeding the town is a worry on the board; at spring the granary carries a third of its stores forward instead of emptying in a day.
 
 **Settled while building:**
-- **Talk warmth is capped at 0.06 a week per resident.** Agreeing, encouraging, brushing off praise and being seen add 0.01 to 0.02 each up to that; only owning a complaint is remembered as something you did ("owned up to it"). With nothing happening, standing relaxes toward 0 (it relaxed toward 0.2, mild liking with no reason behind it).
+- **Talk warmth is capped at 0.06 a week per resident.** Agreeing, encouraging, brushing off praise and being seen add 0.01 to 0.02 each up to that; only owning a complaint is remembered as something you did ("owned up to it"). With nothing happening, standing relaxes toward 0.15 (it relaxed toward 0.2, mild liking with no reason behind it; 0 and 0.1 were tried, and each emptied two of the year soak's neglected towns, since the decision to leave reads standing directly).
 - **"Words are cheap"** below −0.5 standing, for a grievance whose last cause is three days old or more; a fresh wrong can still be forgiven.
 - **"You don't seem it" is denied at a mood of 0.7 or more** when they said they were well.
 - **The log reads what the narrator already holds** when the interface starts, and "This morning" is rebuilt from the entries since the last day header.
@@ -32,7 +32,11 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **A newcomer's first step is done** after talking with three neighbours, or after five days.
 - **Newcomer backstories have four variants per trade** (were two), and "fixes things nobody asked them to" is "nobody asked to be fixed".
 - **The same whole answer is not given twice in a fortnight:** the lines are picked again, then the reason and a second topic are dropped; when it must repeat, they say so ("As I told you on day 9: ...").
-- **35 timber to start** (was 25); **the granary feeding the town is a board worry**; **at spring two thirds of the granary is shared out** and a third kept.
+- **30 timber to start** (was 25; 35 put the favours steward's timber at its cap on eight days of 28); **the granary feeding the town is a board worry**; **at spring two thirds of the granary is shared out** and a third kept.
+- **A low larder caps standing at 0.85 for three days after it ends,** not just while it lasts.
+- **A neighbour's liking counts from 0.25** (17% cool neighbours on one seed at 0.2). **"A lovely spot" stays at 0.7:** 0.75 met its round-4 measure but cost five older ones (fewer residents grieve a lost place, a larder week moves mood less), so it went back, and seed 1 has "a lovely spot" for 4 of 9 settled place views; reported.
+- **A friend called on while standing at a flower bed or similar steps off it to wait**, and anyone mid-walk re-routes round a new building, errand or not (a stroller stood on a flower bed for an hour).
+- **Nine ways to tell a bad night** (five came round again within a week).
 
 **Rejected:**
 - *Making the steward's standing decay to zero.* A good steward should be liked; the fix is that liking follows what you did, not how often you chatted.

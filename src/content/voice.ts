@@ -183,12 +183,13 @@ export const SPEECH: Record<string, Lines> = {
     chatty: ['Have you noticed? {statement}!', 'Listen, listen: {statement}!'],
     dreamy: ['I keep thinking {statement}.', 'Do you ever feel like {statement}?'],
   },
+  // Bar round 5: five each; a hard week has more comforting in it, and one line came round six times.
   comfort: {
-    plain: ['Sit. It will pass.'],
-    formal: ['Come now, {other}. It will look better tomorrow.'],
-    warm: ['Hey, {other}. Come here. It will be all right.'],
-    chatty: ["Chin up, {other}! I'll make you something warm."],
-    dreamy: ['The bad days drift off, {other}. They always do.'],
+    plain: ['Sit. It will pass.', 'Here. Have a sit, {other}.', 'Bad patch, {other}. Happens.', "I'm here, {other}. Say nothing if you like.", 'It gets better, {other}. Takes a while.'],
+    formal: ['Come now, {other}. It will look better tomorrow.', 'You are not alone in this, {other}.', 'Take heart, {other}. This will not last.', 'Lean on me a little, {other}. I insist.', 'One hard week does not make a hard life, {other}.'],
+    warm: ['Hey, {other}. Come here. It will be all right.', "Oh, {other}. Let's sit a while.", "I've got you, {other}. Tell me about it.", "It's a rotten time, {other}, but we'll get through it.", 'Come and have a cup of something, {other}.'],
+    chatty: ["Chin up, {other}! I'll make you something warm.", "Right! Cheering-up time, {other}! No arguments!", "Oh, {other}! Come on, walk with me!", "You need a laugh, {other}! I have so many!", "Sit! Tea! Talk! In that order, {other}!"],
+    dreamy: ['The bad days drift off, {other}. They always do.', 'Even the longest night ends, {other}.', 'Sit with me, {other}. The sky is big enough for both of us.', 'This too will thin like mist, {other}.', 'Rest your head a moment, {other}. The world can wait.'],
   },
   compliment: {
     plain: ['Good work today, {other}.', 'You did all right, {other}.', 'Glad you are about, {other}.', 'Solid, {other}. Solid.', 'Town needs more like you, {other}.'],

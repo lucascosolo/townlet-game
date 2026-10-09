@@ -29,6 +29,9 @@ import { liveBuildings } from '../world.js';
 import { ASK_KINDS, WISH_LABELS, assess } from '../asks.js';
 import { DILEMMAS, closeDilemma } from './dilemmas.js';
 
+/** Bar round 6: a proposal rests this long after it is answered, yes, no or silence. */
+export const PROPOSAL_REST_DAYS = 30;
+
 /** What the director needs from the simulation. */
 export interface StoryHost {
   readonly state: SimState;
@@ -492,7 +495,7 @@ const EVENTS: StoryEventDef[] = [
         // The same proposal waits a month after it is answered, yes, no or silence (bar round 6: the
         // tales night, the lantern walk and Pip's cart each came twice in a month, word for word).
         const lastSame = [...state.story.dilemmas].reverse().find((x) => x.type === d.type);
-        const wait = 4 * DAYS_PER_SEASON;
+        const wait = PROPOSAL_REST_DAYS;
         if (lastSame && state.tick - lastSame.postedTick < wait * TICKS_PER_DAY) return false;
         return d.eligible(state) && d.proposer(state) !== null;
       });

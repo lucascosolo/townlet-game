@@ -331,18 +331,22 @@ export const StructuredMind: Mind = {
     // Everything the steward did today, felt as one running account, before the buffer is
     // folded into beliefs. Beliefs about the steward still form when an aspect repeats.
     let stewardEvidence = 0;
-    const reasons: string[] = [];
+    const good: string[] = [];
+    const bad: string[] = [];
     for (const ep of r.buffer) {
       if (ep.subject !== 'steward' || ep.source === 'recalled') continue;
       stewardEvidence += ep.valence * ep.intensity;
-      if (!reasons.includes(ep.note)) reasons.push(ep.note);
+      const side = ep.valence >= 0 ? good : bad;
+      if (!side.includes(ep.note)) side.push(ep.note);
     }
     const before = r.rel.steward?.affinity ?? 0;
     consolidate(ctx, r);
     nightlyRelationships(ctx, r, stewardEvidence);
     // Tell the steward when someone's view of them has moved, and why.
     const delta = (r.rel.steward?.affinity ?? 0) - before;
-    if (Math.abs(delta) >= 0.04 && reasons.length > 0) ctx.emit({ t: ctx.tick, type: 'standing', who: r.id, delta, reasons: reasons.slice(0, 3) });
+    const reasons = (delta > 0 ? good : bad).length > 0 ? (delta > 0 ? good : bad) : [...good, ...bad];
+    const also = delta > 0 ? bad : good;
+    if (Math.abs(delta) >= 0.04 && reasons.length > 0) ctx.emit({ t: ctx.tick, type: 'standing', who: r.id, delta, reasons: reasons.slice(0, 3), ...(also.length > 0 && reasons !== also ? { also: also.slice(0, 2) } : {}) });
   },
 };
 

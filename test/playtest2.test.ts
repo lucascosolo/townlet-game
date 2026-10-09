@@ -8,7 +8,7 @@ import { factSaid } from '../src/sim/progress.js';
 import type { Simulation } from '../src/sim/sim.js';
 import { at } from '../src/sim/time.js';
 import type { SimEvent } from '../src/sim/types.js';
-import { brookSide, canPlace, footprint, isPath, liveBuildings, placeTile, route, wearDawn } from '../src/sim/world.js';
+import { brookSide, canPlace, footprint, isPath, liveBuildings, placeTile, route, wearDawn, sizeOf } from '../src/sim/world.js';
 import { SEEDS } from './helpers.js';
 
 /** Every everyday walk in town: each home to work and to each gathering place. */
@@ -36,7 +36,11 @@ describe('playtest round 2', () => {
     const sim = runScenario('quiet', 1, 'none');
     const wear = sim.state.wear ?? {};
     const r = sim.resident('bram');
-    const walk = everydayRoutes(sim).get(`${placeTile(liveBuildings(sim.state).find((b) => b.id === r.homeId)!)}>${placeTile(liveBuildings(sim.state).find((b) => b.id === r.jobId)!)}`)!;
+    const route = everydayRoutes(sim).get(`${placeTile(liveBuildings(sim.state).find((b) => b.id === r.homeId)!)}>${placeTile(liveBuildings(sim.state).find((b) => b.id === r.jobId)!)}`)!;
+    // Bar round 2: nothing wears inside a footprint, so the doorstep tiles are left out of the count.
+    const live = liveBuildings(sim.state);
+    const inside = (x: number, y: number) => live.some((b) => b.type !== 'path' && b.type !== 'brook' && x >= b.x && y >= b.y && x < b.x + sizeOf(b)[0] && y < b.y + sizeOf(b)[1]);
+    const walk = route.filter(([x, y]) => !inside(x, y));
     const worn = walk.filter(([x, y]) => (wear[`${x},${y}`] ?? 0) > 0).length;
     expect(worn / walk.length).toBeGreaterThan(0.9);
   });
@@ -135,7 +139,7 @@ describe('playtest round 2', () => {
     expect(n.toSteward('I hope the steward misses nothing.')).toBe('I hope you miss nothing.');
     expect(n.toSteward('The steward worries too much.')).toBe('You worry too much.');
     for (const key of Object.keys(TO_STEWARD_LINES)) {
-      const said = new Set(Object.values(TO_STEWARD_LINES[key]!).flat() as string[]);
+      const said = new Set((Object.values(TO_STEWARD_LINES[key]!).flat() as string[]).map((l) => l.replace(/\{x\}/g, 'the steward')));
       for (let i = 0; i < 20; i++) {
         const words = n.answer('ada', { question: 'mind', topics: [{ key, about: 'steward', vars: { x: 'the steward' }, rank: 0 }] } as never);
         expect([...said].some((l) => words.toLowerCase().includes(l.toLowerCase())), words).toBe(true);
@@ -160,8 +164,9 @@ describe('playtest round 2', () => {
         }
       });
       // Bar round 1 moved the facts: an opinion reveals the closest friend only when asked about a
-      // person, so the opinion here is about someone.
-      const questions = ['how', 'mind', 'hope', 'me', 'opinion'] as const;
+      // person, so the opinion here is about someone. Bar round 2 moved the background to the
+      // resident's page, so "what do you think of me" reveals nothing and is left out here.
+      const questions = ['how', 'mind', 'hope', 'opinion'] as const;
       const other = sim.state.order.find((o) => o !== 'ada')!;
       sim.schedule(questions.map((q, i) => ({ at: at(1, 10) + i, kind: 'talk' as const, who: 'ada', question: q, ...(q === 'opinion' ? { about: `r:${other}` } : {}) })));
       sim.runUntil(at(1, 11));

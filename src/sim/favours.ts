@@ -95,7 +95,7 @@ export interface FavourVerdict {
 }
 
 /** At or above this, they say yes. */
-export const WILLING = 0.45;
+export const WILLING = 0.5;
 
 /** Would this resident do this favour now? Pure: asking is a separate step. */
 export function considerFavour(state: SimState, r: ResidentState, kind: FavourKind, other?: string, plot?: number): FavourVerdict {
@@ -116,10 +116,11 @@ export function considerFavour(state: SimState, r: ResidentState, kind: FavourKi
   // Each pressure on the answer, signed; the biggest negative one is the reason for a no.
   const parts: Array<[RefusalReason | 'plus', number]> = [
     ['plus', 0.5 + 0.2 * (steward.trust - 0.5) + 0.15 * unit(def.traits.generous) + 0.1 * def.values.community],
-    ['distrust', 0.6 * steward.affinity],
-    ['asked_often', -0.15 * recentAsks(r, state.tick)],
+    // Standing and mood weigh more (bar round 2: sixteen of seventeen favours were a yes).
+    ['distrust', 0.8 * steward.affinity],
+    ['asked_often', -0.25 * recentAsks(r, state.tick)],
     ['tired', -0.6 * urgency(r.needs.rest, r.setpoints.rest)],
-    ['low', r.mood < 0.45 ? -(0.45 - r.mood) * 1.5 : 0],
+    ['low', r.mood < 0.55 ? -(0.55 - r.mood) * 2 : 0],
   ];
   if (WORKPLACE[kind] || kind === 'clear') parts.push(['plus', 0.1 * def.values.craft]);
   if (kind === 'visit' && other) parts.push(['plus', 0.3 * rel(r, other).affinity]);

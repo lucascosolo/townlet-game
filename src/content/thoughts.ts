@@ -166,6 +166,13 @@ export const MIND_LINES: Record<string, Lines> = {
     chatty: ['Best steward we ever had!', 'The steward? Marvellous!', 'Say what you like, the steward gets things done!'],
     dreamy: ['Someone is keeping watch over us.', 'The town is in kind hands.'],
   },
+  'steward:fresh': {
+    plain: ['The steward {x}. Not forgotten.', 'Steward {x}. Hm.', 'The steward {x}, and I noticed.'],
+    formal: ['The steward {x}. I have not forgotten it.', 'I am still turning over the fact that the steward {x}.', 'The steward {x}. I say no more than that.'],
+    warm: ['The steward {x}, and it stung a little.', "I keep thinking about how the steward {x}.", 'The steward {x}. I wish that had gone differently.'],
+    chatty: ['The steward {x}! Can you believe it?', 'Still thinking about it: the steward {x}!', 'The steward {x}. Honestly!'],
+    dreamy: ['The steward {x}. It sits in me like a stone.', 'The steward {x}; the day still has that shape.', 'Something the steward did: {x}. It has not settled yet.'],
+  },
   'steward:-': {
     plain: ["Steward doesn't listen.", 'Might as well talk to the well.'],
     formal: ['I have my doubts about the steward.', 'The steward has not earned my confidence.'],
@@ -219,6 +226,13 @@ export const MIND_LINES: Record<string, Lines> = {
 
 /** The same feelings said to the steward's face in talk, where "the steward" would be "you" and the lines above would not bend. */
 export const TO_STEWARD_LINES: Record<string, Lines> = {
+  'steward:fresh': {
+    plain: ['You {x}. Not forgotten.', 'You {x}. Hm.', 'You {x}, and I noticed.'],
+    formal: ['You {x}. I have not forgotten it.', 'I am still turning over the fact that you {x}.', 'You {x}. I say no more than that.'],
+    warm: ['You {x}, and it stung a little.', 'I keep thinking about how you {x}.', 'You {x}. I wish that had gone differently.'],
+    chatty: ['You {x}! Can you believe it?', 'Still thinking about it: you {x}!', 'You {x}. Honestly!'],
+    dreamy: ['You {x}. It sits in me like a stone.', 'You {x}; the day still has that shape.', 'Something you did: {x}. It has not settled yet.'],
+  },
   'feel:gratitude': {
     plain: ['You did right by me.', 'I owe you one.'],
     formal: ['I am grateful to you. I should have said so sooner.'],
@@ -260,6 +274,7 @@ export const TOPIC_LABELS: Record<string, string> = {
   miss_friend: 'Missing {x}',
   grudge: 'Things with {x}',
   'steward:+': 'You: feels looked after',
+  'steward:fresh': 'You: something you did lately',
   'steward:-': "You: doesn't trust you",
   'belief:+': 'Has taken to {x}',
   'belief_person:+': 'Has warmed to {x}',
@@ -297,4 +312,270 @@ addLines(MIND_LINES['need:crowded'], {
   warm: ["I'm going to find a quiet spot for a bit.", 'Just need a moment to myself.'],
   chatty: ['Too much natter, even for me!'],
   dreamy: ['I want to be a pebble somewhere quiet.'],
+});
+
+// ---------------------------------------------------------------- more variety (bar round 2: one line twelve times in a month)
+
+addLines(MIND_LINES['feel:joy'], {
+  plain: ['Nothing wrong with today.', 'Good enough. Better than good.', 'Fine day. Fine town.', "I'll take a day like this."],
+  formal: ['I am in excellent humour, and I know it.', 'The day has treated me kindly.', 'I have rarely felt more settled.', 'All is well, and I say so plainly.'],
+  warm: ["I could hug the whole valley today.", 'Everything went right, for once.', "I'm glad I got up this morning.", "There's a lot to be happy about, honestly."],
+  chatty: ['Today? Ten out of ten!', 'I woke up grinning and I have not stopped!', 'Somebody pinch me, today is lovely!', 'Good mood! Catching! Mind yourself!'],
+  dreamy: ['The whole day hums.', 'I am lit from somewhere inside.', 'Today has a gold rim round it.', 'My feet barely touch the path.'],
+});
+addLines(MIND_LINES['need:rest'], {
+  plain: ['Bed. Soon.', 'Done in.'],
+  formal: ['I shall retire early, I think.', 'My eyelids are not to be reasoned with.'],
+  warm: ['I could sleep for a week.', "I'm yawning so much my jaw aches."],
+  chatty: ['Nap time! For me! Now!', 'I have the energy of a damp sock!'],
+  dreamy: ['Sleep is calling from a long way off.', 'The pillow is the only thing I can think about.'],
+});
+addLines(MIND_LINES['need:purpose'], {
+  plain: ['Idle. Hate it.', 'Give me a job.', 'Restless hands today.'],
+  formal: ['I should like something worth doing.', 'Idleness does not become me.', 'I would be glad of a task.'],
+  warm: ['I want to be of some use today.', "I'm no good at sitting about.", 'Somebody must need a hand with something.'],
+  chatty: ['Bored! Give me work! Any work!', 'My hands are twiddling themselves!', 'Point me at a job and stand back!'],
+  dreamy: ['The day wants a shape and I have none to give it.', 'I am a tool left out in the rain.', 'Even the hens look busier than me.'],
+});
+addLines(MIND_LINES['need:purpose_job'], {
+  plain: ['Same work, same hands. Need a change.', 'Routine. Too much of it.', 'Could do with a new task.'],
+  formal: ['The work has grown rather repetitive.', 'I should like a fresh undertaking.', 'One can have too much of the same day.'],
+  warm: ["I love my work, but I'd like a change of it.", "I'm going through the motions a bit.", 'A new project would do me good.'],
+  chatty: ['New project! Please! Anything new!', 'Same old job! My brain is snoring!', 'I need a challenge before I start singing to the tools!'],
+  dreamy: ['The work has worn a groove and I walk in it.', 'I want to make something I have not made before.', 'My hands know the day too well.'],
+});
+addLines(MIND_LINES['need:delight'], {
+  plain: ['Dull stretch.', 'Nothing to look forward to.', 'Need a bit of fun.'],
+  formal: ['The days have run together of late.', 'I find I am in want of amusement.', 'A small pleasure would not go amiss.'],
+  warm: ["I'd love something to look forward to.", "It's been a long, plain week.", 'A bit of music, a bit of a laugh. That would do it.'],
+  chatty: ['Where is the fun? Who has the fun?', 'This week needs a party!', 'I would settle for a mildly interesting hen!'],
+  dreamy: ['The days are the colour of porridge.', 'I am waiting for a bright thing.', 'Something lovely is overdue.'],
+});
+addLines(MIND_LINES['need:crowded'], {
+  plain: ['Too many people.', 'Need some quiet.'],
+  formal: ['I have had rather enough company for one day.', 'A little solitude would restore me.'],
+  warm: ["I love everyone, but I'd like them elsewhere for an hour.", 'I need a bit of peace, just for a bit.'],
+  chatty: ['Even I need a break from people! Imagine!', 'Everyone, lovely, but hush for a minute!'],
+  dreamy: ['The air is thick with other people.', 'I want a corner and a closed door.'],
+});
+addLines(MIND_LINES['need:comfort'], {
+  plain: ['Could do with my chair.', 'Not settled today.', 'Want my own four walls.'],
+  formal: ['I am somewhat out of sorts.', 'I should like to be at home with the door shut.', 'Comfort is in short supply today.'],
+  warm: ['I just want to be cosy for a bit.', "I'm a bit frayed round the edges today.", 'A warm fire would mend me.'],
+  chatty: ['Cushion! Blanket! Tea! In that order!', 'I feel like a sock on the wrong foot!', 'Nothing is comfy today, not even me!'],
+  dreamy: ['The day scratches.', 'I want to be wrapped in something soft.', 'Home is a word I keep saying to myself.'],
+});
+addLines(MIND_LINES['need:company'], {
+  plain: ['Talk to me, someone.', 'Lonely stretch.'],
+  formal: ['Some company would be most welcome.', 'I have been rather alone with my thoughts.'],
+  warm: ["I'd love someone to sit with.", 'The house is very quiet without a visitor.'],
+  chatty: ['Hello? Anyone? I have so much to say!', 'Come and talk to me before I talk to the furniture!'],
+  dreamy: ['I have been talking to the kettle.', 'A voice at the door would be a gift.'],
+});
+addLines(MIND_LINES['need:food'], {
+  plain: ['Empty inside.', 'Food. Now, ideally.'],
+  formal: ['I am rather in need of a meal.', 'My stomach has opinions.'],
+  warm: ['I could eat the table.', "I'm thinking about supper and it's not even noon."],
+  chatty: ['Feed me! Feed me now!', 'I could eat a whole pie! Two pies!'],
+  dreamy: ['Hunger has moved in and put its feet up.', 'I dream of a full plate.'],
+});
+addLines(MIND_LINES['dream:waiting'], {
+  plain: ['Asked. Still nothing.', 'The steward has my ask. Waiting on it.', 'Any day now, I hope.'],
+  formal: ['My request stands. I await an answer.', 'I have asked, and I shall not ask twice.', 'Patience. The steward has much to weigh.'],
+  warm: ["I keep hoping the steward's read my note.", "Any news? No. Well, I'll wait.", "I'm trying not to pester the steward about it."],
+  chatty: ['Waiting, waiting, waiting! Patience is not my gift!', 'Has the steward seen it yet? Has anyone?', 'Tick tock, steward!'],
+  dreamy: ['The ask is out there somewhere, drifting.', 'I planted a wish and now I wait for rain.', 'Each morning I look at the board and then away.'],
+});
+addLines(MIND_LINES.larder, {
+  plain: ['Larder is bare.', 'Not enough food in. Not nearly.', 'Thin rations.'],
+  formal: ['Our stores are perilously low.', 'I counted the larder twice. It did not improve.', 'We shall go hungry if nothing is done.'],
+  warm: ["There's hardly anything left to eat.", 'I keep opening the larder as if that helps.', "We'll be sharing crusts soon."],
+  chatty: ['The cupboard! Bare! Dramatically bare!', 'Who ate everything? Was it me?', 'Larder emergency! Somebody plant something!'],
+  dreamy: ['The larder breathes out dust.', 'Empty shelves have their own silence.', 'I dreamt of a full pantry and woke to this.'],
+});
+addLines(MIND_LINES['feel:gratitude'], {
+  plain: ['{X} came through for me.', 'Good of {x}, that.', 'Owe {x}. Will remember.'],
+  formal: ['I am much obliged to {x}.', '{X} has been kinder than I deserved.', 'I shall find a way to repay {x}.'],
+  warm: ['{X} was so good to me.', "I don't know what I'd do without {x}.", 'I want to do something nice for {x}.'],
+  chatty: ['{X}! A saint! A hero!', 'I could kiss {x}! I might!', 'Three cheers for {x}!'],
+  dreamy: ['{X} put a light in my window.', 'Kindness from {x}, and it is still warm.', 'I carry what {x} did like a stone in my pocket, a good one.'],
+});
+addLines(MIND_LINES['feel:pride'], {
+  plain: ['Did that well.', 'Good work, that.', 'Not bad, me.'],
+  formal: ['I am rather pleased with my work.', 'I did that properly, and I know it.', 'One may take a little pride in a job well done.'],
+  warm: ["I'm chuffed with how that turned out.", 'I did a good thing today.', 'Look at that. I made that.'],
+  chatty: ['Did you SEE what I did? Marvellous!', 'I am very pleased with myself and I do not care who knows!', 'Genius! Me! Finally!'],
+  dreamy: ['My hands remember doing something right.', 'A small glow, well earned.', 'I made a thing that will outlast the day.'],
+});
+addLines(MIND_LINES['feel:annoyance'], {
+  plain: ['Irritating.', 'Something rubbed me wrong.', 'Not in the mood.'],
+  formal: ['I confess I am vexed.', 'I am not best pleased.', 'Something has got under my skin.'],
+  warm: ["I'm a bit cross, and I hate being cross.", 'Something got on my nerves today.', 'I need to shake this off.'],
+  chatty: ['Grr! Honestly! Grr!', 'I am this close to stamping my foot!', 'Do not test me today!'],
+  dreamy: ['A wasp of a feeling, buzzing round my head.', 'The day has a splinter in it.', 'I am prickly as a hedge.'],
+});
+addLines(MIND_LINES['feel:worry'], {
+  plain: ['Uneasy.', 'Something is not right.', 'Worried, and can\'t say why.'],
+  formal: ['I have a nagging concern.', 'I cannot quite settle my mind.', 'Something troubles me.'],
+  warm: ["I can't stop fretting.", "I've a knot in my stomach about it.", 'I keep turning it over and over.'],
+  chatty: ['Worry worry worry! I hate it!', 'My head is a beehive today!', 'Someone tell me it will be fine!'],
+  dreamy: ['A grey thread runs through the day.', 'I am watching the sky for something.', 'The worry sits on the windowsill and looks at me.'],
+});
+addLines(MIND_LINES['feel:grief'], {
+  plain: ['Miss it.', 'Gone. Still can\'t believe it.', 'Hurts, that.'],
+  formal: ['I feel the loss keenly.', 'It is a sorrow I did not expect.', 'I shall not pretend it does not grieve me.'],
+  warm: ['I keep looking for it and it isn\'t there.', 'My heart is a bit broken over it.', 'I miss it more than I thought I would.'],
+  chatty: ['I am sad! Properly sad! Me!', 'Gone! Just gone! I still can\'t take it in!', 'Hold me, somebody!'],
+  dreamy: ['There is a hole in the day the shape of what was there.', 'Grief has moved into the spare room.', 'I keep setting a place for what is gone.'],
+});
+addLines(MIND_LINES['feel:loneliness'], {
+  plain: ['On my own too much.', 'Nobody about. Again.', 'Quiet house.'],
+  formal: ['I have been rather solitary of late.', 'The silence has grown long.', 'I should welcome a knock at the door.'],
+  warm: ["I'm lonely, if I'm honest.", 'I wish someone would just drop by.', 'The evenings are the hardest.'],
+  chatty: ['Lonely! Me! Who would have thought!', 'Somebody come round! I have biscuits!', 'Talking to myself again! Good company, at least!'],
+  dreamy: ['My own footsteps keep me company.', 'The house and I have run out of things to say.', 'I am a lamp in an empty window.'],
+});
+addLines(MIND_LINES['need:comfort'], { dreamy: ['I am a kettle left off the hob.'] });
+addLines(MIND_LINES['need:company'], { dreamy: ['The quiet has got into the walls.'] });
+addLines(MIND_LINES['need:purpose'], { formal: ['I am at a loose end, and it chafes.'], warm: ['Give me something to carry, somebody.'], chatty: ['Unemployed hands! Dangerous!'], dreamy: ['The hours sit on me like flies.'] });
+addLines(MIND_LINES['need:purpose_job'], { formal: ['Variety would be most welcome in my work.'], warm: ["I'd like to try my hand at something new."], chatty: ['Same tools, same song! Change the tune!'], dreamy: ['I would like my hands to be surprised.'] });
+addLines(MIND_LINES['need:delight'], { formal: ['I could do with a small occasion.'], chatty: ['Somebody juggle! Anybody!'], dreamy: ['I am hungry for a colour I have not seen this week.'] });
+addLines(MIND_LINES['feel:pride'], { formal: ['It was done well, and that is a quiet pleasure.'], warm: ['I stood back and liked what I saw.'], chatty: ['Clap for me! Go on!'], dreamy: ['I left a mark on the day, and it was a good one.'] });
+addLines(MIND_LINES['feel:worry'], { formal: ['I should like to be reassured, and cannot be.'], chatty: ['Nerves! Jangling! All of them!'], dreamy: ['The worry has a weather of its own.'] });
+addLines(MIND_LINES['feel:grief'], { formal: ['One does not get over such things; one gets round them.'], chatty: ['I need a cry and a bun, in that order!'], dreamy: ['The loss has its own chair at my table.'] });
+addLines(MIND_LINES['feel:loneliness'], { plain: ['Nobody has knocked in days.'], formal: ['Company has become a rare commodity.'], warm: ["I'd give a lot for a chat by the fire."], chatty: ['I have started naming the spoons!'], dreamy: ['The echo answers before anyone does.'] });
+addLines(MIND_LINES['dream:waiting'], { formal: ['The matter rests with the steward now.'], chatty: ['Steward! My ask! Remember it!'], dreamy: ['I left the hope on the board like a coat on a hook.'] });
+addLines(MIND_LINES.larder, { formal: ['The larder is a sorry sight.'], warm: ["There's not enough to go round, and I hate saying it."], chatty: ['Empty shelves! Echo! Echo!'], dreamy: ['The pantry is a cave with nothing in it.'] });
+addLines(MIND_LINES.festival_soon, {
+  plain: ['Festival soon. Good.', 'Lanterns to sort.', 'Nearly festival time.'],
+  formal: ['The festival approaches, and I confess I look forward to it.', 'There are preparations to make before the festival.', 'A festival is a fine thing for a town.', 'I shall wear my good coat to the festival.'],
+  warm: ["I love festival week, honestly.", 'Not long now till the festival!', "I'm already humming the festival songs."],
+  chatty: ['FESTIVAL! Soon! Lanterns! Pies!', 'I have planned my festival outfit for a month!', 'Is it festival yet? Is it? Is it?', 'Festival soon and I cannot sit still!'],
+  dreamy: ['The festival is a lamp at the end of the week.', 'I can almost hear the lanterns being lit.', 'The whole valley leans toward the festival.', 'Soon the evenings will glow.'],
+});
+addLines(MIND_LINES['weather:rain'], {
+  plain: ['Wet day.', 'Rain again.', 'Good for the garden, bad for my boots.'],
+  formal: ['The rain is persistent today.', 'A damp day, though the gardens will thank it.', 'One cannot argue with rain.', 'I shall keep indoors while it rains.'],
+  warm: ['I quite like a rainy day, truth be told.', 'Rain on the roof is a lovely sound.', 'A day for soup and a window seat.', "The rain's keeping everyone in."],
+  chatty: ['Rain! My hair! Ruined!', 'Splashing in puddles like a child, me!', 'Rain rain rain! Lovely for ducks!', 'Umbrella weather! I have no umbrella!'],
+  dreamy: ['The rain is writing on the roof.', 'Every leaf is drinking.', 'The brook will be talking louder tonight.', 'Grey silk over the valley.'],
+});
+addLines(MIND_LINES['weather:storm'], {
+  plain: ['Storm. Stay in.', 'Wind could take the roof.', 'Bad night for it.'],
+  formal: ['The storm is a serious one.', 'I trust the roofs will hold.', 'A night to stay indoors and be grateful for walls.', 'The wind is quite ferocious.'],
+  warm: ['I hope everyone is safe inside.', 'The storm has me a bit frightened, honestly.', "I'll check on the neighbours when it passes.", 'What a night! The whole house is creaking.'],
+  chatty: ['Storm! Hold onto your hats! And your hens!', 'The wind is screaming louder than me!', 'Thunder! I jumped a foot!', 'Everything is rattling! Even me!'],
+  dreamy: ['The sky is tearing itself in half.', 'The storm walks over the roofs in big boots.', 'Lightning drew the valley for a second.', 'The night is all teeth tonight.'],
+});
+addLines(MIND_LINES.miss_friend, {
+  plain: ['Miss {x}.', 'Not seen {x} in a while.'],
+  formal: ['I have not seen {x} in some days.', 'I find I miss {x}.', '{X} has been absent from my days.'],
+  warm: ["I keep wondering what {x} is up to.", 'I should go and find {x}.'],
+  chatty: ['Where has {x} got to? I miss them!', '{X}! Come back! I have gossip!', 'Not a peep from {x}! Rude!'],
+  dreamy: ['{X} has drifted out of my week.', 'There is a {x}-shaped gap in the days.', 'I keep turning to say something to {x}.'],
+});
+addLines(MIND_LINES.grudge, {
+  plain: ['Still sore about {x}.', 'Not over it, with {x}.'],
+  formal: ['Matters with {x} remain unresolved.', 'I am not ready to be gracious to {x}.'],
+  warm: ["I hate being at odds with {x}.", "I wish {x} and I could put it right."],
+  chatty: ['{X}! Honestly! Still fuming!', 'Not speaking to {x}! Well, barely!', '{X} knows what they did!'],
+  dreamy: ['The thing with {x} has not healed over.', 'A cold wind blows from the direction of {x}.', '{X} and I are two stones that will not sit together.'],
+});
+addLines(MIND_LINES['steward:+'], {
+  plain: ['Steward does right by us.', 'Good steward, that.'],
+  formal: ['The steward has my confidence.', 'I think well of the steward, and say so.', 'The steward has been fair with me.'],
+  warm: ['The steward really does care, you know.', 'We are lucky in our steward.'],
+  chatty: ['Steward! Top marks! Gold star!', 'Best steward a town could ask for, I say!'],
+  dreamy: ['The town is in kind hands.', 'Someone is minding us, and minding well.', 'The steward tends us like a garden.'],
+});
+addLines(MIND_LINES['steward:-'], {
+  plain: ['Steward lets us down.', 'Waste of breath, asking the steward.', "Steward doesn't care."],
+  formal: ['The steward has disappointed me.', 'I have lost faith in the steward, rather.', 'The steward does not seem to hear us.'],
+  warm: ["I wish the steward would just listen to us.", "I don't feel the steward is on our side.", 'The steward has let me down, and it stings.'],
+  chatty: ['Steward? Useless! Hopeless!', 'Might as well shout at the well as ask the steward!', 'The steward! Where even is the steward!', 'Nought out of ten for the steward!'],
+  dreamy: ['Nobody holds the tiller.', 'The steward is a door that never opens.', 'We call, and the hills answer before the steward does.', 'The town drifts, unsteered.'],
+});
+addLines(MIND_LINES['belief:+'], {
+  plain: ['{X}. Good, that.', 'Like {x}. Settled.', 'Warming to {x}.'],
+  formal: ['I have grown to appreciate {x}.', '{X} has won me over.', 'I speak well of {x} now.'],
+  warm: ["{X} has really grown on me, you know.", "I've come round to {x}.", "I'm quite fond of {x} these days."],
+  chatty: ['{X}! Love it! Changed my mind!', 'Team {x}! Officially!', 'I was wrong about {x}! Happens!'],
+  dreamy: ['{X} has found a place in me.', 'I see {x} differently now, and kindly.', '{X} has settled into the shape of the valley.'],
+});
+addLines(MIND_LINES['belief:-'], {
+  plain: ['Gone off {x}.', '{X}. Not for me.', 'Had enough of {x}.', "Don't rate {x}."],
+  formal: ['I have come to a poor opinion of {x}.', '{X} does not improve on acquaintance.', 'I find I dislike {x}.', 'My view of {x} has soured.'],
+  warm: ["I've gone off {x}, I'm afraid.", "{X} isn't what I hoped.", "I don't like {x} as much as I did.", 'I tried to like {x}. I can\'t.'],
+  chatty: ['{X}? No thank you!', 'Done with {x}! Done!', '{X}! Overrated!', 'I have decided: {x} is a no!'],
+  dreamy: ['{X} has gone grey in my mind.', '{X} and I have fallen out of step.', 'The light has gone out of {x}.', '{X} is a song I no longer hum.'],
+});
+addLines(MIND_LINES['belief_person:+'], {
+  plain: ['{X} is all right.', 'Warming to {x}.', '{X}. Good sort.'],
+  formal: ['I have warmed to {x} considerably.', '{X} has my regard.', 'I think better of {x} than I did.'],
+  warm: ["I've grown very fond of {x}.", "{X} turned out to be lovely.", "I'm glad {x} is here."],
+  chatty: ['{X}! Changed my mind! Love them!', '{X} is my new favourite person!', 'Three cheers for {x}!'],
+  dreamy: ['{X} has become a warm place in my week.', 'I see {x} clearly now, and like what I see.', '{X} is weather I would walk into.'],
+});
+addLines(MIND_LINES['belief_person:-'], {
+  plain: ['Gone cool on {x}.', '{X}. Hm.', 'Keeping my distance from {x}.'],
+  formal: ['I have revised my opinion of {x}, downward.', '{X} has disappointed me.', 'I am wary of {x} now.', 'I think less of {x} than I did.'],
+  warm: ["I don't feel the same about {x} anymore.", "{X} let me down a bit.", "I'm keeping {x} at arm's length for now.", "Something's gone off between me and {x}."],
+  chatty: ['{X}? Hmph!', 'Not sure about {x} anymore!', '{X} is on thin ice with me!', 'I have cooled on {x}! Considerably!'],
+  dreamy: ['{X} has gone a little grey to me.', 'A door has half-closed on {x}.', '{X} and I have drifted into different weathers.', 'I keep my coat on around {x} now.'],
+});
+addLines(MIND_LINES.leaving, {
+  plain: ['Might go.', 'Thinking of the road.', 'Not sure I belong here.'],
+  formal: ['I am considering whether to stay.', 'I have begun to think of leaving.', 'The question of going has presented itself.', 'I do not know that this valley is mine.'],
+  warm: ["I keep thinking about packing, and hating it.", "I don't want to go. I might, though.", 'Something would have to change for me to stay.'],
+  chatty: ['The road is calling and I am half listening!', 'Should I go? Should I? Somebody say no!', 'Bags half packed in my head!', 'Leaving? Me? Maybe! Maybe not!'],
+  dreamy: ['The road out of town has started to shine.', 'I dream of other valleys.', 'Part of me has already left.', 'My feet point at the gate.'],
+});
+addLines(MIND_LINES['feel:joy'], {
+  plain: ['Happy. Simple as that.', 'Good day for it, whatever it is.', 'No complaints. None.', 'Sun on my back and nothing owed.', 'Right as rain today.', 'Cheerful, me. Odd but true.'],
+  formal: ['I am quite content with the world today.', 'A fine day, and I am equal to it.', 'My spirits are high and I see no reason to lower them.', 'The day has been generous.', 'I feel well, and I feel well disposed.', 'All things considered, a splendid day.'],
+  warm: ['I feel wrapped up warm inside.', "I've got a song stuck in me and I don't mind.", 'Today I like everybody.', 'Something good has settled in my chest.', "I'm as happy as the hens in the sun.", 'What a nice life this is, some days.'],
+  chatty: ['Happy! Loudly! Sorry!', 'If I were any cheerier I would float!', 'Today is a biscuit of a day!', 'Grinning like a cat with cream, me!', 'Good mood alert! Stand clear!', 'I could dance! I might! Stand back!'],
+  dreamy: ['The day has honey in it.', 'I am a window with the sun through it.', 'My heart is out walking without me.', 'Everything is a little bit in bloom.', 'The air tastes of something good coming.', 'I am a bell somebody has just rung.'],
+});
+addLines(MIND_LINES['need:rest'], {
+  plain: ['Running on empty.', 'Need a lie-down.', 'Eyes like lead.'],
+  formal: ['I am in want of a long rest.', 'Fatigue has rather caught up with me.', 'I must sleep, and soon.'],
+  warm: ['I could curl up right here and go off.', "I'm tired right down to my boots.", 'A good sleep would put me right.'],
+  chatty: ['Tired! So tired! Zzz!', 'I keep nodding off mid-sentence! Did I just?', 'Carry me to bed, somebody!'],
+  dreamy: ['Sleep is a tide and I am going out with it.', 'My bones want the dark.', 'I am walking through a dream already.'],
+});
+addLines(MIND_LINES['need:food'], {
+  plain: ['Stomach is growling.', 'Need a bite.', 'Starved.'],
+  formal: ['Hunger is making itself felt.', 'I should be glad of something to eat.', 'My appetite is sharp today.'],
+  warm: ["I'm famished, honestly.", 'Supper cannot come soon enough.', 'I could murder a bowl of stew.'],
+  chatty: ['Hungry! Loudly hungry!', 'My stomach just said something rude!', 'Bread! Cheese! Anything! Please!'],
+  dreamy: ['My hunger is a small animal pacing.', 'I can smell bread that is not there.', 'The inside of me is an empty room.'],
+});
+addLines(MIND_LINES['feel:joy'], {
+  plain: ['Good. Plain good.', 'Nothing to grumble at.', 'Fair weather in me today.', 'Day went well. Say so.'],
+  formal: ['I have had a thoroughly satisfactory day.', 'I am in good heart.', 'The day has gone as a day should.', 'I am well, and glad to be.'],
+  warm: ['My heart is full, honestly.', 'I keep catching myself smiling.', 'Life is good to me this week.', "I'm happy, and I'm not going to hide it."],
+  chatty: ['Whoop! That is all! Whoop!', 'Best mood! No reason! Best!', 'I am a kettle on the boil with happiness!', 'Somebody give me a hill to run down!', 'Cheerful as a sparrow, me!', 'Good day! Great day! Marvellous day!', 'I am fizzing! Fizzing, I tell you!', 'Is it a crime to be this happy? Arrest me!'],
+  dreamy: ['The day is a warm stone in my hand.', 'I am full of quiet fireworks.', 'Joy came in without knocking.', 'The light likes me today.'],
+});
+addLines(MIND_LINES['need:purpose_job'], {
+  plain: ['Same hands, same work. Hm.', 'Could use a fresh task.', 'The job has gone stale on me.'],
+  formal: ['My work wants refreshing.', 'I have mastered the day, and it bores me.', 'A new challenge would be welcome.'],
+  warm: ["I'd love to shake up my work a bit.", 'Same old job, lovely as it is.', 'I need something new to sink my teeth into.'],
+  chatty: ['My job! Yawn! Sorry, job!', 'I could do my work in my sleep! Sometimes I do!', 'Give me a different hammer at least!', 'New task! New task! New task!', 'I have polished the same thing nine times today!', 'If I see that bench again I will scream, lovingly!'],
+  dreamy: ['The work has become a hallway with no doors.', 'I want to make something that surprises me.', 'My hands are asking for a new tune.'],
+});
+addLines(MIND_LINES['need:purpose'], {
+  plain: ['Could be doing something.', 'Idle day. Bad.', 'Need a reason to get up.'],
+  formal: ['I am underemployed, and I feel it.', 'Some occupation would do me good.', 'I am not made for idleness.'],
+  warm: ["I'd happily help anyone with anything.", 'I feel a bit useless today, honestly.', "I'm itching to be useful."],
+  chatty: ['Job! Me! Now! Please!', 'I have alphabetised the hens!', 'Idle! Dangerous! Give me a task!'],
+  dreamy: ['The day is a field with nothing planted.', 'I am an unlit lamp.', 'My usefulness has nowhere to go.'],
+});
+addLines(MIND_LINES['need:delight'], {
+  plain: ['Flat week.', 'Need cheering up.', 'Bit grey, all this.'],
+  formal: ['A touch of gaiety would not go amiss.', 'The days lack sparkle.', 'I should enjoy a diversion.'],
+  warm: ["I'd love a bit of a treat.", 'Nothing has made me laugh in days.', 'A little fun would go a long way.'],
+  chatty: ['Entertain me! Somebody!', 'Fun! Where is the fun!', 'I am bored enough to dance alone!'],
+  dreamy: ['I am waiting for a kite of a day.', 'The week has no music in it.', 'I want to be surprised by something small.'],
 });

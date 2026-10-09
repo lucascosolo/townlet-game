@@ -34,7 +34,7 @@ export const DILEMMAS: DilemmaDef[] = [
   {
     type: 'market_day',
     stance: { prosperity: 1, community: 0.5, quiet: -1 },
-    proposer: (state) => mostBy(state, (r) => residentDef(r.id).values.prosperity, 0.6),
+    proposer: (state) => mostBy(state, (r) => residentDef(r.id).values.prosperity, 0.5),
     eligible: (state) => !state.story.marketDay && liveBuildings(state).some((b) => b.type === 'commons'),
     approve: (host) => {
       host.state.story.marketDay = true;
@@ -82,6 +82,65 @@ export const DILEMMAS: DilemmaDef[] = [
     },
   },
 ];
+
+const upcoming = (state: SimState, kind: string) => state.story.gatherings.some((g) => g.kind === kind && g.until > state.tick);
+
+// Four more ways to be put on the spot (bar round 2: three types and four proposals in thirty days).
+DILEMMAS.push(
+  {
+    type: 'lantern_walk',
+    stance: { beauty: 1, community: 0.5, quiet: -0.6 },
+    proposer: (state) => mostBy(state, (r) => residentDef(r.id).values.beauty, 0.5),
+    eligible: (state) => placeFor(state, ['brook', 'commons', 'oak']) !== null && !upcoming(state, 'lantern_walk'),
+    approve: (host) => {
+      const place = placeFor(host.state, ['brook', 'commons', 'oak']);
+      if (place === null) return;
+      const day = dayOf(host.state.tick) + 1;
+      addGathering(host, { kind: 'lantern_walk', label: 'the lantern walk', placeId: place, from: at(day, 20), until: at(day, 22), pull: 0.7, appeal: { beauty: 0.7, community: 0.3 }, emits: { noise: 0.25, bustle: 0.3 }, radius: 3 });
+    },
+  },
+  {
+    type: 'tales_night',
+    stance: { community: 1, beauty: 0.3, quiet: -0.5 },
+    proposer: (state) => mostBy(state, (r) => residentDef(r.id).values.community + 0.3 * residentDef(r.id).traits.sociable, 0.6),
+    eligible: (state) => placeFor(state, ['teahouse', 'oak', 'commons']) !== null && !upcoming(state, 'tales'),
+    approve: (host) => {
+      const place = placeFor(host.state, ['teahouse', 'oak', 'commons']);
+      if (place === null) return;
+      const day = dayOf(host.state.tick) + 1;
+      addGathering(host, { kind: 'tales', label: 'a night of tales', placeId: place, from: at(day, 19), until: at(day, 21, 30), pull: 0.6, appeal: { community: 0.6, beauty: 0.2 }, emits: { noise: 0.3, bustle: 0.4 }, radius: 3 });
+    },
+  },
+  {
+    type: 'cart_stop',
+    stance: { prosperity: 1, craft: 0.3, quiet: -1, beauty: -0.3 },
+    proposer: (state) => mostBy(state, (r) => residentDef(r.id).values.prosperity + 0.2 * residentDef(r.id).values.craft, 0.55),
+    eligible: (state) => placeFor(state, ['commons']) !== null && !upcoming(state, 'trade_cart'),
+    approve: (host) => {
+      const state = host.state;
+      const place = placeFor(state, ['commons']);
+      if (place === null) return;
+      const day = dayOf(state.tick) + 1;
+      // Pip pays for the pitch in timber; the cart is noisy company all night.
+      state.stock.timber = Math.min(100, state.stock.timber + 4);
+      addGathering(host, { kind: 'trade_cart', label: "Pip's cart, stopping the night", placeId: place, from: at(day, 17), until: at(day + 1, 8), pull: 0.6, appeal: { prosperity: 0.8, craft: 0.3 }, emits: { noise: 0.5, bustle: 0.5 }, radius: 3 });
+    },
+  },
+  {
+    type: 'bonfire_night',
+    stance: { community: 0.8, craft: 0.3, quiet: -0.8, nature: -0.4 },
+    proposer: (state) => mostBy(state, (r) => residentDef(r.id).values.community + 0.4 * residentDef(r.id).traits.sociable, 0.65),
+    eligible: (state) => placeFor(state, ['commons']) !== null && state.stock.timber >= 3 && !upcoming(state, 'bonfire'),
+    approve: (host) => {
+      const state = host.state;
+      const place = placeFor(state, ['commons']);
+      if (place === null) return;
+      const day = dayOf(state.tick) + 1;
+      state.stock.timber = Math.max(0, state.stock.timber - 3);
+      addGathering(host, { kind: 'bonfire', label: 'bonfire night', placeId: place, from: at(day, 19), until: at(day, 23), pull: 0.9, appeal: { community: 0.7, craft: 0.2 }, emits: { noise: 0.7, bustle: 0.5 }, radius: 4 });
+    },
+  },
+);
 
 export function dilemmaDef(type: DilemmaType): DilemmaDef {
   const d = DILEMMAS.find((x) => x.type === type);

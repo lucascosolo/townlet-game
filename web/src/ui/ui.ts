@@ -14,13 +14,14 @@ import { wishProgress } from '../../../src/sim/story/director.js';
 import { dilemmaDef, stanceScore } from '../../../src/sim/story/dilemmas.js';
 import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
 import { daysToWinter, granaryRoom, hasGranary } from '../../../src/sim/stores.js';
+import { dreamTitle } from '../../../src/sim/story/aspirations.js';
 import { ALL_FACTS, FACTS, TIERS, factValue, goalLabel, knownFacts, nextTier, progressOf, todaysGoals, unlocked, RENOWN } from '../../../src/sim/progress.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
 import { SPEEDS, type Game } from '../game.js';
 import type { AdResult, RewardedAds } from '../ads.js';
 import { TRADER_GIFT } from '../../../src/sim/sim.js';
 import type { ReplyKind } from '../../../src/sim/replies.js';
-import { REPLY_SAID } from '../../../src/content/replies.js';
+import { replySaid } from '../../../src/content/replies.js';
 import { vividMemories } from '../../../src/sim/recall.js';
 import { residentColor } from '../view/meshes.js';
 import { ICONS } from './icons.js';
@@ -55,7 +56,6 @@ interface TalkPanel {
 }
 
 /** Talking back: the chips under an answer. */
-const REPLY_LABELS: Record<ReplyKind, string> = { agree: "That's fair", disagree: "I don't see it that way", sorry: "I'm sorry", explain: 'Let me explain' };
 
 const QUESTIONS: Array<[TalkQuestion, string]> = [
   ['how', 'How are you?'],
@@ -221,6 +221,7 @@ export class Ui {
   private morning: NarratorEntry[] = [];
   private rosterEl: HTMLElement | null = null;
   private journalBody: HTMLElement | null = null;
+  private lastJournalKey = '';
   private readonly lastStock: Partial<Record<'food' | 'timber', number>> = {};
   /** One talk panel per resident, kept across journal redraws so its choices stay put. */
   private readonly talkPanels = new Map<string, TalkPanel>();
@@ -892,7 +893,11 @@ export class Ui {
     const ask = Object.fromEntries((Object.entries(FACTS) as Array<[TalkQuestion, string[]]>).flatMap(([q, keys]) => keys.map((k) => [k, q]))) as Record<string, TalkQuestion>;
     const label = (q: TalkQuestion) => (q === 'opinion' ? 'What do you think of…' : (QUESTIONS.find(([x]) => x === q)?.[1] ?? q));
     const ul = el('ul');
-    for (const k of ALL_FACTS) if (known.includes(k)) ul.appendChild(el('li', { 'data-fact': k }, factValue(state, r, k)));
+    // The bio is above (shown once); a fact with several parts (quirks) takes a line each.
+    for (const k of ALL_FACTS) {
+      if (!known.includes(k) || k === 'background') continue;
+      for (const part of factValue(state, r, k).split('; ')) ul.appendChild(el('li', { 'data-fact': k }, part));
+    }
     if (known.length === 0) ul.appendChild(el('li', { class: 'quiet' }, 'Nothing yet. Talk to them to find out.'));
     sec.appendChild(ul);
     // What is left to learn, one line per question rather than one per fact (design pass, 2026-10-08).
@@ -1308,11 +1313,14 @@ export class Ui {
       if (atBottom) this.logEl.scrollTop = this.logEl.scrollHeight;
     }
 
-    // A quoted line becomes a bubble over whoever speaks first in it.
-    const quote = /"([^"]+)"/.exec(e.text);
-    if (quote && (e.kind === 'live' || e.kind === 'aside' || e.kind === 'thought') && e.who.length > 0) {
+    // A quoted line becomes a bubble over whoever speaks first in it: the quote after their name,
+    // so a reply's bubble holds their half and not the steward's (bar round 2).
+    const quotes = [...e.text.matchAll(/"([^"]+)"/g)];
+    if (quotes.length > 0 && (e.kind === 'live' || e.kind === 'aside' || e.kind === 'thought') && e.who.length > 0) {
       const speaker = [...e.who].sort((a, b) => e.text.indexOf(residentDef(a).name) - e.text.indexOf(residentDef(b).name))[0] as string;
-      this.bubble(speaker, quote[1] as string, e.kind === 'thought' ? 'thought' : e.importance === 'major' ? 'major' : '');
+      const named = e.text.lastIndexOf(residentDef(speaker).name);
+      const theirs = quotes.find((q) => (q.index ?? 0) > named) ?? quotes[0];
+      this.bubble(speaker, theirs![1] as string, e.kind === 'thought' ? 'thought' : e.importance === 'major' ? 'major' : '');
     }
     this.lastBoardKey = '';
   }
@@ -1324,7 +1332,8 @@ export class Ui {
     if (e.type === 'tier') this.celebrateTier(e);
     if (e.type === 'standing') {
       const notes = this.standingNotes.get(e.who) ?? [];
-      notes.unshift(`${e.delta > 0 ? '▲' : '▼'} Day ${dayOf(e.t)}: ${e.reasons.join('; ')}`);
+      const other = e.also && e.also.length > 0 ? ` · ${e.delta > 0 ? '▼' : '▲'} ${e.also.join('; ')}` : '';
+      notes.unshift(`${e.delta > 0 ? '▲' : '▼'} Day ${dayOf(e.t)}: ${e.reasons.join('; ')}${other}`);
       this.standingNotes.set(e.who, notes.slice(0, 5));
       this.bubble(e.who, e.delta > 0 ? `♥ Thinks better of you: ${e.reasons[0]}` : `☁ Thinks less of you: ${e.reasons[0]}`, e.delta > 0 ? 'up' : 'down');
     }
@@ -1342,9 +1351,19 @@ export class Ui {
     // Who is speaking, so a line never floats over an anonymous figure (review).
     const who = el('span', { class: 'speaker' }, residentDef(id).name);
     who.style.background = cssColor(residentColor(id));
-    // Cut long lines at a word, never mid-word (bar round 1: "before the cart's last v…").
+    // A long line is cut at a sentence, never mid-word and never with an ellipsis (bar round 2):
+    // whole sentences up to the limit, or the first sentence alone when even that runs over.
     const limit = this.phone ? 110 : 140;
-    const cut = text.length > limit ? `${text.slice(0, text.lastIndexOf(' ', limit - 1) > 40 ? text.lastIndexOf(' ', limit - 1) : limit - 1)}…` : text;
+    let cut = text;
+    if (text.length > limit) {
+      const sentences = text.match(/[^.!?]+[.!?]+["”]?\s*|[^.!?]+$/g) ?? [text];
+      let kept = '';
+      for (const sentence of sentences) {
+        if (kept && (kept + sentence).trim().length > limit) break;
+        kept += sentence;
+      }
+      cut = kept.trim() || text;
+    }
     b.el.replaceChildren(who, document.createTextNode(cut));
     b.el.dataset.who = id;
     b.born = performance.now();
@@ -1360,12 +1379,23 @@ export class Ui {
     const requests = state.requests.filter((q) => q.status === 'open');
     const wishes = state.story.wishes.filter((w) => w.status === 'open');
     const progress = wishes.map((w) => wishProgress(state, w).met);
-    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick), state.buildings.length, Math.floor(state.granary ?? 0), state.stores]);
+    const key = JSON.stringify([open.map((d) => d.id), requests.map((q) => q.id), wishes.map((w) => w.id), progress, this.morning.length, dayOf(state.tick), state.buildings.length, Math.floor(state.granary ?? 0), state.stores, state.order.filter((id) => this.game.sim.resident(id).leaving).join()]);
     if (key === this.lastBoardKey) return;
     this.lastBoardKey = key;
     const pane = this.boardEl;
     pane.replaceChildren();
 
+    // Someone thinking of leaving is the first thing on the board (bar round 2: the first a player saw of it was "has left").
+    const leaving = state.order.map((id) => this.game.sim.resident(id)).filter((r) => !r.departed && r.leaving);
+    if (leaving.length > 0) {
+      pane.appendChild(el('h3', {}, 'Thinking of leaving'));
+      for (const r of leaving) {
+        const card = el('div', { class: 'card warning', 'data-testid': `leaving-${r.id}` });
+        card.appendChild(el('p', {}, `${residentDef(r.id).name} has been thinking of leaving since day ${r.leaving!.sinceDay}.`));
+        card.appendChild(el('p', { class: 'quiet' }, 'Answer what they have asked for, and talk to them. A few good days turn it round.'));
+        pane.appendChild(card);
+      }
+    }
     pane.appendChild(el('h3', {}, 'Town Wishes this season'));
     if (wishes.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'No wishes outstanding.'));
     for (const w of wishes) {
@@ -1411,7 +1441,11 @@ export class Ui {
       card.appendChild(el('div', { class: 'card-title' }, `${who.name} ${ASK_TITLES[q.kind]}${q.wants ? `: ${/^[aeiou]/.test(singularName(q.wants)) ? 'an' : 'a'} ${singularName(q.wants)}` : ''}`));
       if (q.kind === 'quieter_home') card.appendChild(el('p', {}, `${cap(this.game.narrator.statement(q.by, { subject: q.subject, aspect: 'noisy_at_night' }))}.`));
       if (q.kind === 'more_green') card.appendChild(el('p', { 'data-testid': 'green-progress' }, this.greenLine(q.by)));
-      card.appendChild(el('p', { class: 'quiet' }, ASK_HINTS[q.kind]));
+      // A dream ask quotes the dreamer (bar round 2: "it matters a great deal to them" on every card).
+      if (q.kind === 'aspiration') {
+        const title = dreamTitle(state, this.game.sim.resident(q.by));
+        if (title) card.appendChild(el('p', { class: 'quiet', 'data-testid': 'dream-quote' }, `“${title.charAt(0).toUpperCase()}${title.slice(1)}.” That is ${who.name}'s hope, and this is part of it.`));
+      } else card.appendChild(el('p', { class: 'quiet' }, ASK_HINTS[q.kind]));
       const show = el('button', {}, 'Show me');
       show.addEventListener('click', () => {
         const home = state.buildings.find((b) => b.id === this.game.sim.resident(q.by).homeId);
@@ -1628,7 +1662,7 @@ export class Ui {
       const chip = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-reply]');
       if (!chip) return;
       const kind = chip.dataset.reply as ReplyKind;
-      say(REPLY_SAID[kind]);
+      say(chip.textContent ?? '');
       this.game.command({ kind: 'reply', who: id, reply: kind });
       this.renderJournal(true);
     });
@@ -1697,7 +1731,7 @@ export class Ui {
     const rkey = open.map((o) => o.kind).join('|');
     if (p.replies.dataset.key !== rkey) {
       p.replies.dataset.key = rkey;
-      p.replies.replaceChildren(...open.map((o) => el('button', { class: 'chip reply', 'data-reply': o.kind, 'data-testid': `reply-${o.kind}` }, REPLY_LABELS[o.kind])));
+      p.replies.replaceChildren(...open.map((o) => el('button', { class: 'chip reply', 'data-reply': o.kind, 'data-testid': `reply-${o.kind}` }, replySaid(o, (sid) => this.game.narrator.subjectName(sid)))));
     }
     p.replies.hidden = open.length === 0;
     const answered = p.reply.textContent !== '';
@@ -1737,6 +1771,12 @@ export class Ui {
       return;
     }
     if (!force && document.activeElement instanceof HTMLSelectElement && this.journalEl.contains(document.activeElement)) return;
+    // Nothing moved since the last draw (a paused game, nothing said or done): leave the page as it
+    // is, so a button is not swapped out under a finger (bar round 2: clicks never landed at a low frame rate).
+    const sim = this.game.sim;
+    const journalKey = JSON.stringify([sim.tick, this.selected, this.residentView, this.game.narrator.lastReply?.t, this.game.narrator.lastSaid?.t, this.game.commandLog.length, sim.state.story.dilemmas.length, sim.state.requests.length, this.standingNotes.size]);
+    if (!force && journalKey === this.lastJournalKey) return;
+    this.lastJournalKey = journalKey;
     this.lastJournalRender = now;
     // The roster is built once and only updated, so a name isn't swapped out under a finger.
     if (!this.rosterEl) {
@@ -1912,6 +1952,8 @@ export class Ui {
       return;
     }
     j.appendChild(el('p', { class: 'quiet' }, rep.background));
+    // Reading their page is how you learn their background (bar round 2); logged like a question, so a save replays it.
+    if (!rep.departed && !knownFacts(this.game.sim.state, rep.id).includes('background')) this.game.command({ kind: 'look', who: rep.id });
     if (!rep.departed) j.appendChild(this.factsSection(rep.id));
     if (!rep.departed) {
       const mem = this.memoriesSection(rep.id);
@@ -1927,7 +1969,7 @@ export class Ui {
         el(
           'p',
           { class: 'quiet', 'data-testid': 'hope-next' },
-          rep.hope.done ? (rep.hope.outcome === 'leave' ? 'Decided to go.' : rep.hope.outcome === 'stay' ? 'Decided to stay.' : 'Done!') : `Next: ${rep.hope.next}`,
+          rep.hope.done ? (rep.hope.outcome === 'leave' ? 'Decided to go.' : rep.hope.outcome === 'stay' ? 'Decided to stay.' : rep.hope.outcome === 'let_go' ? 'Let it go, for now.' : 'Done!') : `Next: ${rep.hope.next}`,
         ),
       );
       j.appendChild(hope);

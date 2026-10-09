@@ -90,6 +90,6 @@ export class Game {
     this.commandLog.push(cmd);
     this.sim.schedule([cmd]);
     // Talk, favours and the trader's gift answer at once, even when paused; the log replays them at the same tick.
-    if (cmd.kind === 'talk' || cmd.kind === 'favour' || cmd.kind === 'gift' || cmd.kind === 'reply') this.sim.flushCommands();
+    if (cmd.kind === 'talk' || cmd.kind === 'favour' || cmd.kind === 'gift' || cmd.kind === 'reply' || cmd.kind === 'look') this.sim.flushCommands();
   }
 }

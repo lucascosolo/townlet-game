@@ -70,11 +70,11 @@ export const THOUGHTS: Record<string, Lines> = {
     dreamy: ['{S} holds the evenings like a cup.'],
   },
   'peaceful_spot+': {
-    plain: ['Quiet here. Good.', '{S}. Nice.'],
-    formal: ['A person can think properly at {s}.'],
-    warm: ['I could stay at {s} all day.'],
-    chatty: ['Nice spot, {s}, nice spot.'],
-    dreamy: ['{S} is humming something only I can hear.'],
+    plain: ['Quiet here. Good.', '{S}. Nice.', 'Peaceful, {s}.', 'Could sit at {s} a while.', '{S} suits me.'],
+    formal: ['A person can think properly at {s}.', '{S} is admirably calm.', 'I find {s} most restful.', 'There is a stillness at {s} I value.', '{S} is where I go to hear myself think.'],
+    warm: ['I could stay at {s} all day.', '{S} is my little bit of peace.', 'I always feel better after {s}.', "There's nowhere calmer than {s}.", '{S} is good for the soul.'],
+    chatty: ['Nice spot, {s}, nice spot.', 'Even I go quiet at {s}!', '{S}! Peace! Who knew I liked it!', 'Shh, {s} is having a moment!', 'Top marks for {s}, very restful!'],
+    dreamy: ['{S} is humming something only I can hear.', 'At {s} the day slows to a walk.', '{S} keeps a pool of quiet for me.', 'I leave my noise at the edge of {s}.', '{S} breathes slowly, and so do I.'],
   },
   'too_crowded-': {
     plain: ['Too many people.'],
@@ -158,11 +158,11 @@ export const SPEECH: Record<string, Lines> = {
     dreamy: ['It came true. Thank you.'],
   },
   lapsed: {
-    plain: ['Asked. Nothing happened.'],
-    formal: ['I did ask. Evidently it was not a priority.'],
-    warm: ['I suppose nobody heard me, then.'],
-    chatty: ['I asked and asked! Nothing!'],
-    dreamy: ['I asked into the wind, it seems.'],
+    plain: ['Asked. Nothing happened.', 'No answer. Noted.', 'Asked the steward. Might as well not have.', 'Heard nothing back.', 'That ask went nowhere.'],
+    formal: ['I did ask. Evidently it was not a priority.', 'My request went unanswered.', 'I shall not pretend the silence did not sting.', 'An answer, even a no, would have been a courtesy.', 'It seems my ask was not worth a reply.'],
+    warm: ['I suppose nobody heard me, then.', "I did ask. Maybe it got lost.", "Never mind. I'll manage without.", "I thought the steward might answer. Never mind.", "It's all right. I'm used to waiting."],
+    chatty: ['I asked and asked! Nothing!', 'Hello? Anyone? My ask? No?', 'Crickets! Absolute crickets!', 'I may as well have asked the well!', 'Nothing! Not even a no!'],
+    dreamy: ['I asked into the wind, it seems.', 'The ask drifted off and did not come back.', 'Silence has a shape, and it is my ask.', 'I put a wish on the board and the board kept it.', 'No answer came, only weather.'],
   },
   share_opinion: {
     plain: ['{statement}. Just saying.', '{statement}.'],
@@ -179,11 +179,11 @@ export const SPEECH: Record<string, Lines> = {
     dreamy: ['The bad days drift off, {other}. They always do.'],
   },
   compliment: {
-    plain: ['Good work today, {other}.', 'You did all right, {other}.'],
-    formal: ['You have a gift, {other}.', 'That was well done, {other}. Truly.'],
-    warm: ['You brighten the place up, {other}.', "I'm glad you're here, {other}.", 'You always know what to say, {other}.'],
-    chatty: ['{other}, you are a treasure, you know that?', 'What would we do without you, {other}?'],
-    dreamy: ['{other}, you make things feel possible.', 'You notice things, {other}. I like that.'],
+    plain: ['Good work today, {other}.', 'You did all right, {other}.', 'Glad you are about, {other}.', 'Solid, {other}. Solid.', 'Town needs more like you, {other}.'],
+    formal: ['You have a gift, {other}.', 'That was well done, {other}. Truly.', 'The town is the better for you, {other}.', 'I admire how you go about things, {other}.', 'You are a credit to the valley, {other}.'],
+    warm: ['You brighten the place up, {other}.', "I'm glad you're here, {other}.", 'You always know what to say, {other}.', 'You make hard days easier, {other}.', 'I was lucky to meet you, {other}.', 'You have such a good heart, {other}.'],
+    chatty: ['{other}, you are a treasure, you know that?', 'What would we do without you, {other}?', '{other}! Legend! Absolute legend!', 'You are the best thing about this town, {other}!', 'Give {other} a medal! Two medals!'],
+    dreamy: ['{other}, you make things feel possible.', 'You notice things, {other}. I like that.', 'You are a lamp in this valley, {other}.', 'Things grow better near you, {other}.', 'You have a way of making the day kinder, {other}.'],
   },
   /** Words over someone or something: {s} is what it is about. The speaker likes it, the other doesn't. */
   argue_for: {
@@ -214,6 +214,27 @@ export const SPEECH: Record<string, Lines> = {
     warm: ["I'm sorry about the other day, {other}."],
     chatty: ['{other}! I was a fool before. Forgive me?'],
     dreamy: ['I said things I did not mean, {other}.'],
+  },
+  thinSupper: {
+    plain: ['Thin pickings.', 'That was not a supper.', 'Bread and not much else.'],
+    formal: ['One does not complain. One does, however, notice.', 'A thin supper, and the larder bare. We have had better evenings.', 'I shall go to bed hungry, I think.'],
+    warm: ['Not much on the plate tonight, is there.', 'We will manage. We always do. But I am hungry.', 'I gave the last of mine to the cat. Silly of me.'],
+    chatty: ['Is that it? Is that ALL?', 'My stomach is writing a strongly worded letter!', 'Thin soup again! Who is running this town?'],
+    dreamy: ['The plate is mostly plate tonight.', 'Hunger has a sound. It is a sort of hum.', 'I dreamt of bread last night. I may again.'],
+  },
+  forage: {
+    plain: ["Found some. Won't last.", 'A basketful. Just about.', 'Nettles and a few eggs. It is food.', 'Better than an empty pot.', 'That is tonight sorted, no more.'],
+    formal: ['Not a feast, but it will do for tonight.', 'The hedgerows are generous, if the larder is not.', 'One does what one must; the brook obliged.', 'A modest haul, honestly come by.', 'It is not how I would choose to eat, but we shall eat.'],
+    warm: ['Something, at least. Better than nothing on the table.', 'The brook never lets you down, not entirely.', 'Enough for a stew, if I am clever with it.', 'I found more than I expected. Small mercies.', "It'll feed us tonight, and that's what matters."],
+    chatty: ['Berries! And a mushroom I am nearly sure about!', 'Provisions! Of a sort!', 'Look! Food! Free food!', 'The hedge is a shop that never shuts!', 'I wrestled a fish! The fish won, but I kept the eggs!'],
+    dreamy: ['The hedge gave what it had.', 'The brook keeps a little back for the hungry.', 'The valley feeds you if you ask it quietly.', 'A basket of small kindnesses from the bank.', 'I brought back the colour green and a little more.'],
+  },
+  letGo: {
+    plain: ['Not this season, then.', "Asked. Waited. Done waiting."],
+    formal: ['I shall not ask again. One learns to make do.', 'It was a hope, not a plan. I have let it go.'],
+    warm: ["I'll make do. I always have.", 'One day, perhaps. Not now. That is all right.'],
+    chatty: ['Fine! Fine! I have other ideas!', 'Never mind! Plenty more dreams where that came from!'],
+    dreamy: ['The wish folds itself up and goes back in the drawer.', 'I will dream something else. The valley has room.'],
   },
   leaving: {
     plain: ['Maybe this place is not for me.'],
@@ -451,4 +472,84 @@ addLines(SPEECH.thanks, {
   warm: ["You remembered! Thank you so much.", 'I could hug you. Thank you.'],
   chatty: ['You legend! Thank you!', 'Yes! YES! Thank you!'],
   dreamy: ['You heard me. Thank you.', 'It is just as I pictured it.'],
+});
+
+// Bar round 2: five lines a register for the thoughts a place or a memory stirs, so a town of
+// ten does not say the same thing about the teahouse four times in a week.
+addLines(THOUGHTS['noisy_at_night-'], {
+  plain: ['{S} again, all night.', 'No sleep, thanks to {s}.', 'Racket from {s}.'],
+  formal: ['{S} kept me awake, and not for the first time.', 'The noise from {s} is intolerable after dark.', 'I should like {s} quieter at night.'],
+  warm: ['I was up half the night with {s}.', "I love {s} by day. By night, I don't.", 'A wall, a hedge, anything between me and {s}.'],
+  chatty: ['{S}! At midnight! Again!', 'My pillow has given up on {s}!', 'Bang, clatter, {s}, all night long!', 'I counted every clank from {s}!'],
+  dreamy: ['{S} talks in its sleep, loudly.', 'The night had {s} in it, and no rest.', 'I lay listening to {s} till the birds.', '{S} is a drum the dark keeps beating.'],
+});
+addLines(THOUGHTS['smells_lovely+'], {
+  plain: ['{S} smells good.', 'Nice air round {s}.', 'Breathed deep by {s}. Worth it.', 'That smell at {s}. Grand.'],
+  formal: ['The air about {s} is delightful.', '{S} has a most agreeable scent.', 'One lingers near {s} for the smell alone.', 'I passed {s} slowly, on purpose.'],
+  warm: ['I could stand by {s} and just breathe.', 'That smell from {s} makes my day.', 'I always slow down near {s}.', '{S} smells like a good morning.'],
+  chatty: ['{S} smells AMAZING!', 'Sniff! {S}! Sniff again!', 'I want to bottle {s}!', 'Follow your nose to {s}!'],
+  dreamy: ['{S} is a scent with a place attached.', 'The air near {s} is sweet and slow.', '{S} perfumes the whole afternoon.', 'I carry the smell of {s} home in my sleeves.'],
+});
+addLines(THOUGHTS['good_times+'], {
+  plain: ['Good times at {s}.', 'Always a laugh at {s}.', 'Like {s}. Good company there.', '{S}. Happy place.'],
+  formal: ['I have spent many pleasant hours at {s}.', '{S} is where the town is at its best.', 'There is good company to be had at {s}.', 'My happiest hours lately were at {s}.'],
+  warm: ["There's always a warm welcome at {s}.", '{S} feels like home, some evenings.', 'Everyone is kinder at {s}, somehow.'],
+  chatty: ['{S}! Where the fun is!', 'Best evenings of my life at {s}!', 'Meet you at {s}! Always!', '{S} never has a dull night!'],
+  dreamy: ['{S} keeps our laughter in its walls.', 'The evenings at {s} glow in memory.', '{S} is where the town remembers how to smile.', 'I go to {s} to be among the warm.'],
+});
+addLines(THOUGHTS['too_crowded-'], {
+  plain: ['{S} is heaving.', 'Can\'t move at {s}.', 'Too many at {s}.', 'Elbows everywhere at {s}.'],
+  formal: ['{S} is uncomfortably full.', 'One cannot think at {s} for the crowd.', 'I shall return to {s} when it is quieter.', 'The press of people at {s} is wearying.'],
+  warm: ['{S} is lovely, but not with everyone in it.', "I couldn't hear myself at {s}.", "I'll come back to {s} when it's calmer.", 'Too many of us at {s} today.'],
+  chatty: ['{S}! Packed! Even for me!', 'Sardines at {s}!', 'I got jostled at {s} three times!', 'Who invited everyone to {s}?'],
+  dreamy: ['{S} was all shoulders and no sky.', 'The crowd at {s} pressed the quiet out of me.', 'Too many voices at {s} for one afternoon.', '{S} was a hive, and I am not a bee.'],
+});
+addLines(THOUGHTS['nice_addition+'], {
+  plain: ['{S}. Good call.', 'Like {s}. Fits.', '{S} belongs here.', 'Good to have {s}.'],
+  formal: ['{S} is a welcome addition.', 'The town is improved by {s}.', '{S} was wisely placed.', 'I approve of {s}.'],
+  warm: ['{S} has made the place nicer.', "I'm glad we have {s} now.", '{S} suits us, somehow.', 'The valley feels fuller with {s}.'],
+  chatty: ['{S}! Love it! More like it!', 'Who put {s} there? Genius!', '{S} is my new favourite thing!', 'Ten out of ten for {s}!'],
+  dreamy: ['{S} has settled in like it was always here.', 'The town grew a new leaf: {s}.', '{S} changes the light a little.', 'I keep finding reasons to pass {s}.'],
+});
+addLines(THOUGHTS['unwelcome_addition-'], {
+  plain: ["Don't like {s}.", '{S}. Why?', '{S} is in the way.', 'Could do without {s}.'],
+  formal: ['{S} does not belong there.', 'I question the wisdom of {s}.', '{S} spoils the look of things.', 'I would not have placed {s} so.'],
+  warm: ["I wish {s} wasn't there, honestly.", '{S} has rather spoilt my view.', "I'm trying to like {s}. It's hard.", '{S} sits wrong with me.'],
+  chatty: ['{S}? Who asked for {s}?', 'Ugh, {s}!', 'I walk past {s} with my eyes shut!', '{S} is an eyesore and I said so!'],
+  dreamy: ['{S} is a wrong note in the valley.', 'The place winces around {s}.', '{S} casts a shadow I did not want.', 'I look away from {s} and the day is better.'],
+});
+addLines(THOUGHTS['my_workplace+'], {
+  plain: ['Work to do at {s}. Good.', '{S}. My place.', 'Proud of {s}.', 'Somewhere to be useful: {s}.'],
+  formal: ['{S} gives my days a shape.', 'I am proud to work at {s}.', '{S} is where I am most myself.', 'It is a fine thing, having {s} to go to.'],
+  warm: ['{S} is where I belong.', 'I love walking to {s} in the morning.', '{S} makes me feel useful.', 'I could sing on the way to {s}.'],
+  chatty: ['{S}! My kingdom!', 'Off to {s}! Best part of the day!', 'Have you seen what I did at {s}?'],
+  dreamy: ['{S} and I understand each other.', 'My hands wake up at {s}.', 'I leave a little of myself at {s} each day.', '{S} hums when I am in it.'],
+});
+addLines(THOUGHTS['wonderful_time+'], {
+  plain: ['{S}. Good memory.', 'Think about {s} a lot.', '{S} was something.', 'Still smiling about {s}.'],
+  formal: ['{S} will be remembered fondly.', 'I think of {s} with great pleasure.', '{S} was the town at its finest.', 'We did ourselves proud at {s}.'],
+  warm: ['{S} was one of the good nights.', 'I keep thinking back to {s}.', '{S} made me glad to live here.', "I'll never forget {s}."],
+  chatty: ['{S}! Best night ever!', 'Remember {s}? I do! Every minute!', '{S} was LEGENDARY!', 'Can we do {s} again? Please?'],
+  dreamy: ['{S} still glows when I close my eyes.', 'Part of me is still at {s}.', '{S} left lanterns in my memory.', 'I keep {s} folded somewhere safe.'],
+});
+addLines(THOUGHTS['weathered_together+'], {
+  plain: ['Got through {s}. Together.', '{S}. We held.', 'Remember {s}. Good folk, here.', '{S} showed what we are.'],
+  formal: ['{S} proved the worth of this town.', 'We came through {s} as one.', 'I think of {s} and feel we are safe here.', '{S} bound us together.'],
+  warm: ['We looked after each other through {s}.', "{S} was awful, and we were lovely to each other.", "I won't forget who helped me during {s}.", 'After {s}, I knew I belonged.'],
+  chatty: ['{S}! We survived! Hurrah!', 'Remember {s}? What a night! What a town!', 'We beat {s}! All of us!', 'Nobody does {s} like we do!'],
+  dreamy: ['{S} washed us clean and left us closer.', 'We were one roof during {s}.', 'The storm of {s} is still in our bones, and so is the warmth.', '{S} made us a family of sorts.'],
+});
+addLines(THOUGHTS['glorious_failure+'], {
+  plain: ['{S} went bang. Worth it.', 'Ha. {S}.', '{S}. Nearly worked.', 'Smoke everywhere at {s}. Grand.'],
+  formal: ['{S} was a failure, and a magnificent one.', 'I admire the ambition of {s}, if not the outcome.', '{S} taught us something, at least.', 'One cannot fault the spirit of {s}.'],
+  warm: ['{S} went wrong so beautifully.', 'I laughed till I cried at {s}.', 'Bless whoever made {s}.', '{S} failed, and I loved every second.'],
+  chatty: ['{S}! BANG! Brilliant!', 'Best explosion of the year, {s}!', 'More smoke! More {s}!', 'I cheered the loudest at {s}!'],
+  dreamy: ['{S} bloomed and burst like a seed-head.', 'There was poetry in how {s} fell apart.', '{S} tried to fly. That counts.', 'The smoke from {s} drew shapes I liked.'],
+});
+addLines(THOUGHTS['lost_place-'], {
+  plain: ['Miss {s}.', '{S}. Gone.', 'Keep looking for {s}.', "Wasn't ready to lose {s}."],
+  formal: ['The loss of {s} is a real one.', 'I grieve for {s} more than I expected.', '{S} should not have gone.', 'The valley is poorer without {s}.'],
+  warm: ['I keep turning to where {s} was.', "It's so empty without {s}.", '{S} was part of my days.'],
+  chatty: ['{S}! Gone! I still can\'t believe it!', 'Bring back {s}!', 'I cried about {s}! Yes, I did!', 'The valley is wrong without {s}!'],
+  dreamy: ['The shape of {s} is still in the air.', 'I visit the place {s} was, and it visits me.', '{S} left a quiet behind it.', 'The ground misses {s} too.'],
 });

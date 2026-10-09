@@ -16,11 +16,12 @@ import type { Quality, ResidentState, SimEvent, SimState, TalkQuestion } from '.
 
 export const TIERS = ['Clearing', 'Hamlet', 'Village', 'Townlet'] as const;
 /** Renown needed to reach each tier. */
-export const TIER_RENOWN = [0, 40, 180, 520];
+/** Slower than it was (bar round 2: Hamlet on day 2). */
+export const TIER_RENOWN = [0, 100, 300, 650];
 /** How many may live in the valley at each tier. */
 export const TIER_RESIDENTS = [8, 12, 16, 20];
 /** Timber the neighbouring towns send when the town moves up a tier. */
-export const TIER_GIFT = 15;
+export const TIER_GIFT = 8;
 
 export const RENOWN = {
   goal: 3,
@@ -76,10 +77,12 @@ export const FACTS: Record<TalkQuestion, string[]> = {
   how: ['job', 'lifts'],
   mind: ['needs', 'quirk', 'dislikes'],
   hope: ['dream', 'values'],
-  me: ['background'],
+  me: [],
   opinion: ['friend', 'favourite'],
 };
-export const ALL_FACTS = Object.values(FACTS).flat();
+/** Learned by reading their page, not by asking (bar round 2: the bio recited inside "what do you think of me"). */
+export const PAGE_FACTS = ['background'];
+export const ALL_FACTS = [...Object.values(FACTS).flat(), ...PAGE_FACTS];
 
 const QUALITY_LIKES: Record<Quality, [string, string]> = {
   noise: ['a bit of noise', 'peace and quiet'],
@@ -314,7 +317,26 @@ export function nextFact(state: SimState, who: string, question: TalkQuestion, a
   // "What do you think of…" reveals the closest friend only when asked about a person, and the
   // favourite spot only when asked about a place (bar round 1: a friend bolted onto any opinion).
   const pool = question === 'opinion' ? (about?.startsWith('r:') ? ['friend'] : about?.startsWith('b:') ? ['favourite'] : []) : (FACTS[question] ?? []);
-  return pool.find((f) => !known.includes(f)) ?? null;
+  // Each resident gives the facts in their own order (bar round 2: a town's first "what's on your
+  // mind" answers all ended "I need a good long sleep").
+  const k = pool.length ? Math.max(0, state.order.indexOf(who)) % pool.length : 0;
+  const turned = [...pool.slice(k), ...pool.slice(0, k)];
+  return turned.find((f) => !known.includes(f)) ?? null;
+}
+
+/** Learn a fact outright, as reading their page does for the background (bar round 2). */
+export function learnFact(h: ProgressHost, who: string, fact: string): boolean {
+  const state = h.state;
+  const p = progressOf(state);
+  const known = (p.known[who] ??= []);
+  if (known.includes(fact)) return false;
+  const first = known.length === 0;
+  known.push(fact);
+  h.emitEvent({ t: state.tick, type: 'fact', who, key: fact, first });
+  addRenown(h, RENOWN.fact, 'getting to know someone');
+  bump(h, 'learn');
+  if (first) bump(h, 'meet');
+  return true;
 }
 
 function onTalk(h: ProgressHost, who: string, question: TalkQuestion, counted: boolean, about?: string): void {
@@ -327,14 +349,7 @@ function onTalk(h: ProgressHost, who: string, question: TalkQuestion, counted: b
   }
   const fact = nextFact(state, who, question, about);
   p.asked[`${who}|${question}`] = day;
-  if (!fact) return;
-  const known = (p.known[who] ??= []);
-  const first = known.length === 0;
-  known.push(fact);
-  h.emitEvent({ t: state.tick, type: 'fact', who, key: fact, first });
-  addRenown(h, RENOWN.fact, 'getting to know someone');
-  bump(h, 'learn');
-  if (first) bump(h, 'meet');
+  if (fact) learnFact(h, who, fact);
 }
 
 /** Each dawn: new goals for the day. */

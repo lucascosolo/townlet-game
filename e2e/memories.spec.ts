@@ -40,7 +40,19 @@ test('criterion 7: a resident’s page shows up to three dated memories in their
 });
 
 test('asking "What do you think of me?" brings up a dated memory about you', async ({ page }) => {
-  await open(page, at(6, 12));
+  // Something has to have happened between you: a hedge on day 2 (bar round 2: with the scenario's
+  // scripted steward gone, a town where you did nothing has nothing to remember you by).
+  await open(page, at(2, 10));
+  await page.evaluate(() => (window as unknown as { __townlet: { game: { command(c: object): void } } }).__townlet.game.command({ kind: 'build', type: 'hedge', x: 4, y: 7 }));
+  await page.evaluate((t) => (window as unknown as { __townlet: Handle }).__townlet.runTicks(t - (window as unknown as { __townlet: Handle }).__townlet.game.sim.tick), at(6, 12));
+  for (let quiet = 0; quiet < 2; ) {
+    await page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+    const later = page.locator('[data-testid^="later-"], [data-testid="tier-ok"]');
+    if ((await later.count()) > 0) {
+      await later.first().click();
+      quiet = 0;
+    } else quiet++;
+  }
   await page.getByTestId('tab-journal').click();
   await page.getByTestId('roster-ada').click();
   await page.getByTestId('sub-talk').click();

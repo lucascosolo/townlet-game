@@ -304,6 +304,11 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
           const friends = friendsOf(r).length;
           const score = 0.3 * Math.min(friends, 3) + 0.9 * r.disposition + 0.4 * (rel(r, 'steward').affinity) - 1.05;
           r.aspiration.outcome = score > 0 ? 'stay' : 'leave';
+          // Going is said before it is done (bar round 2): the week's notice the town gets from anyone else.
+          if (score <= 0 && !r.leaving) {
+            r.leaving = { sinceDay: dayOf(h.state.tick), dream: true };
+            h.emitEvent({ t: h.state.tick, type: 'thinking_of_leaving', who: r.id });
+          }
           if (score > 0) {
             for (const f of friendsOf(r)) {
               const x = h.state.residents[f] as ResidentState | undefined;
@@ -386,6 +391,31 @@ export function aspirationMorning(h: AspirationHost): void {
   }
 }
 
+/** Days a step may wait on the steward before the dreamer lets it go. */
+export const LET_GO_DAYS = 8;
+
+function letGo(h: AspirationHost, r: ResidentState): boolean {
+  const state = h.state;
+  if (state.tick - r.aspiration.since < LET_GO_DAYS * TICKS_PER_DAY) return false;
+  // Only a building this dream asks for counts: not, say, Juniper's granary for the winter stores.
+  const def = dreamOf(state, r);
+  if (!def) return false;
+  const refs = new Set(def.stages.flatMap((st) => [st.until, st.place]).filter((x): x is string => !!x && x !== 'home'));
+  const ask = state.requests.find((q) => q.by === r.id && q.kind === 'aspiration' && (q.status === 'open' || q.status === 'lapsed') && !!q.wants && refs.has(q.wants) && !exists(state, q.wants));
+  if (!ask || !ask.wants) return false;
+  if (ask.status === 'open') {
+    ask.status = 'resolved';
+    ask.closedTick = state.tick;
+    h.emitEvent({ t: state.tick, type: 'request_closed', request: { ...ask } });
+  }
+  r.aspiration.done = true;
+  r.aspiration.outcome = 'let_go';
+  r.aspiration.doneTick = state.tick;
+  addEmotion(r, { kind: 'worry', intensity: 0.3, tick: state.tick });
+  h.emitEvent({ t: state.tick, type: 'dream_let_go', who: r.id, wants: ask.wants });
+  return true;
+}
+
 /** Residents whose current step is not yet reached: checked again after the steward builds something. */
 export function waitingOnStage(h: AspirationHost): Set<string> {
   const out = new Set<string>();
@@ -420,7 +450,11 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
     r.aspiration.minutes = 0;
   }
   const stage = currentStage(h.state, r);
-  if (!stage || !stage.check(h, r)) return;
+  if (!stage) return;
+  // A step that has waited on the steward for over a week is let go (bar round 2): the dreamer
+  // makes do, says so, and in time dreams something else, rather than parking an ask for a month.
+  if (letGo(h, r)) return;
+  if (!stage.check(h, r)) return;
   stage.enter?.(h, r);
   r.aspiration.stage++;
   r.aspiration.since = h.state.tick;
@@ -446,7 +480,7 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
     ...(r.aspiration.kind ? { kind: r.aspiration.kind } : {}),
     ...(r.aspiration.subject ? { subject: r.aspiration.subject } : {}),
   });
-  if (r.aspiration.outcome === 'leave') h.depart(r);
+  // Leaving itself follows the usual week of thinking about it (see the leaving countdown in sim.ts).
 }
 
 function atStagePlace(state: SimState, r: ResidentState, stage: Stage): boolean {

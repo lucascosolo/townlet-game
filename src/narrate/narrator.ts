@@ -9,9 +9,9 @@ import { ASPIRATION_LINES, DILEMMA_NAMES, DREAM_DONE_LINES, GATHERING_START, PRE
 import { MIND_LINES, TO_STEWARD_LINES } from '../content/thoughts.js';
 import { DAY_WORDS, RECALL_LINES } from '../content/recall.js';
 import { FESTIVALS } from '../sim/story/director.js';
-import { REPLY_LINES, REPLY_SAID } from '../content/replies.js';
+import { REPLY_LINES, replySaid } from '../content/replies.js';
 import { FAVOUR_DONE, FAVOUR_NO, FAVOUR_YES, TALK_HOPE,
-  TALK_HOPE_ONE, TALK_HOPE_DONE, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON } from '../content/talk.js';
+  TALK_HOPE_ONE, TALK_HOPE_DONE, TALK_HOW, TALK_ME, TALK_OPINION, TALK_OPINION_PERSON, TALK_REASON, TALK_BUT } from '../content/talk.js';
 import { firstPerson } from '../sim/mind/thoughts.js';
 import { opinion } from '../sim/mind/memory.js';
 import { ASKS, BELIEF_STATEMENTS, REACTIONS, SPEECH, THOUGHTS, type Lines } from '../content/voice.js';
@@ -59,6 +59,8 @@ export function importanceOf(e: SimEvent): Importance {
     case 'left_town':
     case 'disturbed_sleep':
     case 'shortage':
+    case 'forage':
+    case 'dream_let_go':
     case 'aspiration':
     case 'plot_cleared':
     case 'arrived':
@@ -324,7 +326,9 @@ export class Narrator {
     const t = this.state.tick;
     const mine = (o: string) => this.saidBy.get(`${who}|${o}`) ?? -Infinity;
     const any = (o: string) => this.saidAny.get(o) ?? -Infinity;
-    const fresh = options.filter((o) => t - mine(o) >= 3 * 1440 && t - any(o) >= 1440);
+    // Nobody repeats a line they said in the last three days, and nobody says a line anyone in
+    // town said in the last three days (bar round 2: one chatty line twelve times in a month).
+    const fresh = options.filter((o) => t - mine(o) >= 3 * 1440 && t - any(o) >= 8 * 1440);
     const line = fresh.length ? pick(this.rng, fresh) : [...options].sort((a, b) => Math.max(mine(a), any(a)) - Math.max(mine(b), any(b)))[0] ?? '...';
     this.saidBy.set(`${who}|${line}`, t);
     this.saidAny.set(line, t);
@@ -416,7 +420,13 @@ export class Narrator {
         break;
       }
       case 'shortage':
-        this.live(e.t, `The larder is bare. ${this.name(e.who)} makes do with a meagre meal.`);
+        this.live(e.t, `The larder is bare. ${this.name(e.who)} makes do with a thin supper. ${this.voice(e.who, SPEECH.thinSupper)}`);
+        break;
+      case 'forage':
+        this.live(e.t, `${this.name(e.who)} goes ${this.at(e.placeId)} with a basket and comes back with ${e.food} food. ${this.voice(e.who, SPEECH.forage)}`);
+        break;
+      case 'dream_let_go':
+        this.live(e.t, `${this.name(e.who)} stops waiting for ${/^[aeiou]/i.test(buildingDef(e.wants).name) ? 'an' : 'a'} ${buildingDef(e.wants).name.toLowerCase()}. ${this.voice(e.who, SPEECH.letGo)}`);
         break;
       case 'recall': {
         const key = `${e.who}|${e.subject}`;
@@ -461,6 +471,7 @@ export class Narrator {
       case 'wish':
         if (e.phase === 'made') this.pushBoard(() => `Town Wish for the season: ${e.wish.label}. (${this.names(e.wish.supporters)} would like this.)`);
         else if (e.phase === 'granted') this.announce(e.t, `Wish granted: ${e.wish.label.toLowerCase()}. The whole town feels it.`);
+        else if (e.phase === 'dropped') this.pushBoard(() => `The wish for ${e.wish.label.toLowerCase()} leaves with ${this.names(e.wish.supporters)}.`);
         else this.pushBoard(() => `The season ended without ${e.wish.label.toLowerCase()}. ${this.names(e.wish.supporters)} had hoped for it.`);
         break;
       case 'standing': {
@@ -550,7 +561,9 @@ export class Narrator {
       case 'reply': {
         const words = this.utter(e.who, REPLY_LINES[e.stance]);
         this.lastReply = { who: e.who, t: e.t, text: words };
-        this.live(e.t, `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${REPLY_SAID[e.reply]}" "${words}"`);
+        const offer = this.state.residents[e.who]?.lastAnswer?.offers.find((o) => o.kind === e.reply) ?? { kind: e.reply };
+        this.lastSaid = { who: e.who, t: e.t, text: replySaid(offer, (id) => this.subjectName(id)) };
+        this.live(e.t, `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)}: "${words}"`);
         break;
       }
       case 'gift':
@@ -643,6 +656,9 @@ export class Narrator {
       else if (g.kind === 'market') this.announce(e.t, `It's market day ${at}.`);
       else if (g.kind === 'musician') this.announce(e.t, `A travelling fiddler wanders into the valley. There will be music ${at} tonight.`);
       else if (g.kind === 'contraption') this.announce(e.t, `${g.label} will be unveiled ${at} tomorrow afternoon.`);
+      else if (g.kind === 'lantern_walk') this.announce(e.t, `Tomorrow night: a lantern walk, setting off ${at}.`);
+      else if (g.kind === 'tales') this.announce(e.t, `Tomorrow evening: a night of tales ${at}.`);
+      else if (g.kind === 'bonfire') this.announce(e.t, `Tomorrow evening: a bonfire ${at}.`);
       return;
     }
     if (e.phase === 'start') {
@@ -650,7 +666,7 @@ export class Narrator {
       this.live(e.t, cap(template.replace('{at}', at).replace('{festival}', g.label)));
       return;
     }
-    if (g.kind === 'trade_cart' || g.kind === 'musician' || g.kind === 'market') {
+    if (g.kind === 'trade_cart' || g.kind === 'musician' || g.kind === 'market' || g.kind === 'lantern_walk' || g.kind === 'tales' || g.kind === 'bonfire') {
       const who = g.attendees.length > 0 ? `${this.names(g.attendees)} came by.` : 'Hardly anyone came.';
       this.live(e.t, `${cap(g.label)} packs up. ${who}`);
     }
@@ -887,6 +903,8 @@ export class Narrator {
 
   /** The last thing a resident said to the steward, for the talk panel. */
   lastReply: { who: string; t: number; text: string } | null = null;
+  /** What the steward last said in reply, in words (bar round 2: the chips and the chat show the same). */
+  lastSaid: { who: string; t: number; text: string } | null = null;
 
   /** An answer to the steward, in the resident's voice (the words only). */
   answer(who: string, a: TalkAnswer): string {
@@ -910,7 +928,8 @@ export class Narrator {
         const lines = a.question === 'me' ? TALK_ME[a.band ?? 'neutral'] : (person ? TALK_OPINION_PERSON : TALK_OPINION)[a.band ?? 'neutral'];
         const head = this.utter(who, lines, { s: a.about ? this.subjectName(a.about) : 'that' });
         const why = a.because && a.band !== 'neutral' ? this.utter(who, TALK_REASON, { statement: this.spoken(who, a.because) }) : '';
-        return [head, why].filter(Boolean).join(' ');
+        const but = a.but ? this.utter(who, TALK_BUT, { x: a.but.note }) : '';
+        return [head, why, but].filter(Boolean).join(' ');
       }
     }
   }

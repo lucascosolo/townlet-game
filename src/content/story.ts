@@ -26,12 +26,44 @@ export const PROPOSALS: Record<DilemmaType, Lines> = {
     chatty: ['Tomorrow, the commons, my contraption! You will not believe it!'],
     dreamy: ['Ooh, can I show everyone my contraption on the commons? It might even work.'],
   },
+  lantern_walk: {
+    plain: ['Lanterns. A walk along the water, tomorrow night. Say yes.'],
+    formal: ['Might we have a lantern walk tomorrow evening? Everyone, with a light, along the water.'],
+    warm: ['What if we all walked out with lanterns tomorrow night? It would be lovely, honestly.'],
+    chatty: ['Lanterns! Tomorrow night! All of us, lit up like fireflies!'],
+    dreamy: ['A line of lanterns along the water, tomorrow, after dark. Can we?'],
+  },
+  tales_night: {
+    plain: ['An evening of tales. Everyone brings one.'],
+    formal: ['I propose an evening of stories, tomorrow, with everyone invited to tell one.'],
+    warm: ["Could we have a night of tales tomorrow? Everyone has one, even if they say they don't."],
+    chatty: ['Story night! Tomorrow! I have at least six!'],
+    dreamy: ['Tomorrow evening, all of us, and a story each. Old ones are best.'],
+  },
+  cart_stop: {
+    plain: ["Let Pip's cart stop the night on the commons. Pip pays in timber."],
+    formal: ["Pip has asked to stop the night on the commons with the cart, and will pay for the pitch in timber. I am in favour."],
+    warm: ["Pip wants to stop the night with the cart. It'd mean a bit of timber for us, and company of an evening."],
+    chatty: ["Pip's cart, overnight, on the commons! Timber for the pitch! Lamps and trade till late!"],
+    dreamy: ["Pip's cart could stop the night. Lamps on the commons, and a little timber for it."],
+  },
+  bonfire_night: {
+    plain: ['A bonfire on the commons tomorrow. Three timber. Worth it.'],
+    formal: ['I propose a bonfire on the commons tomorrow evening. It costs a little timber and brings everyone out.'],
+    warm: ['Can we have a bonfire tomorrow night? Just a little timber, and everyone round it.'],
+    chatty: ['BONFIRE! Tomorrow! Big one! Three timber, who cares!'],
+    dreamy: ['A fire on the commons tomorrow, and all our faces in it.'],
+  },
 };
 
 export const DILEMMA_NAMES: Record<DilemmaType, string> = {
   market_day: 'weekly market',
   night_baking: 'night of baking before the festival',
   contraption: 'contraption on the commons',
+  lantern_walk: 'lantern walk tomorrow night',
+  tales_night: 'night of tales',
+  cart_stop: "night's stop for Pip's cart",
+  bonfire_night: 'bonfire on the commons',
 };
 
 // {at} is the place with its preposition: "on the commons", "at the teahouse", "under the old oak".
@@ -41,6 +73,9 @@ export const GATHERING_START: Record<string, string> = {
   market: 'Market day: stalls go up {at}.',
   musician: 'The fiddler strikes up {at}.',
   contraption: '{festival}: the unveiling {at}.',
+  lantern_walk: 'Lanterns are lit {at}: the lantern walk sets off.',
+  tales: 'Chairs are pulled round {at}: {festival} begins.',
+  bonfire: 'The bonfire catches {at}.',
 };
 
 export const PREPOSITIONS: Record<string, string> = {

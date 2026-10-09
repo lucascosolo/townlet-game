@@ -4,6 +4,7 @@
 // acquaintance with the steward; asking again the same day changes nothing.
 
 import { opinion } from './mind/memory.js';
+import { freshGrievance } from './mind/thoughts.js';
 import { TICKS_PER_DAY } from './time.js';
 import { rel } from './mind/relationships.js';
 import { topOfMind } from './mind/thoughts.js';
@@ -18,13 +19,30 @@ export function feelingBand(v: number): string {
   return v > 0.3 ? 'love' : v > 0.05 ? 'like' : v >= -0.05 ? 'neutral' : v >= -0.3 ? 'dislike' : 'hate';
 }
 
-function strongestBelief(r: ResidentState, subject: SubjectId, skip: Record<string, number> = {}): Belief | undefined {
-  const all = Object.values(r.beliefs)
-    .filter((b) => b.subject === subject)
-    .sort((a, b) => b.strength * Math.abs(b.valence) - a.strength * Math.abs(a.valence));
+/**
+ * The reason behind a feeling: the strongest belief about the subject, or a trace still forming.
+ * Bar round 2: the reason has the feeling's sign (no "I am grateful... you still irritate me"),
+ * and something fresh (a source in the last two days) counts double, so the day after you felled
+ * their oak that is what they bring up, not an old settled view.
+ */
+function strongestBelief(r: ResidentState, subject: SubjectId, skip: Record<string, number> = {}, sign = 0, now = 0): Pick<Belief, 'subject' | 'aspect' | 'valence'> | undefined {
+  const fresh = (sources: Array<{ tick: number }>) => sources.some((x) => now - x.tick < 2 * TICKS_PER_DAY);
+  const all: Array<{ subject: SubjectId; aspect: string; valence: number; weight: number }> = [
+    ...Object.values(r.beliefs)
+      .filter((b) => b.subject === subject)
+      .map((b) => ({ subject: b.subject, aspect: b.aspect, valence: b.valence, weight: b.strength * Math.abs(b.valence) * (fresh(b.sources) ? 2 : 1) })),
+    ...Object.values(r.traces)
+      .filter((t) => t.subject === subject && !r.beliefs[`${t.subject}|${t.aspect}`] && Math.abs(t.evidence) > 0.1)
+      .map((t) => ({ subject: t.subject, aspect: t.aspect, valence: Math.sign(t.evidence), weight: 0.5 * Math.abs(t.evidence) * (fresh(t.sources) ? 2 : 1) })),
+  ]
+    .filter((b) => sign === 0 || Math.sign(b.valence) === sign)
+    .sort((a, b) => b.weight - a.weight);
   // One not given as the reason lately, if there is one (bar round 1: "you listen" every day).
   return all.find((b) => skip[b.aspect] === undefined) ?? all[0];
 }
+
+/** The sign a reason must have to fit a feeling: none when the feeling is neutral. */
+const reasonSign = (v: number) => (v > 0.05 ? 1 : v < -0.05 ? -1 : 0);
 
 /** How a resident feels about someone or something, for "what do you think of…": people by affinity and belief, places by belief. */
 export function feelingAbout(r: ResidentState, subject: SubjectId, now: number): number {
@@ -42,14 +60,21 @@ export function feelingAbout(r: ResidentState, subject: SubjectId, now: number):
 export function talkAnswer(state: SimState, r: ResidentState, question: TalkQuestion, about?: SubjectId): TalkAnswer {
   const top = topOfMind(state, r, 3).map((t, rank) => ({ key: t.key, ...(t.about ? { about: t.about } : {}), vars: t.vars, rank }));
   switch (question) {
-    case 'how':
+    case 'how': {
+      // Asked by someone who has let them down badly, "how are you" is no better than fair, and
+      // says why (bar round 2: the page said "unhappy with you" while the mouth said "rather good spirits").
+      const sour = rel(r, STEWARD).affinity < -0.5;
+      const band = moodBand(r.mood);
+      const capped = sour && (band === 'good' || band === 'great');
+      const topics = capped ? [{ key: 'steward:-', about: STEWARD as SubjectId, vars: {}, rank: 0 }, ...top.slice(0, 1).map((t) => ({ ...t, rank: 1 }))] : top.slice(0, 1);
       return {
         question,
-        band: moodBand(r.mood),
-        value: r.mood,
-        topics: top.slice(0, 1),
+        band: capped ? 'fair' : band,
+        value: capped ? Math.min(r.mood, 0.6) : r.mood,
+        topics,
         ...(r.moodArc ? { mood: { kind: r.moodArc.kind, reason: r.moodArc.reason } } : {}),
       };
+    }
     case 'mind':
       return { question, topics: top };
     case 'hope':
@@ -57,13 +82,15 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
     case 'opinion': {
       const subject = about ?? STEWARD;
       const v = feelingAbout(r, subject, state.tick);
-      const b = strongestBelief(r, subject);
+      const b = strongestBelief(r, subject, {}, reasonSign(v), state.tick);
       return { question, about: subject, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
     }
     case 'me': {
       const v = feelingAbout(r, STEWARD, state.tick);
-      const b = strongestBelief(r, STEWARD, r.cited ?? {});
-      return { question, about: STEWARD, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
+      const b = strongestBelief(r, STEWARD, r.cited ?? {}, reasonSign(v), state.tick);
+      // A kind view still concedes a fresh wrong (bar round 2): "I think well of you, though you felled the oak".
+      const fresh = reasonSign(v) >= 0 ? freshGrievance(r, state.tick) : null;
+      return { question, about: STEWARD, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}), ...(fresh ? { but: { aspect: fresh.aspect, note: fresh.note } } : {}) };
     }
   }
 }
@@ -79,12 +106,46 @@ export function reconcile(answer: TalkAnswer): TalkAnswer {
   const dark = band === 'low' || band === 'bad' || band === 'dislike' || band === 'hate';
   if (answer.topics && (sunny || dark)) {
     answer.topics = answer.topics.filter((t) => {
-      if (sunny && (t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)))) return false;
+      if (sunny && (t.key === 'steward:-' || t.key === 'steward:fresh' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)))) return false;
       if (dark && (t.key === 'feel:joy' || t.key === 'steward:+' || (t.about === STEWARD && t.key === 'feel:gratitude'))) return false;
       return true;
     });
   }
+  // One feeling per subject in one breath (bar round 2: "I am grateful to you... you still
+  // irritate me"): where two topics about the same thing pull opposite ways, the higher-ranked one stays.
+  if (answer.topics) {
+    const seen = new Map<string, number>();
+    answer.topics = answer.topics.filter((t) => {
+      const sign = topicSign(t.key);
+      const subject = t.about ?? '';
+      if (!subject || sign === 0) return true;
+      const prior = seen.get(subject);
+      if (prior !== undefined && prior !== sign) return false;
+      seen.set(subject, sign);
+      return true;
+    });
+  }
   return answer;
+}
+
+/** Which way a mind topic leans about its subject, or 0 for a plain observation. */
+export function topicSign(key: string): number {
+  if (key === 'steward:+' || key === 'belief:+' || key === 'belief_person:+' || /^feel:(joy|gratitude|pride)/.test(key)) return 1;
+  if (key === 'steward:-' || key === 'steward:fresh' || key === 'belief:-' || key === 'belief_person:-' || key === 'grudge' || /^feel:(annoyance|worry|grief|loneliness)/.test(key)) return -1;
+  return 0;
+}
+
+/** Whether a memory about any subject agrees with what the answer already says about it (bar round 2). */
+export function memoryAgrees(answer: TalkAnswer, memory: { subject: SubjectId; valence: number }): boolean {
+  const sign = Math.sign(memory.valence);
+  if (sign === 0) return true;
+  for (const t of answer.topics ?? []) if (t.about === memory.subject && topicSign(t.key) !== 0 && topicSign(t.key) !== sign) return false;
+  // "Bram is pleasant company" does not go on "it still weighs on me that Bram and I argued".
+  if (answer.about === memory.subject && answer.band) {
+    const bandSign = ['love', 'like'].includes(answer.band) ? 1 : ['dislike', 'hate'].includes(answer.band) ? -1 : 0;
+    if (bandSign !== 0 && bandSign !== sign) return false;
+  }
+  return true;
 }
 
 /** Whether a memory about the steward with this feeling fits the answer's band. */

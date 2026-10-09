@@ -8,7 +8,7 @@ import { considerFavour, openPlots, WILLING } from '../src/sim/favours.js';
 import { assess } from '../src/sim/asks.js';
 import { rel } from '../src/sim/mind/relationships.js';
 import { topOfMind } from '../src/sim/mind/thoughts.js';
-import { feelingAbout, feelingBand, moodBand } from '../src/sim/talk.js';
+import { feelingAbout, feelingBand, moodBand, reconcile } from '../src/sim/talk.js';
 import { dreamTitle, nextStep } from '../src/sim/story/aspirations.js';
 import { at, TICKS_PER_DAY } from '../src/sim/time.js';
 import { TRAITS, VALUES, type SimEvent } from '../src/sim/types.js';
@@ -207,7 +207,8 @@ describe('criterion 3: newcomers', () => {
     const r = sim.resident(sim.state.order[6] as string);
     expect(r.aspiration.done).toBe(false);
     expect(r.aspiration.kind).toBe('settle');
-    expect(dreamTitle(sim.state, r)).toBe('Settle into the valley');
+    // Bar round 2: the first dream carries their own hope, as their trade gave it.
+    expect(dreamTitle(sim.state, r)).toBeTruthy();
     expect(nextStep(sim.state, r)).toBe('Get to know the neighbours');
   });
 
@@ -251,7 +252,8 @@ describe('criterion 4 (M3b criterion 4): talking to a resident', () => {
         const how = sim.talk(id, 'how');
         expect(how?.band).toBe(moodBand(r.mood));
         const mind = sim.talk(id, 'mind');
-        const top = topOfMind(sim.state, r, 3);
+        // Bar round 2: an answer keeps one feeling per subject, so the comparison is with the reconciled list.
+        const top = reconcile({ question: 'mind', topics: topOfMind(sim.state, r, 3).map((t, rank) => ({ key: t.key, ...(t.about ? { about: t.about } : {}), vars: t.vars, rank })) }).topics ?? [];
         expect(mind?.topics?.map((t) => t.key)).toEqual(top.map((t) => t.key));
         for (const other of sim.state.order.filter((o) => o !== id)) {
           const a = sim.talk(id, 'opinion', `r:${other}`);

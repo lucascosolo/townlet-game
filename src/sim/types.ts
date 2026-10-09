@@ -13,7 +13,7 @@ export type Trait = (typeof TRAITS)[number];
 export const VALUES = ['beauty', 'quiet', 'community', 'craft', 'nature', 'prosperity'] as const;
 export type Value = (typeof VALUES)[number];
 
-export const ACTIVITIES = ['sleep', 'eat', 'work', 'socialize', 'stroll', 'rest'] as const;
+export const ACTIVITIES = ['sleep', 'eat', 'work', 'socialize', 'stroll', 'rest', 'forage'] as const;
 export type ActivityId = (typeof ACTIVITIES)[number];
 
 export type Register = 'formal' | 'warm' | 'plain' | 'chatty' | 'dreamy';
@@ -236,7 +236,8 @@ export interface ResidentState {
   dayMoodSum: number;
   dayMoodN: number;
   lowDays: number;
-  leaving: { sinceDay: number } | null;
+  /** Thinking of leaving since this day; `dream` when it came from a dream's decision (bar round 2), which only a very good week turns round. */
+  leaving: { sinceDay: number; dream?: boolean } | null;
   departed: boolean;
   /** Tick a newcomer moved in (M3c); absent for the founding cast. */
   arrivedTick?: number;
@@ -257,6 +258,10 @@ export interface ResidentState {
   lastHungryDay?: number;
   /** Consecutive days of meagre meals ending on lastHungryDay. */
   hungryRun?: number;
+  /** The last day they went foraging (bar round 2): one trip a day when the larder is bare. */
+  lastForageDay?: number;
+  /** Trips made on lastForageDay (two when very hungry). */
+  forageTrips?: number;
   /** Day of the steward's last talk with them that counted (M3b: no farming). */
   lastTalkDay?: number;
   /** A favour they agreed to and are doing (M3c). */
@@ -343,6 +348,8 @@ export interface TalkAnswer {
   about?: SubjectId;
   /** opinion/me: the belief behind it, if any. */
   because?: { subject: SubjectId; aspect: string };
+  /** me: a fresh grievance conceded after a kind view (bar round 2), in their words. */
+  but?: { aspect: string; note: string };
   /** A memory they bring up, if any (memories in conversation, 2026-10-08). */
   memory?: import('./recall.js').Recollection;
   /** The replies the steward can make to this answer (talking back, bar round 1). */
@@ -378,7 +385,8 @@ export interface Wish {
   label: string;
   supporters: string[];
   madeTick: number;
-  status: 'open' | 'granted' | 'missed';
+  /** dropped: its last wisher left town (bar round 2: "0 of 0 who wished for it have it"). */
+  status: 'open' | 'granted' | 'missed' | 'dropped';
   closedTick?: number;
 }
 
@@ -386,7 +394,7 @@ export interface Wish {
 
 export type Tone = 'good' | 'bad' | 'neutral';
 
-export type GatheringKind = 'festival' | 'trade_cart' | 'musician' | 'market' | 'contraption';
+export type GatheringKind = 'festival' | 'trade_cart' | 'musician' | 'market' | 'contraption' | 'lantern_walk' | 'tales' | 'bonfire';
 
 /** A time-boxed reason to be somewhere: a festival, a visitor, a market. */
 export interface Gathering {
@@ -423,7 +431,7 @@ export interface Spark {
   until: number;
 }
 
-export type DilemmaType = 'market_day' | 'night_baking' | 'contraption';
+export type DilemmaType = 'market_day' | 'night_baking' | 'contraption' | 'lantern_walk' | 'tales_night' | 'cart_stop' | 'bonfire_night';
 export type DilemmaStatus = 'open' | 'approved' | 'declined' | 'lapsed';
 
 export interface Dilemma {
@@ -453,6 +461,8 @@ export interface StoryState {
   weather: Weather;
   sparks: Spark[];
   dilemmas: Dilemma[];
+  /** Mornings in a row with nothing open on the board (bar round 2): after three, the town finds something to put to the steward. */
+  quietMornings?: number;
   memories: TownMemory[];
   /** Seasonal Town Wishes. */
   wishes: Wish[];
@@ -550,7 +560,7 @@ export type SimEvent =
     }
   | { t: number; type: 'grief'; who: string; building: number; btype: string; how: 'saw' | 'woke' | 'heard' }
   | { t: number; type: 'shortage'; resource: Resource; who: string }
-  | { t: number; type: 'wish'; phase: 'made' | 'granted' | 'missed'; wish: Wish }
+  | { t: number; type: 'wish'; phase: 'made' | 'granted' | 'missed' | 'dropped'; wish: Wish }
   /** One resident calls on a friend and they walk somewhere together. */
   | { t: number; type: 'invite'; a: string; b: string; place: number }
   /** Something on a resident's mind surfaced as a passing thought (M3a). Always one of their top three. */
@@ -570,8 +580,13 @@ export type SimEvent =
   | { t: number; type: 'talk'; who: string; answer: TalkAnswer; counted: boolean }
   | { t: number; type: 'reply'; who: string; reply: import('./replies.js').ReplyKind; stance: import('./replies.js').ReplyStance; aspect?: string }
   /** A resident's view of the steward moved overnight, and why. */
-  | { t: number; type: 'standing'; who: string; delta: number; reasons: string[] }
+  /** Standing moved: `reasons` pulled the way it moved, `also` the other way (bar round 2: each side with its own sign). */
+  | { t: number; type: 'standing'; who: string; delta: number; reasons: string[]; also?: string[] }
   | { t: number; type: 'thinking_of_leaving'; who: string }
+  /** A dream stage waited on the steward for over a week and the dreamer let it go (bar round 2). */
+  | { t: number; type: 'dream_let_go'; who: string; wants: string }
+  /** A hungry resident went looking for food along the brook or the wild edge (bar round 2). */
+  | { t: number; type: 'forage'; who: string; placeId: number; food: number }
   /** A newcomer moves into an empty home (M3c). */
   | { t: number; type: 'arrived'; who: string; home: number }
   | { t: number; type: 'decided_to_stay'; who: string }

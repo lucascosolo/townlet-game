@@ -76,8 +76,10 @@ describe('twin: word gets around', () => {
       reachedWith += others(base);
       reachedWithout += others(twin);
     }
-    expect(reachedWithout).toBe(0);
-    expect(reachedWith).toBeGreaterThanOrEqual(SEEDS.length);
+    // Bar round 2: rivalries form on their own again, and a quarrel is gossiped about, so the twin
+    // without the planted grievance is not always silent about Marlow. The planting still has to
+    // reach one more person per seed than the town's own talk does.
+    expect(reachedWith).toBeGreaterThanOrEqual(reachedWithout + SEEDS.length);
   });
 });
 
@@ -88,6 +90,8 @@ describe('twin: memories change behaviour', () => {
     for (const seed of SEEDS) {
       const base = Simulation.fromScenario(quietScenario, seed);
       base.runDays(2);
+      // A full larder (bar round 2): hunger now weighs on where people go, and this twin is about memory.
+      base.state.stock.food = 200;
       const bench = base.state.buildings.find((b) => b.type === 'bench')!;
       const twin = base.clone();
       for (let i = 0; i < 3; i++) {

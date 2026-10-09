@@ -52,7 +52,8 @@ export function companyOvershoot(level: number, setpoint: number, def: ResidentD
   return over > 0 ? over * (1 - unit(def.traits.sociable)) * 2 : 0;
 }
 
-const MOOD_WEIGHTS: NeedMap = { rest: 1.2, food: 1.2, comfort: 1, company: 1, purpose: 0.7, delight: 0.7 };
+// Hunger weighs most (bar round 2: a week of thin suppers barely moved mood).
+const MOOD_WEIGHTS: NeedMap = { rest: 1.2, food: 2.5, comfort: 1, company: 1, purpose: 0.7, delight: 0.7 };
 
 export function needsWellbeing(needs: NeedMap, setpoints: NeedMap, def: ResidentDef): number {
   let total = 0;
@@ -84,4 +85,5 @@ export const ACTIVITY_EFFECTS: Record<ActivityId, Partial<NeedMap>> = {
   socialize: { company: 0.22, delight: 0.06 },
   stroll: { delight: 0.16, comfort: 0.04, purpose: 0.02 },
   rest: { comfort: 0.15, rest: 0.05, delight: 0.02 },
+  forage: { purpose: 0.1, rest: -0.03, delight: 0.04 },
 };

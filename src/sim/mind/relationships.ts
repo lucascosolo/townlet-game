@@ -6,7 +6,12 @@ import type { MindContext } from './mind.js';
 import { opinion } from './memory.js';
 
 /** The most a single night's dealings with the steward can move standing, each way. */
-export const STEWARD_NIGHT_CAP = { good: 0.3, bad: 0.6 } as const;
+/**
+ * Bar round 2: good news moves standing two thirds as far as it did (0.3), so nobody thinks the
+ * world of you by day 3; a kindness lands twice as hard on someone thinking of leaving, so the
+ * window to turn them round stays open.
+ */
+export const STEWARD_NIGHT_CAP = { good: 0.2, bad: 0.6 } as const;
 
 export function newRelationship(): Relationship {
   return { affinity: 0.1, familiarity: 0.3, trust: 0.4, lastContact: -1, lastArgue: -1, tags: [] };
@@ -71,7 +76,7 @@ export function nightlyRelationships(ctx: MindContext, r: ResidentState, steward
       // answered ask no longer makes a devotee overnight and a felled oak costs more than a bed of
       // flowers earns; and standing relaxes faster when nothing happens.
       const op = opinion(r, STEWARD);
-      const ev = clamp(stewardEvidence, -STEWARD_NIGHT_CAP.bad, STEWARD_NIGHT_CAP.good);
+      const ev = clamp(stewardEvidence, -STEWARD_NIGHT_CAP.bad, STEWARD_NIGHT_CAP.good * (r.leaving ? 2 : 1));
       x.affinity = clamp(x.affinity + 0.05 * (0.2 - x.affinity) + 0.5 * ev + 0.03 * op, -1, 1);
       x.trust = clamp(x.trust + 0.04 * (0.5 - x.trust) + 0.3 * ev + 0.02 * op);
       continue;

@@ -263,7 +263,24 @@ export class TownView {
       if (lamp) lamp.material = lit ? glow.lantern : glow.lanternOut;
       this.lampsDirty = true;
     }
+    // Street lamps burn while anyone in the valley is still up, and go out when the last one is in
+    // bed (owner, 2026-10-09: "not at a set time").
+    const up = Object.values(state.residents).some((r) => !r.departed && r.activity?.id !== 'sleep');
+    if (up !== this.streetLit) {
+      this.streetLit = up;
+      for (const g of this.buildings.values()) {
+        g.traverse((o) => {
+          if (o.name !== 'street-lamp') return;
+          (o.userData.spot as THREE.Object3D).visible = up;
+          (o.userData.lamp as THREE.Mesh).material = up ? glow.lantern : glow.lanternOut;
+        });
+      }
+      this.lampsDirty = true;
+    }
   }
+
+  /** Whether the street lamps are lit; null until first set, so a new building is brought into line. */
+  private streetLit: boolean | null = null;
 
   /** Put the real lights at the lamps nearest the middle of the view. */
   private placeLamps(night: number): void {
@@ -476,6 +493,8 @@ export class TownView {
         g.userData.porch = g.getObjectByName('porch');
         g.userData.porchLamp = g.getObjectByName('porch-lamp');
       }
+      // A new street lamp takes the town's state (lit or out) on the next frame.
+      if (g.getObjectByName('street-lamp')) this.streetLit = null;
       g.traverse((o) => {
         if (o instanceof THREE.Mesh && o.name === 'canopy') o.material = this.leafMat;
         if (o instanceof THREE.Mesh && o.name === 'canopy-v') o.material = this.leafMatV;

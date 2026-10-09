@@ -115,3 +115,32 @@ test('the town fills the stage on a phone, and follows the stage when it changes
   expect(Math.abs(f.buffer[1]! / f.stage[1]! - f.buffer[0]! / f.stage[0]!)).toBeLessThan(0.05);
   await ctx.close();
 });
+
+test('street lamps burn while anyone is up and go out when the last one is in bed', async ({ page }) => {
+  await page.goto('/?intro=0&scenario=quiet&seed=1&speed=0');
+  await page.waitForFunction(() => (window as unknown as { __townlet?: unknown }).__townlet !== undefined);
+  const lamps = () =>
+    page.evaluate(() => {
+      const x = (window as unknown as { __townlet: { game: { sim: { state: { residents: Record<string, { departed: boolean; activity?: { id: string } }> } } }; view: { scene: { traverse(f: (o: { name: string; userData: Record<string, { visible: boolean }> }) => void): void } } } }).__townlet;
+      const up = Object.values(x.game.sim.state.residents).some((r) => !r.departed && r.activity?.id !== 'sleep');
+      const lit: boolean[] = [];
+      x.view.scene.traverse((o) => {
+        if (o.name === 'street-lamp') lit.push(o.userData.spot!.visible);
+      });
+      return { up, lit };
+    });
+  let checked = 0;
+  for (const [day, hour] of [[2, 21], [3, 2], [3, 22], [4, 3]] as const) {
+    await page.evaluate((t) => {
+      const x = (window as unknown as { __townlet: { runTicks(n: number): void; game: { sim: { tick: number } } } }).__townlet;
+      x.runTicks(t - x.game.sim.tick);
+    }, at(day, hour));
+    await putOff(page);
+    await frames(page);
+    const s = await lamps();
+    if (s.lit.length === 0) continue;
+    for (const v of s.lit) expect(v, `day ${day} ${hour}:00, someone up: ${s.up}`).toBe(s.up);
+    checked++;
+  }
+  expect(checked).toBeGreaterThan(0);
+});

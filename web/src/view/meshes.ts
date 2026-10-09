@@ -122,8 +122,13 @@ function lanternPost(x: number, z: number): THREE.Group {
   const lamp = new THREE.Mesh(new THREE.OctahedronGeometry(0.08, 0), glow.lantern);
   lamp.position.y = 0.65;
   g.add(lamp);
-  g.add(lightSpot(0, 0.7, 0, 2.6));
+  const spot = lightSpot(0, 0.7, 0, 2.6);
+  g.add(spot);
   g.position.set(x, 0, z);
+  // The scene puts street lamps out once everyone has gone to bed (owner, 2026-10-09).
+  g.name = 'street-lamp';
+  g.userData.lamp = lamp;
+  g.userData.spot = spot;
   return g;
 }
 

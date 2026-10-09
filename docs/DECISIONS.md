@@ -2,6 +2,27 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-09: Bar round 3: no raw text, hunger that hurts, replies with substance, shorter answers, a tidier board
+
+**The review** (`docs/reviews/2026-10-09-bar-review-3.md`) scored the game 6, 5, 7, 6, 6. It credits round 2 with replies that name the grievance, proposals every few days that lapse as promised, residents who give up waiting and warn before leaving, and a phone start without a modal. What still holds it under: raw ids and broken grammar on screen, a famine nobody feels, replies that are one chip and a stock answer, answers that are stitched lists, and a board that repeats itself. Round 3 takes all nine problems in rank order, plus the round-2 misses (the year soak under total neglect, the hungry week's 0.10, the favours refusal rate).
+
+**Chosen:**
+- **No raw text.** Every belief aspect the sim can form has a statement, checked by a test that scans the code for aspects. A grievance note is kept as a whole clause ("nothing was done", "you took away the old oak") so a sentence never reads "Though you nothing was done". "The steward really does care" becomes "You really do care". Plural building names take "are". A belief list names each building once. A wish counts only the wishers still in town, and a departed resident's asks close the day they leave. The tier modal and the log read the same gift. The needs line never says "all met" while a need is low.
+- **Hunger hurts.** A town that went short in the last three days weighs on everyone's mood, more each day it goes on, whether or not they ate; a hungry resident answers "how are you" no better than fair and never with joy; nobody moves into a town that went hungry in the last two days. Foraging still keeps people alive, but no longer keeps them cheerful. This replaces round 2's per-meal pang as the main lever, so the per-resident numbers stay where the year soak was clean.
+- **The neglected stop expecting.** Someone ignored for long enough (three asks lapsed in a fortnight) gives up on the steward: their open asks close, they stop asking for a week, and the nightly "kept me waiting" stops. Neglect wounds once, then settles into a low opinion, rather than bleeding every night until they leave. This is the round-2 year-soak fix.
+- **Replies with substance.** Every answer that says something (a non-neutral feeling, or anything on their mind) can be agreed or disagreed with, and both chips name what they answer ("That's fair, about the larder"). How a reply lands depends on what was said: disagreeing with praise gets them insisting kindly, not sulking; agreeing with a complaint gets "at least you own it"; disagreeing with a view of someone else is a difference of opinion, not a slight. Each response is written for that case, with at least five lines per voice, and no response is said twice to you by the same person in a week. The talk panel keeps the last three exchanges.
+- **Shorter answers.** "How are you" is the band line plus one thing; "what's on your mind" names at most two things, and a fact takes the place of one of them rather than being added; nothing in an answer pulls against its band line ("On top of the world! Larder emergency!" cannot happen).
+- **A board that does not repeat.** Asks of the same kind are one card with everyone's names and one help line; a grievance that grows by a day updates its ledger line instead of adding one; no narrated line repeats within a week.
+- **Approval earned, favours refused.** A night's good news is capped lower again for the first week; "thinks the world of you" needs a higher standing; anyone below zero standing, or hungry two days running, refuses a favour (food favours excepted when hungry) and says why.
+- **Dreams that do not converge or stall.** At most two residents dream of making something for someone at once; a step that needs no building completes by itself after a week of trying.
+- **Layout:** the Folk album keeps a usable height on a desktop; worn ground shows only the most-walked tiles (never more than an eighth of the settled valley); the build tray's hint wraps; bubbles stop at three lines; an empty day is not given a header in Highlights; toasts come one at a time.
+- **Places have opinions.** When something is built, everyone forms a first impression from what they value, so "no view on the garden plots" is rare; building opinions have several shapes, not one template.
+
+**Rejected:**
+- *A free-text reply box.* Still four moves; the substance is in what each move answers and how it lands.
+- *Hiding the needs meter during a famine.* It should show the truth, so the truth has to be right.
+- *Tuning the year soak seed by seed.* The fix is a behaviour (giving up on the steward), not a number.
+
 ## 2026-10-08: Bar round 2: replies that fit, answers that speak, troubles that reach mood, a board of decisions, on-screen faults
 
 **The review** (`docs/reviews/2026-10-08-bar-review-2.md`) scored the game 5, 5, 7, 6, 6 against a pass mark of 8: talking back and a town that can lose someone are in, but the replies fire whether or not they fit, the answers are still lists, an empty larder moves nobody, the board is parked asks, and a handful of faults read as unfinished. Round 2 takes its problems in rank order, 1 to 5 in full and 6 to 9 as far as they go, plus the round-1 soak miss (a starving town empties).

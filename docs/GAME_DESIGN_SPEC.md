@@ -1136,6 +1136,34 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Marlow's "stay or go" now gives a week's notice like anyone else, and a very good week can still turn it round; the founding-walks count leaves doorstep tiles out; the hearsay twin allows for the town's own gossip now that rivalries form; the bench twin starts with a full larder, since hunger now moves where people go.
    - **The year-long bakery soak with newcomers (10 seeds, 112 days): missed, and kept as the nightly workflow's red step.** Seed 3, which lost 24 of 35 residents in round 1, loses nobody now that a hungry town forages, and one full run was clean. But the outcome is on a knife edge under a steward who never answers or feeds anyone for a year: the same numbers flagged seed 1 (15 of 29 left) on a later run after dreams were let go over any building they asked for, and a slightly harder hunger weight flagged seed 5 (9 of 23). One seed in ten crossing the one-third line is where the sim sits under total neglect. Not re-banded; round 3 should give the neglected a way to stop expecting the steward, so that neglect wounds once and not every night.
 
+**Bar round 3 criteria (predeclared 2026-10-09, before code).** Quiet town, seeds 1–5, unless stated. A failure is reported as a failure, not redefined.
+
+1. **No raw text.**
+   - Every belief aspect named in `src/sim` has a statement (a test scans the source).
+   - Over 30-day considerate, favours and none runs, every question to everyone every other day plus every resident's spoken beliefs on days 10, 20 and 30: no text contains a raw id in brackets, "matters (", "you nothing", "you our", "Maybe The", "You does/has/is/was", or a plural building name followed by "is".
+   - A wish card counts only wishers still in town; a departed resident has no open ask the morning after they leave.
+   - The tier-up modal's gift equals the log's (browser).
+   - The needs line does not say all needs are met while any need is under 0.3 (headless check of the same function).
+2. **Hunger hurts.** Bakery town, seeds 1–5, steward none, the larder and granary emptied every minute from day 13 (foraging finds included):
+   - mean mood on day 19 is at least 0.12 below day 12 on every seed;
+   - at least 70% of "how are you" answers on day 19 are fair or lower, and none mentions joy;
+   - no newcomer arrives within two days of a shortage (30-day favours runs with newcomers);
+   - the year-long bakery soak with newcomers finds no degenerate state, and seed 3 keeps two thirds of its people.
+3. **The neglected stop expecting.** Steward none, 28 days: every resident with three asks lapsed in a fortnight has no open ask and no "kept me waiting" pang for the following seven days; random-builder 28-day departures stay within the band (at most 4 of 10 runs).
+4. **Replies with substance.** Over 20 days of every question to everyone, considerate steward:
+   - disagree is offered on at least 90% of answers with a non-neutral band or anything on their mind;
+   - agree and disagree name the subject when the answer has one;
+   - disagreeing with praise never lands as a sulk; agreeing with a complaint raises trust;
+   - no resident gives the same response line to the steward twice in seven days, and no response line is said more than 4 times in the run;
+   - the talk panel shows the last three exchanges (browser).
+5. **Shorter answers.** Same run: no answer has more than four sentences (a tic counts as part of its sentence); "what's on your mind" names at most two topics; no "how are you" in the good or great band carries a worry, need or larder topic; no answer pairs a joy line with a hunger or larder line.
+6. **A board that does not repeat.** No two open ask cards share a kind on the board (headless check of the same grouping); a resident's standing notes never hold two lines for the same grievance within seven days; in 30-day favours, considerate and none runs, no narrated line (time stripped) repeats within seven days.
+7. **Approval earned, favours refused.** Considerate steward: nobody above 0.45 standing before day 4. Favours steward, 30 days: at least one refusal per seed names standing or hunger; anyone below zero standing refuses a non-food favour (direct check), and anyone hungry two days running refuses a non-food favour.
+8. **Dreams.** 30-day considerate runs: never more than two residents with a "make something for" dream at once; no dream step that needs no building lasts more than ten days.
+9. **Layout (browser, 1440×900 unless stated).** The Folk widget is at least 200 px tall; the build tray's hint is not clipped; no bubble is taller than three lines; no empty day header in Highlights; at most one toast on screen at a time. Headless: worn tiles shown are at most an eighth of the settled tiles on day 12 of a considerate bakery town.
+10. **Places have opinions.** Considerate quiet town, day 10: at most 30% of "what do you think of <building>" answers are neutral, and building opinions use at least three different sentence shapes.
+11. **No regressions.** Earlier tests pass or their moved measures are re-measured and reported; determinism holds; 10× stepping stays under 2 ms a frame.
+
 ### 9.4 The bar (set 2026-10-08)
 
 Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:

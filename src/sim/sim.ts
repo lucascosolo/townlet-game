@@ -25,6 +25,7 @@ import { ASK_KINDS, ASK_LAPSE_DAYS, WISH_LABELS, assess } from './asks.js';
 import { voiceTopic } from './mind/thoughts.js';
 import { runExchange } from './social.js';
 import { memoryFits, reconcile, talkAnswer, memoryAgrees } from './talk.js';
+import { townHunger } from './hunger.js';
 import {
   ASKS_BEFORE_GRATING,
   CLEAR_MINUTES,
@@ -164,6 +165,11 @@ function detailFor(q: Quality, change: number): string {
 }
 
 /** How often a resident's asks of this kind went ignored in the last fortnight. */
+/** Every ask of theirs lapsed in the last fortnight. */
+function allLapses(state: SimState, who: string, tick: number): number {
+  return state.requests.filter((q) => q.by === who && q.status === 'lapsed' && (q.closedTick ?? 0) > tick - 14 * TICKS_PER_DAY).length;
+}
+
 function lapsesOf(state: SimState, who: string, kind: Request['kind'], tick: number): number {
   return state.requests.filter((q) => q.by === who && q.kind === kind && q.status === 'lapsed' && (q.closedTick ?? 0) > tick - 14 * TICKS_PER_DAY).length;
 }
@@ -672,6 +678,8 @@ export class Simulation implements AspirationHost {
   private newcomers(): void {
     const state = this.state;
     if (this.activeResidents().length >= Math.min(MAX_RESIDENTS, residentCap(this.state))) return;
+    // Nobody moves into a town that went hungry in the last two days (bar round 3).
+    if ((state.shortRun ?? 0) > 0 && state.lastShortageDay >= dayOf(state.tick) - 2) return;
     const home = this.emptyHomes().find((b) => state.tick - b.placedTick >= NEWCOMER_DELAY);
     if (!home) return;
     const defs = (state.newcomerDefs ??= []);
@@ -911,6 +919,7 @@ export class Simulation implements AspirationHost {
       this.mind.perceive(this.ctx(), r, { subject: STEWARD, aspect: 'went_hungry', valence: -0.6, base: r.hungryRun <= 3 ? 0.4 : 0.12, source: 'witnessed', note: 'let the larder run bare' });
     }
     if (state.lastShortageDay !== day) {
+      state.shortRun = state.lastShortageDay === day - 1 && (state.shortRun ?? 0) > 0 ? (state.shortRun ?? 0) + 1 : 1;
       state.lastShortageDay = day;
       this.emit({ t: state.tick, type: 'shortage', resource: 'food', who: r.id });
     }
@@ -1194,6 +1203,21 @@ export class Simulation implements AspirationHost {
 
     this.mind.consolidate(ctx, r);
 
+    // Ignored three times in a fortnight, they stop expecting anything of the steward for a week
+    // (bar round 3): their asks are withdrawn and the nightly "kept me waiting" stops. Neglect
+    // wounds once and settles into a low opinion, rather than bleeding every night until they go.
+    const givenUp = (r.gaveUpUntil ?? -1) > tick;
+    if (!givenUp && allLapses(state, r.id, tick) >= 3) {
+      r.gaveUpUntil = tick + 7 * TICKS_PER_DAY;
+      for (const q of state.requests) {
+        if (q.by !== r.id || q.status !== 'open') continue;
+        q.status = 'resolved';
+        q.closedTick = tick;
+        this.emit({ t: tick, type: 'request_closed', request: { ...q } });
+      }
+      this.emit({ t: tick, type: 'gave_up', who: r.id });
+    }
+    const stoppedAsking = (r.gaveUpUntil ?? -1) > tick;
     // Asks: close the ones dealt with, lapse the ignored, and voice at most one new one.
     for (const q of state.requests) {
       if (q.by !== r.id || q.status !== 'open') continue;
@@ -1219,6 +1243,7 @@ export class Simulation implements AspirationHost {
     // Even a resident who has stopped trusting the steward still says so: the player must
     // always be able to find out what is wrong (pillar 3).
     for (const kind of ASK_KINDS) {
+      if (stoppedAsking) break;
       if (state.requests.some((q) => q.by === r.id && q.kind === kind && (q.status === 'open' || (q.closedTick ?? 0) > tick - 3 * TICKS_PER_DAY))) continue;
       // Ignored twice lately, they stop asking for a while.
       if (lapsesOf(state, r.id, kind, tick) >= 2) continue;
@@ -1276,6 +1301,13 @@ export class Simulation implements AspirationHost {
     r.pending = null;
     r.path = [];
     r.jobId = null;
+    // Their asks go with them (bar round 3: a departed Wren's ask stayed on the board).
+    for (const q of this.state.requests) {
+      if (q.by !== r.id || q.status !== 'open') continue;
+      q.status = 'resolved';
+      q.closedTick = this.state.tick;
+      this.emit({ t: this.state.tick, type: 'request_closed', request: { ...q } });
+    }
     this.emit({ t: this.state.tick, type: 'left_town', who: r.id });
   }
 
@@ -1310,8 +1342,9 @@ export class Simulation implements AspirationHost {
       const standing = 0.5 + 0.5 * (r.rel[STEWARD]?.affinity ?? 0);
       // Something to look forward to: a place in town they are fond of, that still stands.
       const fond = this.hasFondPlace(r) ? 1 : 0.4;
-      r.mood = clamp(MOOD_MIX.needs * needsWellbeing(r.needs, r.setpoints, def) + MOOD_MIX.feelings * (0.5 + 0.5 * emotionBalance(r)) + MOOD_MIX.home * home + MOOD_MIX.fond * fond + MOOD_MIX.standing * standing);
-      r.dayMoodSum += r.mood;
+      r.mood = clamp(MOOD_MIX.needs * needsWellbeing(r.needs, r.setpoints, def) + MOOD_MIX.feelings * (0.5 + 0.5 * emotionBalance(r)) + MOOD_MIX.home * home + MOOD_MIX.fond * fond + MOOD_MIX.standing * standing - townHunger(this.state));
+      // Bar round 3: a famine lowers mood and talk, but the slow decision to leave is weighed without it.
+      r.dayMoodSum += r.mood + townHunger(this.state);
       r.dayMoodN++;
     }
   }

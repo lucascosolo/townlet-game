@@ -139,7 +139,9 @@ describe('playtest round 2', () => {
     expect(n.toSteward('I hope the steward misses nothing.')).toBe('I hope you miss nothing.');
     expect(n.toSteward('The steward worries too much.')).toBe('You worry too much.');
     for (const key of Object.keys(TO_STEWARD_LINES)) {
-      const said = new Set((Object.values(TO_STEWARD_LINES[key]!).flat() as string[]).map((l) => l.replace(/\{x\}/g, 'the steward')));
+      // Filled and turned to "you" the way the narrator does it (bar round 3: some lines are whole clauses, {X}).
+      const filled = (Object.values(TO_STEWARD_LINES[key]!).flat() as string[]).map((l) => l.replace(/\{x\}/g, 'the steward').replace(/\{X\}/g, 'The steward'));
+      const said = new Set([...filled, ...filled.map((l) => n.toSteward(l))]);
       for (let i = 0; i < 20; i++) {
         const words = n.answer('ada', { question: 'mind', topics: [{ key, about: 'steward', vars: { x: 'the steward' }, rank: 0 }] } as never);
         expect([...said].some((l) => words.toLowerCase().includes(l.toLowerCase())), words).toBe(true);

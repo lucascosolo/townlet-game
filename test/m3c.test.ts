@@ -253,7 +253,7 @@ describe('criterion 4 (M3b criterion 4): talking to a resident', () => {
         expect(how?.band).toBe(moodBand(r.mood));
         const mind = sim.talk(id, 'mind');
         // Bar round 2: an answer keeps one feeling per subject, so the comparison is with the reconciled list.
-        const top = reconcile({ question: 'mind', topics: topOfMind(sim.state, r, 3).map((t, rank) => ({ key: t.key, ...(t.about ? { about: t.about } : {}), vars: t.vars, rank })) }).topics ?? [];
+        const top = reconcile({ question: 'mind', topics: topOfMind(sim.state, r, 3).slice(0, 2).map((t, rank) => ({ key: t.key, ...(t.about ? { about: t.about } : {}), vars: t.vars, rank })) }).topics ?? [];
         expect(mind?.topics?.map((t) => t.key)).toEqual(top.map((t) => t.key));
         for (const other of sim.state.order.filter((o) => o !== id)) {
           const a = sim.talk(id, 'opinion', `r:${other}`);

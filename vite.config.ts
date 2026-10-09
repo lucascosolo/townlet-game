@@ -11,7 +11,8 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
     chunkSizeWarningLimit: 900,
-    rollupOptions: { output: { manualChunks: (id) => (id.includes('node_modules/three/') ? 'three' : undefined) } },
+    // The residents' written lines go in a file of their own too (bar round 3: several hundred new lines).
+    rollupOptions: { output: { manualChunks: (id) => (id.includes('node_modules/three/') ? 'three' : /[\\/]src[\\/]content[\\/]/.test(id) ? 'lines' : undefined) } },
   },
   server: { port: 5173 },
   preview: { port: 4173 },

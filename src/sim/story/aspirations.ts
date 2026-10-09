@@ -55,6 +55,7 @@ const feel = (h: AspirationHost, r: ResidentState, p: Omit<Perception, 'source'>
 
 /** Ask the steward for a dream building, unless already asked and still waiting, or refused twice. */
 function askFor(h: AspirationHost, r: ResidentState, wants: string): void {
+  if ((r.gaveUpUntil ?? -1) > h.state.tick) return;
   const mine = h.state.requests.filter((q) => q.by === r.id && q.kind === 'aspiration' && q.wants === wants);
   if (mine.some((q) => q.status === 'open')) return;
   if (mine.filter((q) => q.status === 'lapsed').length >= 2) return;
@@ -404,7 +405,8 @@ function letGo(h: AspirationHost, r: ResidentState): boolean {
   const ask = state.requests.find((q) => q.by === r.id && q.kind === 'aspiration' && (q.status === 'open' || q.status === 'lapsed') && !!q.wants && refs.has(q.wants) && !exists(state, q.wants));
   if (!ask || !ask.wants) return false;
   if (ask.status === 'open') {
-    ask.status = 'resolved';
+    // Never answered: that is a lapse, and it counts towards giving up on the steward.
+    ask.status = 'lapsed';
     ask.closedTick = state.tick;
     h.emitEvent({ t: state.tick, type: 'request_closed', request: { ...ask } });
   }
@@ -454,7 +456,11 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
   // A step that has waited on the steward for over a week is let go (bar round 2): the dreamer
   // makes do, says so, and in time dreams something else, rather than parking an ask for a month.
   if (letGo(h, r)) return;
-  if (!stage.check(h, r)) return;
+  // A step that needs nothing from the steward is done within nine days of trying, one way or
+  // another (bar round 3: "get to know the neighbours" from day 4 to day 29).
+  const waitingOnYou = h.state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open');
+  const longEnough = !stage.until && !waitingOnYou && h.state.tick - r.aspiration.since >= 9 * TICKS_PER_DAY;
+  if (!stage.check(h, r) && !longEnough) return;
   stage.enter?.(h, r);
   r.aspiration.stage++;
   r.aspiration.since = h.state.tick;

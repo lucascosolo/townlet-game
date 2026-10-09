@@ -3,7 +3,11 @@
 // steward action: the first talk of the day is a little company for them, and a little
 // acquaintance with the steward; asking again the same day changes nothing.
 
-import { opinion } from './mind/memory.js';
+import { attachment, opinion } from './mind/memory.js';
+import { buildingDef } from '../content/buildings.js';
+import { residentDef } from '../content/residents.js';
+import { ambientPrefs } from './needs.js';
+import { townHunger } from './hunger.js';
 import { freshGrievance } from './mind/thoughts.js';
 import { TICKS_PER_DAY } from './time.js';
 import { rel } from './mind/relationships.js';
@@ -45,7 +49,7 @@ function strongestBelief(r: ResidentState, subject: SubjectId, skip: Record<stri
 const reasonSign = (v: number) => (v > 0.05 ? 1 : v < -0.05 ? -1 : 0);
 
 /** How a resident feels about someone or something, for "what do you think of…": people by affinity and belief, places by belief. */
-export function feelingAbout(r: ResidentState, subject: SubjectId, now: number): number {
+export function feelingAbout(r: ResidentState, subject: SubjectId, now: number, state?: SimState): number {
   if (subject === STEWARD) return rel(r, STEWARD).affinity;
   if (subject.startsWith('r:')) {
     const x = r.rel[subject.slice(2)];
@@ -54,7 +58,29 @@ export function feelingAbout(r: ResidentState, subject: SubjectId, now: number):
     // between me and Ada" one day, "I haven't felt anything about Ada yet" the next).
     return x && x.lastArgue >= 0 && now - x.lastArgue < 2 * TICKS_PER_DAY ? Math.min(v, -0.1) : v;
   }
-  return opinion(r, subject);
+  // A place: what they have decided, half of what they are still deciding, and their taste for
+  // what it is (bar round 3: nine in ten answers about places were "no view").
+  return Math.max(-1, Math.min(1, attachment(r, subject) + (state ? taste(state, r, subject) : 0)));
+}
+
+/**
+ * A first leaning about a building from what someone values: what it gives off against what they
+ * like (green, quiet, bustle...), and its kind against their values. Small: a first impression
+ * that experience soon outweighs. Steady across days, so the same person says the same thing.
+ */
+export function taste(state: SimState, r: ResidentState, subject: SubjectId): number {
+  if (!subject.startsWith('b:')) return 0;
+  const b = state.buildings.find((x) => `b:${x.id}` === subject);
+  if (!b || b.removed) return 0;
+  const def = buildingDef(b.type);
+  const rd = residentDef(r.id);
+  const prefs = ambientPrefs(rd);
+  const e = def.emits ?? {};
+  let v = 0;
+  for (const q of Object.keys(e) as Array<keyof typeof prefs>) v += (e[q] ?? 0) * (prefs[q] ?? 0);
+  const kindValue: Record<string, number> = { work: rd.values.craft + 0.5 * rd.values.prosperity - 0.6, social: rd.values.community - 0.4, nature: rd.values.nature - 0.3, decor: rd.values.beauty - 0.3 };
+  v += 0.5 * (kindValue[def.kind] ?? 0);
+  return Math.max(-0.25, Math.min(0.25, 0.4 * v));
 }
 
 export function talkAnswer(state: SimState, r: ResidentState, question: TalkQuestion, about?: SubjectId): TalkAnswer {
@@ -64,9 +90,14 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
       // Asked by someone who has let them down badly, "how are you" is no better than fair, and
       // says why (bar round 2: the page said "unhappy with you" while the mouth said "rather good spirits").
       const sour = rel(r, STEWARD).affinity < -0.5;
+      // Hungry two days running, or in a town going short: no better than fair, and they say why (bar round 3).
+      const day = Math.floor(state.tick / TICKS_PER_DAY) + 1;
+      const hungry = ((r.hungryRun ?? 0) >= 2 && (r.lastHungryDay ?? -9) >= day - 1) || townHunger(state) >= 0.12;
       const band = moodBand(r.mood);
-      const capped = sour && (band === 'good' || band === 'great');
-      const topics = capped ? [{ key: 'steward:-', about: STEWARD as SubjectId, vars: {}, rank: 0 }, ...top.slice(0, 1).map((t) => ({ ...t, rank: 1 }))] : top.slice(0, 1);
+      const capped = (sour || hungry) && (band === 'good' || band === 'great');
+      const reason = hungry ? { key: 'larder', vars: {}, rank: 0 } : { key: 'steward:-', about: STEWARD as SubjectId, vars: {}, rank: 0 };
+      const rest = top.filter((t) => !(hungry && (t.key === 'feel:joy' || t.key === 'larder')));
+      const topics = capped || hungry ? [reason, ...rest.slice(0, 1).map((t) => ({ ...t, rank: 1 }))].slice(0, hungry && !capped ? 1 : 2) : top.slice(0, 1);
       return {
         question,
         band: capped ? 'fair' : band,
@@ -76,12 +107,13 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
       };
     }
     case 'mind':
-      return { question, topics: top };
+      // Two things at most (bar round 3: six- and ten-sentence answers).
+      return { question, topics: top.slice(0, 2) };
     case 'hope':
       return { question, hope: { title: dreamTitle(state, r) ?? '', next: nextStep(state, r), done: r.aspiration.done } };
     case 'opinion': {
       const subject = about ?? STEWARD;
-      const v = feelingAbout(r, subject, state.tick);
+      const v = feelingAbout(r, subject, state.tick, state);
       const b = strongestBelief(r, subject, {}, reasonSign(v), state.tick);
       return { question, about: subject, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
     }
@@ -110,6 +142,13 @@ export function reconcile(answer: TalkAnswer): TalkAnswer {
       if (dark && (t.key === 'feel:joy' || t.key === 'steward:+' || (t.about === STEWARD && t.key === 'feel:gratitude'))) return false;
       return true;
     });
+  }
+  // Someone well does not lead with a worry, a want or the larder (bar round 3: "On top of the
+  // world, me! Larder emergency!"); and joy and hunger never share an answer.
+  if (answer.topics && answer.question === 'how' && sunny) answer.topics = answer.topics.filter((t) => !/^(need:|larder|feel:(worry|grief|loneliness|annoyance))/.test(t.key));
+  if (answer.topics && answer.topics.some((t) => t.key === 'feel:joy') && answer.topics.some((t) => t.key === 'larder' || t.key === 'need:food')) {
+    const first = answer.topics.find((t) => t.key === 'feel:joy' || t.key === 'larder' || t.key === 'need:food')!;
+    answer.topics = answer.topics.filter((t) => t === first || !(t.key === 'feel:joy' || t.key === 'larder' || t.key === 'need:food'));
   }
   // One feeling per subject in one breath (bar round 2: "I am grateful to you... you still
   // irritate me"): where two topics about the same thing pull opposite ways, the higher-ranked one stays.

@@ -76,7 +76,9 @@ export function nightlyRelationships(ctx: MindContext, r: ResidentState, steward
       // answered ask no longer makes a devotee overnight and a felled oak costs more than a bed of
       // flowers earns; and standing relaxes faster when nothing happens.
       const op = opinion(r, STEWARD);
-      const ev = clamp(stewardEvidence, -STEWARD_NIGHT_CAP.bad, STEWARD_NIGHT_CAP.good * (r.leaving ? 2 : 1));
+      // The first week, trust is earned more slowly still (bar round 3: "you have earned my trust" on day 2).
+      const firstWeek = ctx.tick < 7 * 1440;
+      const ev = clamp(stewardEvidence, -STEWARD_NIGHT_CAP.bad, (firstWeek ? 0.14 : STEWARD_NIGHT_CAP.good) * (r.leaving ? 2 : 1));
       x.affinity = clamp(x.affinity + 0.05 * (0.2 - x.affinity) + 0.5 * ev + 0.03 * op, -1, 1);
       x.trust = clamp(x.trust + 0.04 * (0.5 - x.trust) + 0.3 * ev + 0.02 * op);
       continue;

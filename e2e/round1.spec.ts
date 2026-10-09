@@ -40,8 +40,10 @@ test('talking back: an answer offers replies, a reply lands and is answered, and
   await expect(chips).toBeVisible();
   await expect(page.getByTestId('reply-agree')).toBeVisible();
   const before = await page.getByTestId('talk-reply').textContent();
+  // Bar round 3: the chip says what it agrees with; the chat shows the chip's words.
+  const chip = (await page.getByTestId('reply-agree').textContent()) ?? '';
   await page.getByTestId('reply-agree').click();
-  await expect(page.getByTestId('talk-asked')).toContainText("That's fair.");
+  await expect(page.getByTestId('talk-asked')).toHaveText(chip);
   await expect(page.getByTestId('talk-reply')).not.toHaveText(before as string);
   await expect(chips).toBeHidden();
   // Logged as a command, so a save replays it.

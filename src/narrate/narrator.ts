@@ -43,6 +43,36 @@ function plainVerb(v: string): string {
 
 const FIRST_PERSON: Person = { subj: 'I', obj: 'me', poss: 'my' };
 
+/** A reply answered with a look, when every line for it has been said lately (bar round 3). */
+const GESTURES_WARM = ['smiles', 'nods slowly', 'looks pleased', 'gives you a warm look', 'pats your arm', 'laughs softly', 'nods, satisfied'];
+const GESTURES_COOL = ['shrugs', 'frowns', 'looks away', 'sniffs', 'says nothing', 'folds {poss} arms', 'purses {poss} lips'];
+
+/** Building names that are plural take a plural verb (bar round 3: "the garden plots is a lovely spot"). */
+const PLURAL_NAMES = ['garden plots', 'beehives'];
+const PLURAL_OF: Record<string, string> = { is: 'are', was: 'were', has: 'have', gets: 'get', keeps: 'keep', makes: 'make', does: 'do' };
+const PLURAL_VERB = new RegExp(`\\b(${PLURAL_NAMES.join('|')}) (is|was|has|gets|keeps|makes|does)\\b`, 'gi');
+
+/** Sentences in a reply, a verbal tic counting as part of the sentence it opens (bar round 3). */
+export function sentenceCount(text: string, tics: readonly string[] = []): number {
+  let t = text.replace(/[“”"]/g, '');
+  for (const tic of tics) t = t.split(tic).join('');
+  return t.split(/[.!?]+(?:\s+|$)/).filter((x) => /[a-z]/i.test(x)).length;
+}
+
+/**
+ * A grievance note as a whole clause with its subject (bar round 3: "Though you nothing was
+ * done"): "took away the old oak" is something the steward did; "nothing was done" and "our wish
+ * … came to nothing" already say who.
+ */
+/** The words a topic is said with: a fresh wrong is a whole clause. */
+function topicVars(m: Pick<MindMention, 'key' | 'vars'>): Record<string, string> {
+  return m.key === 'steward:fresh' && m.vars.x ? { ...m.vars, x: deedClause(m.vars.x) } : m.vars;
+}
+
+export function deedClause(note: string): string {
+  return /^(nothing|our|my|the|a|an|everyone|nobody|no one|it)\b/i.test(note) ? note : `the steward ${note}`;
+}
+
 export type EntryKind = 'day' | 'board' | 'live' | 'aside' | 'note' | 'thought';
 
 /** How much a line matters to someone following along: the browser log filters and highlights by it. */
@@ -55,11 +85,11 @@ export function importanceOf(e: SimEvent): Importance {
     case 'dilemma_posted':
     case 'dilemma_closed':
     case 'thinking_of_leaving':
+    case 'gave_up':
     case 'decided_to_stay':
     case 'left_town':
     case 'disturbed_sleep':
     case 'shortage':
-    case 'forage':
     case 'dream_let_go':
     case 'aspiration':
     case 'plot_cleared':
@@ -179,8 +209,16 @@ export class Narrator {
   }
 
   private entry(kind: EntryKind, t: number, text: string): void {
+    const importance = kind === 'day' || kind === 'note' ? 'normal' : kind === 'thought' ? 'minor' : this.importance;
+    // The same sentence twice in a week is skipped unless it matters (bar round 3: "Goal done:
+    // ask someone a favour" fourteen times in a month). The day headers are not sentences.
+    if (kind !== 'day' && importance !== 'major') {
+      const last = this.lastSaidLine.get(text);
+      if (last !== undefined && t - last < 7 * 1440) return;
+      this.lastSaidLine.set(text, t);
+    }
     const who = this.state.order.filter((id) => new RegExp(`\\b${this.name(id)}\\b`).test(text));
-    const e: NarratorEntry = { t, kind, text, who, importance: kind === 'day' || kind === 'note' ? 'normal' : kind === 'thought' ? 'minor' : this.importance };
+    const e: NarratorEntry = { t, kind, text, who, importance };
     this.entries.push(e);
     if (this.entries.length > MAX_ENTRIES) this.entries.splice(0, this.entries.length - MAX_ENTRIES);
     for (const l of this.entryListeners) l(e);
@@ -264,7 +302,8 @@ export class Narrator {
       .replace(/\{when\}/g, vars.when ?? '')
       .replace(/\{subj\}/g, person.subj)
       .replace(/\{obj\}/g, person.obj)
-      .replace(/\{poss\}/g, person.poss);
+      .replace(/\{poss\}/g, person.poss)
+      .replace(PLURAL_VERB, (_m: string, name: string, verb: string) => `${name} ${PLURAL_OF[verb.toLowerCase()] ?? verb}`);
   }
 
   private keepsCapital(text: string): boolean {
@@ -276,15 +315,24 @@ export class Narrator {
   }
 
   /** A line in a resident's own voice, with an occasional verbal tic, in quotes. */
-  voice(who: string, lines: Lines | undefined, vars: Record<string, string> = {}): string {
-    return `"${this.utter(who, lines, vars)}"`;
+  // A spoken line in a scene rests eight days for its speaker (bar round 3: the same apology twice in a week).
+  voice(who: string, lines: Lines | undefined, vars: Record<string, string> = {}, mineGapDays = 8): string {
+    return `"${this.utter(who, lines, vars, mineGapDays)}"`;
+  }
+
+  /** One of several ways of telling the same thing, the one this resident's story used longest ago. */
+  private freshLine(who: string, ways: string[]): string {
+    const t = this.state.tick;
+    const line = [...ways].sort((a, b) => (this.saidBy.get(`${who}|${a}`) ?? -Infinity) - (this.saidBy.get(`${who}|${b}`) ?? -Infinity))[0] as string;
+    this.saidBy.set(`${who}|${line}`, t);
+    return line;
   }
 
   /** The words of a line in a resident's voice, without quotes, so lines can be joined. */
-  utter(who: string, lines: Lines | undefined, vars: Record<string, string> = {}): string {
+  utter(who: string, lines: Lines | undefined, vars: Record<string, string> = {}, mineGapDays = 3): string {
     const def = residentDef(who);
     const options = lines?.[def.voice.register] ?? lines?.plain ?? ['...'];
-    let text = sentenceCase(fixArticles(this.fill(this.freshest(who, options), FIRST_PERSON, vars)));
+    let text = sentenceCase(fixArticles(this.fill(this.freshest(who, options, mineGapDays), FIRST_PERSON, vars)));
     // No tic on a line that already opens with an interjection, a name or a tic of its own
     // ("Honestly, you know, ..." read as a stammer).
     const opensLoud = /^(Oh|Ha|Ooh|Hey|Listen|Kaboom|What)\b/.test(text) || (this.keepsCapital(text) && !/^I\b/.test(text)) || /^[A-Z][a-z']*( [a-z']+)?,/.test(text);
@@ -322,13 +370,13 @@ export class Narrator {
     return options.length > 0 && options.every((o) => t - (this.saidBy.get(`${who}|${o}`) ?? -Infinity) < 3 * 1440 || t - (this.saidAny.get(o) ?? -Infinity) < 720);
   }
 
-  private freshest(who: string, options: string[]): string {
+  private freshest(who: string, options: string[], mineGapDays = 3): string {
     const t = this.state.tick;
     const mine = (o: string) => this.saidBy.get(`${who}|${o}`) ?? -Infinity;
     const any = (o: string) => this.saidAny.get(o) ?? -Infinity;
-    // Nobody repeats a line they said in the last three days, and nobody says a line anyone in
-    // town said in the last three days (bar round 2: one chatty line twelve times in a month).
-    const fresh = options.filter((o) => t - mine(o) >= 3 * 1440 && t - any(o) >= 8 * 1440);
+    // Nobody repeats a line they said lately, and nobody says a line anyone in town said in the
+    // last eight days (bar round 2: one chatty line twelve times in a month).
+    const fresh = options.filter((o) => t - mine(o) >= mineGapDays * 1440 && t - any(o) >= 8 * 1440);
     const line = fresh.length ? pick(this.rng, fresh) : [...options].sort((a, b) => Math.max(mine(a), any(a)) - Math.max(mine(b), any(b)))[0] ?? '...';
     this.saidBy.set(`${who}|${line}`, t);
     this.saidAny.set(line, t);
@@ -394,7 +442,21 @@ export class Narrator {
         }
         break;
       case 'disturbed_sleep':
-        this.live(e.t, `Noise from ${this.subjectName(`b:${e.building}`)} wakes ${this.name(e.who)}. ${cap(residentDef(e.who).pronouns.subj)} lie${residentDef(e.who).pronouns.subj === 'they' ? '' : 's'} awake till dawn.`);
+        {
+          // Several ways to tell a bad night, so a week of them does not read the same (bar round 3).
+          const p = residentDef(e.who).pronouns;
+          const they = p.subj === 'they';
+          const place = this.subjectName(`b:${e.building}`);
+          const name = this.name(e.who);
+          const ways = [
+            `Noise from ${place} wakes ${name}. ${cap(p.subj)} lie${they ? '' : 's'} awake till dawn.`,
+            `${name} is up in the small hours again, kept awake by ${place}.`,
+            `${cap(place)} clatters through the night, and ${name} hears every minute of it.`,
+            `${name} gives up on sleep and sits by the window; ${place} is at it again.`,
+            `Another broken night for ${name}, courtesy of ${place}.`,
+          ];
+          this.live(e.t, this.freshLine(e.who, ways));
+        }
         break;
       case 'reaction': {
         const b = this.state.buildings.find((x) => x.id === e.building);
@@ -420,7 +482,7 @@ export class Narrator {
         break;
       }
       case 'shortage':
-        this.live(e.t, `The larder is bare. ${this.name(e.who)} makes do with a thin supper. ${this.voice(e.who, SPEECH.thinSupper)}`);
+        this.live(e.t, `The larder is bare. ${this.name(e.who)} makes do with a thin supper. ${this.voice(e.who, SPEECH.thinSupper, {}, 8)}`);
         break;
       case 'forage':
         this.live(e.t, `${this.name(e.who)} goes ${this.at(e.placeId)} with a basket and comes back with ${e.food} food. ${this.voice(e.who, SPEECH.forage)}`);
@@ -493,6 +555,9 @@ export class Narrator {
       case 'thinking_of_leaving':
         this.pushBoard(() => `${this.name(e.who)} is thinking of leaving. ${this.voice(e.who, SPEECH.leaving)}`);
         break;
+      case 'gave_up':
+        this.pushBoard(() => `${this.name(e.who)} has stopped asking ${this.you ? 'you' : 'the steward'} for anything. ${this.voice(e.who, SPEECH.gaveUp)}`);
+        break;
       case 'decided_to_stay':
         this.pushBoard(() => `${this.name(e.who)} has decided to stay. ${this.voice(e.who, SPEECH.staying)}`);
         break;
@@ -559,11 +624,26 @@ export class Narrator {
       case 'renown':
         break;
       case 'reply': {
-        const words = this.utter(e.who, REPLY_LINES[e.stance]);
+        // A response is not given to you twice in a week by the same person, nor the same line
+        // by anyone in town that week; when every line is used up, they answer with a look
+        // instead of repeating themselves (bar round 3).
+        const def = residentDef(e.who);
+        const options = REPLY_LINES[e.stance]?.[def.voice.register] ?? REPLY_LINES[e.stance]?.plain ?? [];
+        const fresh = options.filter((o) => e.t - (this.saidBy.get(`${e.who}|${o}`) ?? -Infinity) >= 7 * 1440 && e.t - (this.saidAny.get(o) ?? -Infinity) >= 8 * 1440);
+        const warmish = ['warm', 'forgiven', 'convinced', 'owned', 'insist', 'with_you', 'seen'].includes(e.stance);
+        const gestures = (warmish ? GESTURES_WARM : GESTURES_COOL).map((g) => `(${this.name(e.who)} ${g.replace('{poss}', def.pronouns.poss)}.)`);
+        const freshGesture = gestures.filter((g) => e.t - (this.saidBy.get(`${e.who}|${g}`) ?? -Infinity) >= 7 * 1440);
+        let words: string;
+        if (fresh.length > 0) words = this.utter(e.who, REPLY_LINES[e.stance], {}, 7);
+        else if (freshGesture.length) {
+          words = pick(this.rng, freshGesture);
+          this.saidBy.set(`${e.who}|${words}`, e.t);
+        } else words = '';
         this.lastReply = { who: e.who, t: e.t, text: words };
         const offer = this.state.residents[e.who]?.lastAnswer?.offers.find((o) => o.kind === e.reply) ?? { kind: e.reply };
         this.lastSaid = { who: e.who, t: e.t, text: replySaid(offer, (id) => this.subjectName(id)) };
-        this.live(e.t, `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)}: "${words}"`);
+        // Not every remark needs an answer: with nothing fresh to say, they just listen.
+        this.live(e.t, words ? `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)}: "${words}"` : `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)} listens.`);
         break;
       }
       case 'gift':
@@ -786,7 +866,9 @@ export class Narrator {
         break;
       }
       case 'apologize':
-        text = e.ok ? `${at}${a} finds ${b}. ${this.voice(e.a, SPEECH.apologize, { other: b })}` : `${a} tries to apologise to ${b}, who isn't ready to hear it.`;
+        text = e.ok
+          ? `${at}${a} finds ${b}. ${this.voice(e.a, SPEECH.apologize, { other: b })}`
+          : this.freshLine(e.a, [`${a} tries to apologise to ${b}, who isn't ready to hear it.`, `${a} starts to say sorry, but ${b} walks off.`, `${b} hears ${a} out, and says nothing back.`, `${a}'s apology lands on stony ground with ${b}.`, `${b} isn't ready to make it up with ${a} yet.`]);
         break;
       case 'tease':
         if (!e.ok) text = `${at}${a} teases ${b}, and it lands badly.`;
@@ -905,11 +987,13 @@ export class Narrator {
   lastReply: { who: string; t: number; text: string } | null = null;
   /** What the steward last said in reply, in words (bar round 2: the chips and the chat show the same). */
   lastSaid: { who: string; t: number; text: string } | null = null;
+  /** When each log line was last written, so a minor line is not written twice in a week. */
+  private readonly lastSaidLine = new Map<string, number>();
 
   /** An answer to the steward, in the resident's voice (the words only). */
   answer(who: string, a: TalkAnswer): string {
     const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
-    const mind = (m: Pick<MindMention, 'key' | 'vars' | 'about'>) => this.utter(who, (m.about === STEWARD_ID && this.you && TO_STEWARD_LINES[m.key]) || MIND_LINES[m.key], m.vars);
+    const mind = (m: Pick<MindMention, 'key' | 'vars' | 'about'>) => this.utter(who, (m.about === STEWARD_ID && this.you && TO_STEWARD_LINES[m.key]) || MIND_LINES[m.key], topicVars(m));
     switch (a.question) {
       case 'how': {
         const top = a.topics?.[0];
@@ -928,7 +1012,7 @@ export class Narrator {
         const lines = a.question === 'me' ? TALK_ME[a.band ?? 'neutral'] : (person ? TALK_OPINION_PERSON : TALK_OPINION)[a.band ?? 'neutral'];
         const head = this.utter(who, lines, { s: a.about ? this.subjectName(a.about) : 'that' });
         const why = a.because && a.band !== 'neutral' ? this.utter(who, TALK_REASON, { statement: this.spoken(who, a.because) }) : '';
-        const but = a.but ? this.utter(who, TALK_BUT, { x: a.but.note }) : '';
+        const but = a.but ? this.utter(who, TALK_BUT, { x: deedClause(a.but.note) }) : '';
         return [head, why, but].filter(Boolean).join(' ');
       }
     }
@@ -952,8 +1036,29 @@ export class Narrator {
     const fact = nextFact(this.state, e.who, a.question, a.about);
     const told = fact ? factSaid(this.state, this.state.residents[e.who]!, fact) : '';
     // A memory they bring up (2026-10-08), in their own words, after the answer itself.
-    const remembered = a.memory ? this.memoryLine(e.who, a.memory, this.you) : '';
-    const words = [this.toSteward(this.answer(e.who, a)), remembered, told].filter(Boolean).join(' ');
+    let remembered = a.memory ? this.memoryLine(e.who, a.memory, this.you) : '';
+    // Four sentences at most (bar round 3): a fact takes the place of a second thing on their
+    // mind, then the second thing goes, then the memory waits for another day.
+    const tics = residentDef(e.who).voice.tics;
+    let shown = told && a.question === 'mind' ? { ...a, topics: a.topics?.slice(0, 1) } : a;
+    let head = this.toSteward(this.answer(e.who, shown));
+    const total = () => sentenceCount([head, remembered, told].filter(Boolean).join(' '), tics);
+    if (total() > 4 && (shown.topics?.length ?? 0) > 1) {
+      shown = { ...shown, topics: shown.topics?.slice(0, 1) };
+      head = this.toSteward(this.answer(e.who, shown));
+    }
+    if (total() > 4) remembered = '';
+    // "What do you think of me": the reason gives way before the concession does.
+    if (total() > 4 && shown.because) {
+      const { because: _b, ...rest } = shown;
+      shown = rest;
+      head = this.toSteward(this.answer(e.who, shown));
+    }
+    if (total() > 4 && (shown.topics?.length ?? 0) > 0) {
+      shown = { ...shown, topics: [] };
+      head = this.toSteward(this.answer(e.who, shown));
+    }
+    const words = [head, remembered, told].filter(Boolean).join(' ');
     this.lastReply = { who: e.who, t: e.t, text: words };
     this.live(e.t, `${this.you ? 'You ask' : 'The steward asks'} ${name} ${asking}. "${words}"`);
   }
@@ -961,7 +1066,7 @@ export class Narrator {
   /** Said to the steward's face: "the steward listens" becomes "you listen" (in the browser, where you are the steward). */
   toSteward(text: string): string {
     if (!this.you) return text;
-    const verbs: Array<[RegExp, string | ((m: string, v: string) => string)]> = [
+    const verbs: Array<[RegExp, string | ((m: string, ...groups: string[]) => string)]> = [
       [/\bwhoever the steward is, they care\b/gi, 'you care'],
       [/\b(the )?steward doesn't\b/gi, "you don't"],
       [/\b(the )?steward does\b/gi, 'you do'],
@@ -969,11 +1074,13 @@ export class Narrator {
       [/\bthe steward has\b/gi, 'you have'],
       [/\bthe steward's\b/gi, 'your'],
       [/\bthe steward was\b/gi, 'you were'],
-      [/\bthe steward (\w+s)\b/gi, (_m: string, v: string) => `you ${plainVerb(v)}`],
+      // "The steward really does care" is "you really do care" (bar round 3: "You really does care").
+      [/\bthe steward (really|always|never|still|truly|just|certainly|clearly) (does|has|is|was|\w+s)\b/gi, (_m: string, adv?: string, v?: string) => `you ${adv} ${v === 'is' ? 'are' : v === 'was' ? 'were' : v === 'has' ? 'have' : v === 'does' ? 'do' : plainVerb(v ?? '')}`],
+      [/\bthe steward (\w+s)\b/gi, (_m: string, v?: string) => `you ${plainVerb(v ?? '')}`],
       [/\bthe steward\b/gi, 'you'],
     ];
     let out = text;
-    for (const [re, to] of verbs) out = typeof to === 'string' ? out.replace(re, to) : out.replace(re, to);
+    for (const [re, to] of verbs) out = typeof to === 'string' ? out.replace(re, to) : out.replace(re, to as (m: string, ...g: string[]) => string);
     return out.replace(/(^|[.!?] )you\b/g, (_m, p: string) => `${p}You`);
   }
 
@@ -1031,7 +1138,7 @@ export class Narrator {
 
   /** What is on someone's mind, in their own voice. */
   mindLine(who: string, m: Pick<MindMention, 'key' | 'vars'>): string {
-    return this.voice(who, MIND_LINES[m.key], m.vars);
+    return this.voice(who, MIND_LINES[m.key], topicVars(m));
   }
 
   private thinks(e: Extract<SimEvent, { type: 'thought' }>): void {

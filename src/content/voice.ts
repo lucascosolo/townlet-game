@@ -44,6 +44,14 @@ export const BELIEF_STATEMENTS: Record<string, string> = {
   granted_wish: 'the steward makes wishes come true',
   asks_too_much: 'the steward asks too much of {obj}',
   looks_out_for_me: 'the steward looks out for {obj}',
+  // Bar round 3: every aspect the sim can form has words (a missing one showed as "matters (still_waiting)").
+  went_hungry: 'the steward lets the larder run bare',
+  still_waiting: 'the steward keeps {obj} waiting',
+  spoke_plainly: 'the steward says what they think',
+  heard_me_out: 'the steward hears {obj} out',
+  explained: 'the steward explains things',
+  excuses: 'the steward makes excuses',
+  disagreement: '{S} and {subj} see things differently',
 };
 
 /** Thoughts and speech, keyed by aspect and sign ("+" or "-"). */
@@ -209,18 +217,18 @@ export const SPEECH: Record<string, Lines> = {
     dreamy: ['You never listen, {other}.'],
   },
   apologize: {
-    plain: ['About before. Sorry.'],
-    formal: ['{other}, I owe you an apology.'],
-    warm: ["I'm sorry about the other day, {other}."],
-    chatty: ['{other}! I was a fool before. Forgive me?'],
-    dreamy: ['I said things I did not mean, {other}.'],
+    plain: ['About before. Sorry.', "Wasn't fair, what I said. Sorry, {other}.", '{other}. My fault. Sorry.', "Shouldn't have said it. Sorry.", 'Sorry, {other}. Let it lie?'],
+    formal: ['{other}, I owe you an apology.', 'I spoke out of turn, {other}. Forgive me.', 'I was wrong, {other}, and I am sorry for it.', '{other}, I regret what passed between us.', 'Allow me to apologise, {other}. I was unkind.'],
+    warm: ["I'm sorry about the other day, {other}.", "{other}, I hate that we fell out. I'm sorry.", "I didn't mean it, {other}. Truly.", "Can we start again, {other}? I'm sorry.", "I've felt awful since, {other}. Sorry."],
+    chatty: ['{other}! I was a fool before. Forgive me?', '{other}! Sorry! Sorry sorry sorry!', 'Right, {other}, I was an idiot. Friends?', "{other}! Forget what I said! I'm a donkey!", 'I take it all back, {other}! Every word!'],
+    dreamy: ['I said things I did not mean, {other}.', 'The words came out crooked, {other}. I am sorry.', '{other}, can we let the river take it?', 'I have been carrying what I said, {other}. Let me set it down.', 'Forgive me, {other}. The day was all thorns.'],
   },
   thinSupper: {
-    plain: ['Thin pickings.', 'That was not a supper.', 'Bread and not much else.'],
-    formal: ['One does not complain. One does, however, notice.', 'A thin supper, and the larder bare. We have had better evenings.', 'I shall go to bed hungry, I think.'],
-    warm: ['Not much on the plate tonight, is there.', 'We will manage. We always do. But I am hungry.', 'I gave the last of mine to the cat. Silly of me.'],
-    chatty: ['Is that it? Is that ALL?', 'My stomach is writing a strongly worded letter!', 'Thin soup again! Who is running this town?'],
-    dreamy: ['The plate is mostly plate tonight.', 'Hunger has a sound. It is a sort of hum.', 'I dreamt of bread last night. I may again.'],
+    plain: ['Thin pickings.', 'That was not a supper.', 'Bread and not much else.', 'Half a bowl. Again.', 'Stomach still empty.', 'Not enough to go round.', 'Seen better meals in a ditch.', 'Water and crusts, then.'],
+    formal: ['One does not complain. One does, however, notice.', 'A thin supper, and the larder bare. We have had better evenings.', 'I shall go to bed hungry, I think.', 'This is not what one would call a meal.', 'I have eaten more at a funeral.', 'We are reduced to scraps, it seems.', 'I shall not pretend that was sufficient.', 'Supper was brief, and so, I fear, is my patience.'],
+    warm: ['Not much on the plate tonight, is there.', 'We will manage. We always do. But I am hungry.', 'I gave the last of mine to the cat. Silly of me.', "I'm trying not to think about proper food.", 'Hardly enough to warm the bowl.', "I'll dream of stew, I expect.", "We'll laugh about this one day. Not yet.", 'Another hungry evening. I hate this.'],
+    chatty: ['Is that it? Is that ALL?', 'My stomach is writing a strongly worded letter!', 'Thin soup again! Who is running this town?', 'I could eat the table! Legs and all!', 'Supper? That was a rumour of supper!', 'My belly is shouting at me! Rudely!', 'Crumbs! Literally crumbs!', 'If this is supper, I am a duck!'],
+    dreamy: ['The plate is mostly plate tonight.', 'Hunger has a sound. It is a sort of hum.', 'I dreamt of bread last night. I may again.', 'The bowl echoes when I set it down.', 'Supper was a memory of supper.', 'I am hollow as an old tree.', 'Even the candle looks hungry.', 'The night tastes of nothing.'],
   },
   forage: {
     plain: ["Found some. Won't last.", 'A basketful. Just about.', 'Nettles and a few eggs. It is food.', 'Better than an empty pot.', 'That is tonight sorted, no more.'],
@@ -228,6 +236,13 @@ export const SPEECH: Record<string, Lines> = {
     warm: ['Something, at least. Better than nothing on the table.', 'The brook never lets you down, not entirely.', 'Enough for a stew, if I am clever with it.', 'I found more than I expected. Small mercies.', "It'll feed us tonight, and that's what matters."],
     chatty: ['Berries! And a mushroom I am nearly sure about!', 'Provisions! Of a sort!', 'Look! Food! Free food!', 'The hedge is a shop that never shuts!', 'I wrestled a fish! The fish won, but I kept the eggs!'],
     dreamy: ['The hedge gave what it had.', 'The brook keeps a little back for the hungry.', 'The valley feeds you if you ask it quietly.', 'A basket of small kindnesses from the bank.', 'I brought back the colour green and a little more.'],
+  },
+  gaveUp: {
+    plain: ["Not asking again. What's the use.", "Stopped asking. Easier.", 'Done asking.', "I'll sort myself out.", "Won't trouble the steward again."],
+    formal: ['I shall not trouble the steward further.', 'I have stopped expecting anything, which is a kind of peace.', 'There is no point in asking where nobody answers.', 'I will manage my own affairs from now on.', 'The steward has made their position clear enough.'],
+    warm: ["I've stopped asking. It hurt less than waiting.", "I don't expect much any more. That's all right.", "I'll just get on with things myself.", "I suppose I'll stop hoping for a while.", "No more asks from me. I'm tired of waiting."],
+    chatty: ['I give up! Officially! On asking!', 'No more asks! The board can stay empty for all I care!', 'Asking the steward is like shouting at fog!', 'Done! Finished! Not asking!', 'Who needs the steward anyway? Not me! Probably!'],
+    dreamy: ['I have folded my hopes up and put them away.', 'The board is a door I no longer knock on.', 'I stopped calling, and the quiet came in.', 'Some wishes are better kept than sent.', 'I will ask the brook instead.'],
   },
   letGo: {
     plain: ['Not this season, then.', "Asked. Waited. Done waiting."],

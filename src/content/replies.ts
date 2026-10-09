@@ -25,13 +25,18 @@ export function replySaid(offer: ReplyOffer, subject?: (id: string) => string): 
     case 'explain':
       return about ? `Let me explain why ${ownNote(about)}.` : REPLY_SAID.explain;
     case 'agree':
+      if (offer.tone === 'mood') return offer.well ? "Good. I'm glad." : "That's hard. I'm listening.";
+      if (offer.tone === 'complaint') return "That's fair. I hear you.";
+      if (offer.tone === 'praise') return 'Thank you. That means something.';
       return about && subject ? `That's fair, about ${subject(about)}.` : REPLY_SAID.agree;
     case 'disagree':
+      if (offer.tone === 'mood') return offer.well ? "You don't seem it." : "It can't be all bad.";
+      if (about === 'steward') return offer.tone === 'praise' ? "I don't deserve that." : "I don't see myself that way.";
       return about && subject ? `I don't see ${subject(about)} that way.` : REPLY_SAID.disagree;
   }
 }
 
-export const REPLY_LINES: Record<ReplyStance, Lines> = {
+export const REPLY_LINES: Record<ReplyStance, Lines> = <Record<ReplyStance, Lines>>{
   warm: {
     plain: ['Good.', 'Glad you see it.', 'Right, then.'],
     formal: ['I am glad we understand each other.', 'Thank you for hearing me.', 'That is good of you to say.'],
@@ -89,3 +94,42 @@ export const REPLY_LINES: Record<ReplyStance, Lines> = {
     dreamy: ['The apology floats past, looking for somewhere to land.', 'For what? The day is clear.'],
   },
 };
+
+// Bar round 3: how a reply lands depends on what it answered.
+Object.assign(REPLY_LINES, {
+  owned: {
+    plain: ['At least you own it.', 'Fair. Said is half done.', "Good. Now fix it.", 'Not many say that. Noted.', "Right. That's a start."],
+    formal: ['I appreciate your candour.', 'That is a good deal more than I expected.', 'Owning it does you credit.', 'Then we understand each other on that.', 'I shall hold you to it.'],
+    warm: ["Thank you for not pretending.", "That means more than you'd think.", "Well. That helps, honestly.", "I didn't expect you to say so. Thank you.", "Then I can let it go a little."],
+    chatty: ['Oh! Well! That was easy!', 'A steward who admits things! Write it down!', 'Ha! Fair play to you!', 'Well, now I have nothing to grumble about! Rude!', "Look at that! Honesty! In this town!"],
+    dreamy: ['The knot loosens a little.', 'Said aloud, it weighs less.', 'There. The air is clearer already.', 'A true word, and the day turns.', 'I hear it. It lands softly.'],
+  },
+  insist: {
+    plain: ["Don't argue. I mean it.", 'Take it. It was meant.', "Too modest. Stop it.", 'I said what I said.', "You did. Leave it there."],
+    formal: ['Modesty becomes you, but I stand by it.', 'I do not offer praise lightly. Accept it.', 'Nevertheless, it is so.', 'You may demur. I shall not change my mind.', 'Allow me my opinion, steward.'],
+    warm: ["Oh, hush. You do.", "Don't be daft. I meant every word.", "You can't talk me out of it, you know.", "Let someone be grateful for once.", "Well, I think so, and that's that."],
+    chatty: ['Ha! Too late! Already said it!', 'Nope! Compliment delivered! No returns!', 'Modest AND good! Unbearable!', 'Stop it! Take the nice thing!', "I'll say it louder if you like!"],
+    dreamy: ['A kind word does not need your permission.', 'It is true whether you hold it or not.', 'Let it sit. It suits you.', 'You can put it down, but it stays yours.', 'The praise is out now. It has flown.'],
+  },
+  differ: {
+    plain: ['We differ, then.', "Suit yourself. I know what I think.", 'Each to their own.', "We'll see.", 'Not how I see it, but all right.'],
+    formal: ['Then we must agree to differ.', 'A reasonable person might think so. I do not.', 'I hold my view, and you yours.', 'Interesting. I remain unpersuaded.', 'We shall have to see who is right.'],
+    warm: ["Oh? Well, we can see it differently.", "Maybe. I still think what I think.", "Fair enough, it's not for everyone.", "Hm. I'll think about that.", "We don't have to agree, do we?"],
+    chatty: ['Ooh, a debate! Wrong, but a debate!', 'Agree to disagree! Loudly!', 'You and your opinions! Ha!', "Well, I'm right, but go on!", 'Ha! Bold of you!'],
+    dreamy: ['Two windows on the same garden.', 'We see different weather, you and I.', 'Perhaps it changes with the light.', 'It may look otherwise from where you stand.', 'Then let it be two things at once.'],
+  },
+  seen: {
+    plain: ["...No. You're right.", 'Hm. Caught me.', "Not as fine as I said, maybe.", "You're sharp.", 'All right. Bit of a day.'],
+    formal: ['You are perceptive. I am a little out of sorts.', 'Perhaps I overstated it.', 'I confess it has not been the easiest day.', 'You see more than you let on.', 'I would rather not dwell on it, but you are right.'],
+    warm: ["You noticed. That's kind of you.", "Oh, you can tell? It's been a bit much.", "Thank you for asking properly.", "I'm all right. Mostly. Thank you.", "It helps that you see it, honestly."],
+    chatty: ['Busted! Fine, fine, a bit tired!', "Ha! Can't fool you!", 'Oh, you saw that? Sneaky!', "Well, since you ask properly!", "Fine! A small grumble! Happy?"],
+    dreamy: ['You looked past the curtain.', 'The weather in me is greyer than I said.', 'You see the cloud behind the smile.', 'Yes. There is a shadow on it.', 'Kind of you to look closer.'],
+  },
+  with_you: {
+    plain: ['Glad you see it.', 'Right, then.', "Thought you might.", 'Good.', 'Same mind, us.'],
+    formal: ['I am glad we see it alike.', 'It is pleasant to be agreed with.', 'Then we are of one mind.', 'Good. I hoped you would.', 'That settles it.'],
+    warm: ["Oh, good. I thought it was just me.", "See? You get it.", "Isn't it nice to agree?", "I'm glad you think so too.", 'That makes two of us.'],
+    chatty: ['Yes! Exactly! See!', 'Ha! Great minds!', 'Finally, someone agrees with me!', "That's what I keep saying!", 'Two of us! A movement!'],
+    dreamy: ['Then we are looking at the same sky.', 'Agreed, like two notes in tune.', 'It is good to stand on the same side.', 'Yes. You see it too.', 'Then the thought is shared.'],
+  },
+});

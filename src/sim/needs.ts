@@ -87,3 +87,8 @@ export const ACTIVITY_EFFECTS: Record<ActivityId, Partial<NeedMap>> = {
   rest: { comfort: 0.15, rest: 0.05, delight: 0.02 },
   forage: { purpose: 0.1, rest: -0.03, delight: 0.04 },
 };
+
+/** A need shown as low: under six tenths of what they want, or under 0.3 whatever they want (bar round 3: "all met" mid-famine). */
+export function needIsLow(level: number, setpoint: number): boolean {
+  return level < setpoint * 0.6 || level < 0.3;
+}

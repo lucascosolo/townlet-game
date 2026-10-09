@@ -167,11 +167,11 @@ export const MIND_LINES: Record<string, Lines> = {
     dreamy: ['Someone is keeping watch over us.', 'The town is in kind hands.'],
   },
   'steward:fresh': {
-    plain: ['The steward {x}. Not forgotten.', 'Steward {x}. Hm.', 'The steward {x}, and I noticed.'],
-    formal: ['The steward {x}. I have not forgotten it.', 'I am still turning over the fact that the steward {x}.', 'The steward {x}. I say no more than that.'],
-    warm: ['The steward {x}, and it stung a little.', "I keep thinking about how the steward {x}.", 'The steward {x}. I wish that had gone differently.'],
-    chatty: ['The steward {x}! Can you believe it?', 'Still thinking about it: the steward {x}!', 'The steward {x}. Honestly!'],
-    dreamy: ['The steward {x}. It sits in me like a stone.', 'The steward {x}; the day still has that shape.', 'Something the steward did: {x}. It has not settled yet.'],
+    plain: ['{X}. Not forgotten.', '{X}. Hm.', '{X}, and I noticed.', '{X}. I keep count.', '{X}. Still sore.'],
+    formal: ['{X}. I have not forgotten it.', 'I am still turning over the fact that {x}.', '{X}. I say no more than that.', 'It has not escaped me that {x}.', '{X}, and I took note.'],
+    warm: ['{X}, and it stung a little.', 'I keep thinking about how {x}.', '{X}. I wish that had gone differently.', "I can't quite let go of it: {x}.", '{X}, and it still smarts.'],
+    chatty: ['{X}! Can you believe it?', 'Still thinking about it: {x}!', '{X}. Honestly!', 'Did you hear? {X}!', '{X}! I am still cross!'],
+    dreamy: ['{X}. It sits in me like a stone.', '{X}; the day still has that shape.', 'Something lingers: {x}.', '{X}, and the air has not cleared.', '{X}. It has not settled yet.'],
   },
   'steward:-': {
     plain: ["Steward doesn't listen.", 'Might as well talk to the well.'],
@@ -227,11 +227,11 @@ export const MIND_LINES: Record<string, Lines> = {
 /** The same feelings said to the steward's face in talk, where "the steward" would be "you" and the lines above would not bend. */
 export const TO_STEWARD_LINES: Record<string, Lines> = {
   'steward:fresh': {
-    plain: ['You {x}. Not forgotten.', 'You {x}. Hm.', 'You {x}, and I noticed.'],
-    formal: ['You {x}. I have not forgotten it.', 'I am still turning over the fact that you {x}.', 'You {x}. I say no more than that.'],
-    warm: ['You {x}, and it stung a little.', 'I keep thinking about how you {x}.', 'You {x}. I wish that had gone differently.'],
-    chatty: ['You {x}! Can you believe it?', 'Still thinking about it: you {x}!', 'You {x}. Honestly!'],
-    dreamy: ['You {x}. It sits in me like a stone.', 'You {x}; the day still has that shape.', 'Something you did: {x}. It has not settled yet.'],
+    plain: ['{X}. Not forgotten.', '{X}. Hm.', '{X}, and I noticed.', '{X}. I keep count.', '{X}. Still sore.'],
+    formal: ['{X}. I have not forgotten it.', 'I am still turning over the fact that {x}.', '{X}. I say no more than that.', 'It has not escaped me that {x}.', '{X}, and I took note.'],
+    warm: ['{X}, and it stung a little.', 'I keep thinking about how {x}.', '{X}. I wish that had gone differently.', "I can't quite let go of it: {x}.", '{X}, and it still smarts.'],
+    chatty: ['{X}! Can you believe it?', 'Still thinking about it: {x}!', '{X}. Honestly!', 'Did you hear? {X}!', '{X}! I am still cross!'],
+    dreamy: ['{X}. It sits in me like a stone.', '{X}; the day still has that shape.', 'Something lingers: {x}.', '{X}, and the air has not cleared.', '{X}. It has not settled yet.'],
   },
   'feel:gratitude': {
     plain: ['You did right by me.', 'I owe you one.'],

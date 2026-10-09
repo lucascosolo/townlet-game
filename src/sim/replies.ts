@@ -12,7 +12,10 @@ import { STEWARD, type ResidentState, type SimState, type TalkAnswer } from './t
 export type ReplyKind = 'agree' | 'disagree' | 'sorry' | 'explain';
 
 /** How the reply landed, which picks the resident's response. */
-export type ReplyStance = 'warm' | 'respect' | 'sulk' | 'forgiven' | 'enough' | 'convinced' | 'unconvinced' | 'puzzled';
+export type ReplyStance = 'warm' | 'respect' | 'sulk' | 'forgiven' | 'enough' | 'convinced' | 'unconvinced' | 'puzzled' | 'owned' | 'insist' | 'differ' | 'seen' | 'with_you';
+
+/** What an answer said, which decides how agreeing or disagreeing with it lands (bar round 3). */
+export type ReplyTone = 'praise' | 'complaint' | 'view' | 'mood';
 
 export interface ReplyOffer {
   kind: ReplyKind;
@@ -20,6 +23,10 @@ export interface ReplyOffer {
   aspect?: string;
   /** What the reply names (bar round 2): the grievance's note in their words ("took away the old oak"), or a subject id for agree and disagree. */
   about?: string;
+  /** For agree and disagree: what kind of thing was said (bar round 3). */
+  tone?: ReplyTone;
+  /** For a "how are you" answer: whether they said they were well. */
+  well?: boolean;
 }
 
 /** Grievances about a decision, which an explanation can answer. */
@@ -69,12 +76,24 @@ export function carriedGrievance(r: ResidentState, answer: TalkAnswer, now = 0):
 }
 
 /** The replies open after this answer. Agree is always open; the rest only when the answer itself gives something to answer. */
+/** What kind of thing an answer said, and about what (bar round 3). */
+export function answerTone(answer: TalkAnswer): { tone: ReplyTone; subject?: string; well?: boolean } {
+  const top = answer.topics?.[0];
+  if (answer.question === 'me') return { tone: DARK_BANDS.has(answer.band ?? '') ? 'complaint' : 'praise', subject: STEWARD };
+  if (answer.question === 'opinion') return { tone: 'view', ...(answer.about ? { subject: answer.about } : {}) };
+  if (answer.question === 'how') return { tone: 'mood', well: answer.band === 'good' || answer.band === 'great' };
+  if (top?.about === STEWARD) return { tone: top.key === 'steward:+' || top.key === 'feel:gratitude' ? 'praise' : 'complaint', subject: STEWARD };
+  const subject = top?.about ?? (answer.memory?.subject && answer.memory.subject !== STEWARD ? answer.memory.subject : undefined);
+  return { tone: 'view', ...(subject ? { subject } : {}) };
+}
+
 export function offersFor(r: ResidentState, answer: TalkAnswer, now = 0): ReplyOffer[] {
-  const subject = answer.question === 'opinion' && answer.about && answer.about !== STEWARD ? answer.about : answer.memory?.subject && answer.memory.subject !== STEWARD ? answer.memory.subject : undefined;
-  const offers: ReplyOffer[] = [{ kind: 'agree', ...(subject ? { about: subject } : {}) }];
-  const voiced = (answer.question === 'opinion' || answer.question === 'me') && answer.band !== 'neutral';
-  const aboutYou = answer.topics?.some((t) => t.about === STEWARD) || answer.memory?.subject === STEWARD;
-  if (voiced || aboutYou) offers.push({ kind: 'disagree', ...(subject ? { about: subject } : {}) });
+  const t = answerTone(answer);
+  const named = { tone: t.tone, ...(t.subject ? { about: t.subject } : {}), ...(t.well !== undefined ? { well: t.well } : {}) };
+  const offers: ReplyOffer[] = [{ kind: 'agree', ...named }];
+  // Anything that says something can be disagreed with (bar round 3: 43 of 95 answers offered only "That's fair").
+  const saysSomething = (answer.band !== undefined && answer.band !== 'neutral') || (answer.topics?.length ?? 0) > 0 || !!answer.memory;
+  if (saysSomething) offers.push({ kind: 'disagree', ...named });
   const g = carriedGrievance(r, answer, now);
   if (g) {
     offers.push({ kind: 'sorry', aspect: g.aspect, about: g.note });
@@ -127,10 +146,30 @@ export function applyReply(
   const tick = state.tick;
   switch (kind) {
     case 'agree':
+      // Owning a complaint is worth more than agreeing with praise (bar round 3).
+      if (offer.tone === 'complaint') {
+        adjust(r, STEWARD, { familiarity: 0.03, trust: 0.04, affinity: 0.02 }, tick);
+        perceive({ aspect: 'heard_me_out', valence: 0.5, base: 0.35, note: 'owned up to it' });
+        return { stance: 'owned' };
+      }
       adjust(r, STEWARD, { familiarity: 0.03, affinity: 0.02 }, tick);
       perceive({ aspect: 'heard_me_out', valence: 0.4, base: 0.25, note: 'heard me out' });
-      return { stance: 'warm' };
+      return { stance: offer.tone === 'praise' ? 'warm' : 'with_you' };
     case 'disagree':
+      // Brushing off praise is modesty, not a slight; doubting "I'm fine" is being seen.
+      if (offer.tone === 'praise') {
+        adjust(r, STEWARD, { familiarity: 0.03, affinity: 0.01 }, tick);
+        return { stance: 'insist' };
+      }
+      if (offer.tone === 'mood') {
+        adjust(r, STEWARD, { familiarity: 0.04 }, tick);
+        perceive({ aspect: 'heard_me_out', valence: 0.3, base: 0.2, note: 'saw how I really was' });
+        return { stance: 'seen' };
+      }
+      if (offer.tone === 'view') {
+        adjust(r, STEWARD, steady ? { trust: 0.03, familiarity: 0.03 } : { affinity: -0.02, familiarity: 0.03 }, tick);
+        return { stance: 'differ' };
+      }
       if (steady) {
         adjust(r, STEWARD, { trust: 0.05, familiarity: 0.03 }, tick);
         perceive({ aspect: 'spoke_plainly', valence: 0.3, base: 0.3, note: 'spoke plainly to me' });

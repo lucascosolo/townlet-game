@@ -43,6 +43,7 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **The needs and dislikes facts are relative to the rest of the town:** the need they feel more than most, the thing they mind more than most, or "easy to please" and "not much bothers her".
 - **The third ask of a kind in one morning is a short line** ("Fen asks for more food too"), so the log never carries the same quoted ask more than twice.
 - **A dream about someone who has left is put away the next morning**, except a dream of remembering someone gone, which is about someone who left by design.
+- **The Folk album keeps at least 260 px** (was 210): with Goals grown, 210 was less than one row of cards and the summary, so a card was cut; when both do not fit, the left column scrolls, as before.
 - **The neglected town's measure is met in part:** 0.083 to 0.140 by seed; seed 2 lost its two unhappiest residents and gained a newcomer, so the mean of those still there rose. Reported, not tuned for that seed.
 
 **Rejected:**

@@ -910,7 +910,8 @@ export class Ui {
     const body = this.widgets.get('folk')?.querySelector<HTMLElement>('.widget-body');
     if (!grid || !body || !body.contains(grid)) return;
     grid.classList.add('fit');
-    grid.style.maxHeight = '';
+    // Keep the last fit when the album cannot be measured (hidden behind a modal, say): clearing
+    // first left it uncapped and cut by the widget.
     const card = grid.firstElementChild as HTMLElement | null;
     if (!card) return;
     const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;

@@ -1208,6 +1208,26 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 8. **Layout.** At 1440×900 the Folk widget shows its cards in full (browser); on day 21 of an unbuilt quiet town, no tile unwalked for four days shows wear (headless).
 9. **No regressions.** Earlier tests pass or their moved measures are re-measured and reported; determinism holds; 10× stepping stays under 2 ms a frame.
 
+**Bar round 4 status (2026-10-09): seven of nine met; criterion 2 met in part (the neglected town, kept visible) and criterion 9 met with moved measures.** The tests are in `test/round4.test.ts` and `e2e/round4.spec.ts`.
+
+1. **Replies that answer what was said: met.** The narrator records what of an answer survived trimming and whether the words named the subject; the chips are built from that and a reply carries it, so a save replays the same offer. Over 20 days of every question to everyone on five seeds: every agree or disagree chip that names a subject names one the answer named; every sorry or explain answers a grievance the answer states; no praise chip appears under a grievance; every hope answer offers two replies (between dreams, "Take your time" and "Don't settle for too little"); no warm look from anyone below zero standing and no cold one above 0.5. In the browser, a second question without a reply between shows the new answer's own chips.
+2. **Everyday play moves mood: met in part.**
+   - Losing the place most hold dear lowers the next day's mood of those who held it by 0.05 or more on every seed, against a twin.
+   - A larder held at a quarter of a day's meals for a week lowers mean mood by 0.06 or more on every seed, the board names it under "Worries", and nobody stands above 0.85 with you while it lasts.
+   - **Missed on one seed:** a neglected quiet town is 0.083 to 0.140 glummer on day 21 than day 2. Seed 2 falls short of the 0.10 declared, and two of five there say fair or worse against the half declared: its two unhappiest residents left and a newcomer moved in, so the mean of those still there rose. Kept visible as an expected failure; the other four seeds meet both.
+   - The year-long bakery soak with newcomers is flagged on one seed of ten (seed 2, eight of twenty gone), as in round 3. The first version held a low larder against the steward every dawn and emptied whole towns (24 of 24 on seed 1); a low larder now caps standing instead, and the town's troubles take at most 0.22 off mood.
+3. **No ghosts: met.** A dream about someone who has left is put away the next morning (a dream of remembering someone gone excepted, by design); Bram's "find a bakery to work in" waits for a bakery and lets go after eight days instead of finishing by itself; every dream ask card quotes the dream that posted it; season notes and the green-progress line count only those still in town.
+4. **Opinions with an edge: met.** On day 20 at least a fifth of neighbour opinions are cool or worse on every seed; every seed has a place someone dislikes ("isn't my sort of place", "spoils the view"); "a lovely spot" is 20% to 27% of settled place views (it was 59%); no noise or rest fact is held by more than half the founders; nobody stands above 0.9 after a week of a low larder.
+5. **Answers without stock facts: met.** No fact sentence in more than 3% of answers; no answer says the same thing twice behind a lead-in or names a subject's verdict twice; five or more between-dreams hope lines per register, saying what they are enjoying meanwhile.
+6. **No raw lines: met.** Every fact line starts with a capital and calls nobody "them"; no standing note says "the steward"; a proposal says "Yours to decide"; the third ask of a kind in one morning is a short line, so no quoted ask appears more than twice; "you built X for me" only for a building put up that day.
+7. **Dreams that do not converge: met.** Never more than two gift dreams at once, "do something for the steward" included; at most a third on day 30. Two parts of the decision were not built and are left for later: a second dream for each trade, and a hope answer that says how the dream is going.
+8. **Layout: met.** At 1440×900 the Folk album shows whole rows and scrolls row by row (browser); on day 21 of an unbuilt quiet town no tile unwalked for four days shows wear.
+9. **No regressions: met with these moved measures, each kept visible.**
+   - The larder-at-cap measure on stores seed 5, an expected failure since round 2, passes again and is a plain test.
+   - Juniper's glasshouse step-timing test now gives the town the timber when she asks: the town spends its timber on her granary first and the ask lapsed before it could be paid for.
+   - Push-back and true-to-state tests ask about a neighbour with a view, and expect "cool" for someone known well and not liked.
+   - Determinism holds; 10× stepping is checked by the browser test.
+
 ### 9.4 The bar (set 2026-10-08)
 
 Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:

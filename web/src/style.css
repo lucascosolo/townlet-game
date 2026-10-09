@@ -372,7 +372,7 @@ body.phone .desk-only, body.phone .dash-left, body.phone .widget-menu { display:
 .dash-left { overflow-y: auto; }
 .widget[data-widget='goals'] { flex: 0 0 auto; }
 /* Bar round 4: the Folk album takes the rest of the column and shows whole rows, scrolling row by row. */
-.widget[data-widget='folk'] { flex: 1 1 0; min-height: 210px; }
+.widget[data-widget='folk'] { flex: 1 1 0; min-height: 260px; }
 .widget[data-widget='folk'] .widget-body { overflow: hidden; }
 body:not(.phone) .album.fit { overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: thin; padding-right: 2px; }
 body:not(.phone) .album.fit > .folk-card { scroll-snap-align: start; }

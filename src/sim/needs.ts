@@ -53,7 +53,7 @@ export function companyOvershoot(level: number, setpoint: number, def: ResidentD
 }
 
 // Hunger weighs most (bar round 2: a week of thin suppers barely moved mood).
-const MOOD_WEIGHTS: NeedMap = { rest: 1.2, food: 2.5, comfort: 1, company: 1, purpose: 0.7, delight: 0.7 };
+const MOOD_WEIGHTS: NeedMap = { rest: 1.2, food: 3, comfort: 1, company: 1, purpose: 0.7, delight: 0.7 };
 
 export function needsWellbeing(needs: NeedMap, setpoints: NeedMap, def: ResidentDef): number {
   let total = 0;

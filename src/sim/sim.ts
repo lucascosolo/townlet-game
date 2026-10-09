@@ -1073,7 +1073,7 @@ export class Simulation implements AspirationHost {
       state.stock.food += found;
       // They eat as they pick: a forager is never the one who starves (year soak: a hungry
       // resident spent half their waking hours with the food need under 0.1).
-      r.needs.food = clamp(r.needs.food + 0.35);
+      r.needs.food = clamp(r.needs.food + 0.25);
       this.emit({ t: tick, type: 'forage', who: r.id, placeId: act.placeId, food: found });
     }
     const next = this.favourNext(r) ?? this.forageNext(r) ?? this.mind.decide(ctx, r);

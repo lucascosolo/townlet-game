@@ -328,7 +328,7 @@ export class Narrator {
     const any = (o: string) => this.saidAny.get(o) ?? -Infinity;
     // Nobody repeats a line they said in the last three days, and nobody says a line anyone in
     // town said in the last three days (bar round 2: one chatty line twelve times in a month).
-    const fresh = options.filter((o) => t - mine(o) >= 3 * 1440 && t - any(o) >= 4 * 1440);
+    const fresh = options.filter((o) => t - mine(o) >= 3 * 1440 && t - any(o) >= 8 * 1440);
     const line = fresh.length ? pick(this.rng, fresh) : [...options].sort((a, b) => Math.max(mine(a), any(a)) - Math.max(mine(b), any(b)))[0] ?? '...';
     this.saidBy.set(`${who}|${line}`, t);
     this.saidAny.set(line, t);

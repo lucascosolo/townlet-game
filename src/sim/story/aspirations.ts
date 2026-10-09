@@ -397,11 +397,11 @@ export const LET_GO_DAYS = 8;
 function letGo(h: AspirationHost, r: ResidentState): boolean {
   const state = h.state;
   if (state.tick - r.aspiration.since < LET_GO_DAYS * TICKS_PER_DAY) return false;
-  // Only the building this step waits for counts: not, say, Juniper's granary for the winter stores.
-  const stage = currentStage(state, r);
-  const wants = stage?.until ?? (stage?.place && stage.place !== 'home' && !exists(state, stage.place) ? stage.place : undefined);
-  if (!wants || exists(state, wants)) return false;
-  const ask = state.requests.find((q) => q.by === r.id && q.kind === 'aspiration' && (q.status === 'open' || q.status === 'lapsed') && q.wants === wants);
+  // Only a building this dream asks for counts: not, say, Juniper's granary for the winter stores.
+  const def = dreamOf(state, r);
+  if (!def) return false;
+  const refs = new Set(def.stages.flatMap((st) => [st.until, st.place]).filter((x): x is string => !!x && x !== 'home'));
+  const ask = state.requests.find((q) => q.by === r.id && q.kind === 'aspiration' && (q.status === 'open' || q.status === 'lapsed') && !!q.wants && refs.has(q.wants) && !exists(state, q.wants));
   if (!ask || !ask.wants) return false;
   if (ask.status === 'open') {
     ask.status = 'resolved';

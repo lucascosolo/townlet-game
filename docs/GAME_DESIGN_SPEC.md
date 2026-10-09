@@ -1228,6 +1228,18 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Push-back and true-to-state tests ask about a neighbour with a view, and expect "cool" for someone known well and not liked.
    - Determinism holds; 10× stepping is checked by the browser test.
 
+**Bar round 5 criteria (predeclared 2026-10-09, before code).** Quiet town, seeds 1–5, unless stated. A failure is reported as a failure, not redefined.
+
+1. **Standing earned.** Considerate steward, 30 days: on day 30 at most half the residents stand above 0.8 with you, and highest minus lowest is at least 0.4 on every seed. Replies alone move anyone's affinity by at most 0.06 in any seven days (direct check: twenty friendly replies in a week to one resident). Below −0.5 standing, a sorry for a grievance older than three days is "words are cheap" (direct check).
+2. **Replies land by what was said.** Disagreeing with a good or great "how are you" from someone whose mood is at or above 0.7 is denied, not conceded; doubting a between-dreams hope has its own response pool; an answer that speaks of leaving offers no chip naming another subject; no reply response in a 20-day considerate run carries a verbal tic.
+3. **Log and layout (browser).** After Begin on a phone with the intro, the log shows entries; after a reload, "This morning" is not "Nothing new on the board" when the narrator holds major entries for that morning; at 1440×900 with the winter stores card showing, the Folk widget shows at least one whole row of cards.
+4. **The board.** "Nothing needs you" is never the board's line while a proposal or ask is open (headless check of the same function).
+5. **Raw lines.** In 30-day considerate, favours and none runs (bakery and quiet): no word in the log mixes a lowercase first letter with capitals ("bONFIRE"); no "a" before a vowel or before a plural building name in any status line; no fact line has ".." or starts lowercase; no "<plural> spoils"; no "nothing was done)" in a reason; no resident's memory names their own possession in the third person; no stage direction inside quote marks; no You-tab statement says "the steward".
+6. **Opinions agree with their holder.** Considerate 30 days: nobody holds a dislike of their workplace, their home, or a building their dream asked for; the needs line never says all met while a need is on their mind; after a loved place is removed, no one who grieved it voices a dislike of it within seven days.
+7. **Less sameness.** No "lifts" or "dislikes" fact held by more than half the founders; never more than two residents with the same dream title (30-day considerate); a newcomer's first step is done within six days of arriving; newcomer backstories differ across seeds for the same trade; no resident gives the steward the same whole answer twice within 14 days.
+8. **Economy pacing.** Considerate steward: timber below 5 at dawn on at most 4 of days 2–13 on every seed; when the granary is feeding the town the board names it as a worry; at the first morning of spring the granary keeps at least a third of what it held.
+9. **No regressions.** Earlier tests pass or their moved measures are re-measured and reported; determinism holds; 10× stepping stays under 2 ms a frame; the year soak is flagged on no more seeds than in round 4 (one).
+
 ### 9.4 The bar (set 2026-10-08)
 
 Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:

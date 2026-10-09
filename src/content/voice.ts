@@ -217,11 +217,11 @@ export const SPEECH: Record<string, Lines> = {
     dreamy: ['You never listen, {other}.'],
   },
   apologize: {
-    plain: ['About before. Sorry.'],
-    formal: ['{other}, I owe you an apology.'],
-    warm: ["I'm sorry about the other day, {other}."],
-    chatty: ['{other}! I was a fool before. Forgive me?'],
-    dreamy: ['I said things I did not mean, {other}.'],
+    plain: ['About before. Sorry.', "Wasn't fair, what I said. Sorry, {other}.", '{other}. My fault. Sorry.', "Shouldn't have said it. Sorry.", 'Sorry, {other}. Let it lie?'],
+    formal: ['{other}, I owe you an apology.', 'I spoke out of turn, {other}. Forgive me.', 'I was wrong, {other}, and I am sorry for it.', '{other}, I regret what passed between us.', 'Allow me to apologise, {other}. I was unkind.'],
+    warm: ["I'm sorry about the other day, {other}.", "{other}, I hate that we fell out. I'm sorry.", "I didn't mean it, {other}. Truly.", "Can we start again, {other}? I'm sorry.", "I've felt awful since, {other}. Sorry."],
+    chatty: ['{other}! I was a fool before. Forgive me?', '{other}! Sorry! Sorry sorry sorry!', 'Right, {other}, I was an idiot. Friends?', "{other}! Forget what I said! I'm a donkey!", 'I take it all back, {other}! Every word!'],
+    dreamy: ['I said things I did not mean, {other}.', 'The words came out crooked, {other}. I am sorry.', '{other}, can we let the river take it?', 'I have been carrying what I said, {other}. Let me set it down.', 'Forgive me, {other}. The day was all thorns.'],
   },
   thinSupper: {
     plain: ['Thin pickings.', 'That was not a supper.', 'Bread and not much else.', 'Half a bowl. Again.', 'Stomach still empty.', 'Not enough to go round.', 'Seen better meals in a ditch.', 'Water and crusts, then.'],

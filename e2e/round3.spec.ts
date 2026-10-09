@@ -50,11 +50,15 @@ test('the tier-up modal names the same gift as the log', async ({ page }) => {
     const h = (window as unknown as { __townlet: Handle }).__townlet;
     h.game.sim.state.progress.renown = 99;
   });
-  // A goal or a fact pushes renown over the line.
+  // Reading Bram's page teaches his background, and the renown for it pushes the town over the line.
   await page.getByTestId('tab-journal').click();
+  for (let i = 0; i < 3; i++) {
+    await frames(page);
+    const later = page.locator('[data-testid^="later-"]');
+    if ((await later.count()) > 0) await later.first().click();
+  }
   await page.getByTestId('roster-bram').click();
-  await page.getByTestId('sub-talk').click();
-  await page.getByTestId('ask-how').click();
+  await frames(page);
   await expect(page.getByTestId('tier-up')).toBeVisible();
   await expect(page.getByTestId('tier-up')).toContainText(`send ${TIER_GIFT} timber`);
 });

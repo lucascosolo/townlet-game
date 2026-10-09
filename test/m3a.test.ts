@@ -91,13 +91,18 @@ describe("criterion 2: Marlow's choice", () => {
         }
         // Bar round 2: deciding to go gives the week's notice anyone else gets, and a good week can turn it round.
         let stayed = false;
+        let outcome: string | undefined;
         sim.on((e) => {
           if (e.type === 'decided_to_stay' && e.who === 'marlow') stayed = true;
+          if (e.type === 'aspiration' && e.who === 'marlow' && e.outcome && !outcome) outcome = e.outcome;
         });
+        if (m.aspiration.outcome) outcome = m.aspiration.outcome;
         sim.runUntil(at(24, 12));
         expect(firstDreamDone(sim, 'marlow'), `seed ${seed}`).toBe(true);
-        expect(m.aspiration.outcome, `seed ${seed} isolated=${isolate}`).toBe(isolate ? 'leave' : 'stay');
-        expect(m.leaving !== null, `seed ${seed} isolated=${isolate}: thinking of leaving`).toBe(isolate);
+        // Bar round 3: a step that needs nothing from you finishes within nine days, so he may decide
+        // earlier than day 23 and move on to a new dream; the decision is read from when he made it.
+        expect(outcome, `seed ${seed} isolated=${isolate}`).toBe(isolate ? 'leave' : 'stay');
+        expect(m.leaving !== null || m.departed, `seed ${seed} isolated=${isolate}: thinking of leaving`).toBe(isolate);
         sim.runUntil(at(32, 12));
         expect(sim.resident('marlow').departed, `seed ${seed} isolated=${isolate}`).toBe(isolate && !stayed);
       }

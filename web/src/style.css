@@ -368,9 +368,10 @@ body.phone .desk-only, body.phone .dash-left, body.phone .widget-menu { display:
 .dash-left > * { pointer-events: auto; }
 .widget { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 /* Goals shows all of itself (bar round 2: its tier card was cut in half); the Folk album takes what is left. */
-.widget[data-widget='goals'] { flex: 0 1 auto; max-height: calc(100% - 220px); }
-/* Bar round 3: the Folk album keeps a usable height (it was squashed to a strip under Goals). */
-.widget[data-widget='folk'] { flex: 1 1 auto; min-height: 210px; }
+/* Bar round 3: Goals shows all of itself and the Folk album keeps a usable height; when both do not fit, the column scrolls. */
+.dash-left { overflow-y: auto; }
+.widget[data-widget='goals'] { flex: 0 0 auto; }
+.widget[data-widget='folk'] { flex: 1 0 auto; min-height: 210px; }
 .widget-head { display: flex; align-items: center; gap: 4px; padding: 6px 6px 6px 12px; border-bottom: 1px solid var(--paper-edge); background: linear-gradient(#fbf5e6, #f1e6cc); }
 .widget-head h2 { flex: 1; margin: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 16px; cursor: pointer; }
 .widget-head h2 svg { color: var(--accent); }
@@ -389,7 +390,7 @@ body.phone .desk-only, body.phone .dash-left, body.phone .widget-menu { display:
 body:not(.phone) .dock { left: 324px; max-width: calc(100vw - 324px - 400px); }
 /* One row, however narrow (owner: it was squeezed into a tall box): the buttons keep their size and the hint gives way, on one line. */
 body:not(.phone) .dock button { flex: none; white-space: nowrap; }
-body:not(.phone) .dock .status { flex: 1 1 auto; min-width: 0; white-space: normal; line-height: 1.25; }
+body:not(.phone) .dock .status { flex: 1 1 auto; min-width: 0; white-space: normal; font-size: 12px; line-height: 1.2; max-height: 2.4em; }
 body:not(.phone) .menu { left: 324px; right: 394px; }
 /* The scroll hangs below the top bar, rolled or not (owner: the rolled journal sat over the bar's end). */
 body:not(.phone) .scroll { top: 70px; }

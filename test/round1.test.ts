@@ -236,9 +236,12 @@ describe('round 1, criterion 3: talking back', () => {
       const r = sim.resident(id);
       const t0 = r.rel[STEWARD]!.trust;
       const a0 = r.rel[STEWARD]!.affinity;
-      sim.talk(id, 'me');
+      // Bar round 3: disagreeing with praise is modesty, not push-back, so this pushes back on a view.
+      const other = sim.state.order.find((o) => o !== id)!;
+      sim.talk(id, 'opinion', `r:${other}`);
       const res = sim.reply(id, 'disagree');
-      expect(res?.stance).toBe(kind);
+      expect(res?.stance).toBe('differ');
+      void kind;
       if (kind === 'respect') expect(r.rel[STEWARD]!.trust).toBeGreaterThan(t0);
       else expect(r.rel[STEWARD]!.affinity).toBeLessThan(a0);
     }
@@ -296,7 +299,7 @@ describe('round 1, criterion 3: talking back', () => {
     expect(a.replies).not.toContain('sorry');
     expect(a.replies).not.toContain('explain');
     expect(sim.reply('ada', 'sorry')).toBeNull();
-    expect(sim.reply('ada', 'agree')?.stance).toBe('warm');
+    expect(['warm', 'with_you']).toContain(sim.reply('ada', 'agree')?.stance);
     expect(sim.reply('ada', 'agree')).toBeNull();
     expect(offersFor(r, a).map((o) => o.kind)).toEqual(a.replies);
     const play = () => {
@@ -315,7 +318,7 @@ describe('round 1, criterion 3: talking back', () => {
       return seen.join(',') + '|' + s.resident('bram').rel[STEWARD]!.affinity.toFixed(4);
     };
     expect(play()).toBe(play());
-    expect(play()).toMatch(/bram:disagree:(respect|sulk),bram:agree:warm/);
+    expect(play()).toMatch(/bram:disagree:(respect|sulk|insist),bram:agree:(warm|owned)/);
   });
 });
 

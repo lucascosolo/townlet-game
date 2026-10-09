@@ -1050,7 +1050,7 @@ export class Narrator {
     }
     if (total() > 4) remembered = '';
     // "What do you think of me": the reason gives way before the concession does.
-    if (total() > 4 && shown.because && shown.but) {
+    if (total() > 4 && shown.because) {
       const { because: _b, ...rest } = shown;
       shown = rest;
       head = this.toSteward(this.answer(e.who, shown));

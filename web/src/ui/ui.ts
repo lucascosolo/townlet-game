@@ -479,7 +479,7 @@ export class Ui {
         ? `Placing a ${buildingDef(tool.type).name.toLowerCase()} (${buildingDef(tool.type).cost ?? 0} timber). R rotates · Esc stops.`
         : tool.kind === 'remove'
           ? 'Click a building to remove it (half its timber back). Homes stay. Esc stops.'
-          : 'Click someone or a building. Drag to move, right-drag to turn, wheel to zoom.',
+          : 'Click anyone or anything. Drag to pan, right-drag to turn, wheel to zoom.',
     );
   }
 

@@ -300,19 +300,19 @@ addLines(MIND_LINES['feel:joy'], {
   dreamy: ['The day is singing.', 'I am full of small suns.', 'Even the stones look happy.'],
 });
 addLines(MIND_LINES.dream, {
-  plain: ['Still on it. {next}.', 'Getting there. {next}, then.'],
+  plain: ['Still on the plan. {next}.', 'Getting there. {next}, then.'],
   formal: ['I am making progress. Next, I must {next}.', 'Patience. I need to {next}.'],
-  warm: ["I'm working on something. Next, I {next}.", "It's coming along. I just have to {next}.", "Wish me luck. I'm trying to {next}."],
+  warm: ["I'm working on something. Next, I {next}.", "My plan is coming along. I just have to {next}.", "Wish me luck. I'm trying to {next}."],
   chatty: ['Progress report: next I {next}!', "Nearly there! Well, sort of! I've got to {next}!"],
   dreamy: ['The next stone on the path: {next}.', 'I need to {next}, and then we will see.'],
 });
 // Bar round 5: newcomers sit on their first steps longer, so more ways to say what is next.
 addLines(MIND_LINES.dream, {
-  plain: ['Working at it. {next}.', 'Not there yet. {next} first.', 'Day by day. {next}.', 'Plenty to do. {next}, mainly.'],
-  formal: ['There is a next step, and it is to {next}.', 'I am resolved to {next}.', 'First things first: I must {next}.', 'It is in hand. Next, to {next}.'],
-  warm: ["Today I'm hoping to {next}.", "Little by little. I want to {next}.", "It's on my mind all day. I need to {next}.", "If I can {next}, I'll be so pleased."],
+  plain: ['Working at my plan. {next}.', 'Not there yet. {next} first.', 'Day by day. {next}.', 'Plenty to do. {next}, mainly.'],
+  formal: ['There is a next step: {next}.', 'I am resolved to {next}.', 'First things first: I must {next}.', 'My plan is in hand. Next, to {next}.'],
+  warm: ["Today I'm hoping to {next}.", "Little by little. I want to {next}.", "My dream is on my mind all day. I need to {next}.", "If I can {next}, I'll be so pleased."],
   chatty: ["Today's mission: {next}!", "On my list! Top of it! {next}!", "Watch me! I'm going to {next}!", "Next stop: {next}! Choo choo!"],
-  dreamy: ['The way leads on: I {next}.', 'Today the next thing is to {next}.', 'I am walking toward it. Next, I {next}.', 'One more turning: {next}.'],
+  dreamy: ['The way leads on: I {next}.', 'Today the next thing is to {next}.', 'I am walking toward my dream. Next, I {next}.', 'One more turning: {next}.'],
 });
 addLines(MIND_LINES['need:crowded'], {
   plain: ['Bit much, all this.', 'Need a quiet hour.'],
@@ -390,8 +390,8 @@ addLines(MIND_LINES['need:food'], {
 addLines(MIND_LINES['dream:waiting'], {
   plain: ['Asked. Still nothing.', 'The steward has my ask. Waiting on it.', 'Any day now, I hope.'],
   formal: ['My request stands. I await an answer.', 'I have asked, and I shall not ask twice.', 'Patience. The steward has much to weigh.'],
-  warm: ["I keep hoping the steward's read my note.", "Any news? No. Well, I'll wait.", "I'm trying not to pester the steward about it."],
-  chatty: ['Waiting, waiting, waiting! Patience is not my gift!', 'Has the steward seen it yet? Has anyone?', 'Tick tock, steward!'],
+  warm: ["I keep hoping the steward's read my note.", "Any news? No. Well, I'll wait.", "I'm trying not to pester the steward about my request."],
+  chatty: ['Waiting, waiting, waiting! Patience is not my gift!', 'Has the steward seen my request yet? Has anyone?', 'Tick tock, steward!'],
   dreamy: ['The ask is out there somewhere, drifting.', 'I planted a wish and now I wait for rain.', 'Each morning I look at the board and then away.'],
 });
 addLines(MIND_LINES.larder, {

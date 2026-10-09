@@ -138,7 +138,7 @@ export const FELT_CAP = 0.22;
 export const LOW_LARDER_TOP = 0.85;
 /** Bar round 5: 30 timber to start (was 25): seventeen builds were refused for timber in the first fortnight. */
 /** Bar round 6: the woodlot yields this much more in the first fortnight (16 builds were refused for timber on days 3 to 14). */
-export const EARLY_TIMBER = 1.5;
+export const EARLY_TIMBER = 2;
 export const EARLY_TIMBER_DAYS = 14;
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 30 };
 /** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */

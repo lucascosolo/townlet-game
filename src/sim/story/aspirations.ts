@@ -518,9 +518,9 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
   const waitingOnYou = h.state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open');
   // Never a step that needs a building that is not there (bar round 4).
   const lacking = (stage.needs && !exists(h.state, stage.needs)) || (stage.place && stage.place !== 'home' && !exists(h.state, stage.place));
-  // A first step is done within four days (bar round 6: "watch the trade cart come and go" was
+  // A first step is done within four days, half a day early since steps move only while they are awake (bar round 6: "watch the trade cart come and go" was
   // Marlow's bubble four days running, "find someone willing to learn" Fen's for three).
-  const longEnough = !stage.until && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS : 9) * TICKS_PER_DAY;
+  const longEnough = !stage.until && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 0.5 : 9) * TICKS_PER_DAY;
   if (!stage.check(h, r) && !longEnough) return;
   stage.enter?.(h, r);
   r.aspiration.stage++;

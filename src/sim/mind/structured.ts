@@ -20,7 +20,7 @@ import { ambientAt, liveBuildings, placeTile, walkDistance } from '../world.js';
 import type { Mind, MindContext, Perception, Setting } from './mind.js';
 import { addEmotion, beliefsAbout, consolidate, opinion, perceive } from './memory.js';
 import { nightlyRelationships, rel } from './relationships.js';
-import { aspirationPull } from '../story/aspirations.js';
+import { aspirationPull, dreamBuildings } from '../story/aspirations.js';
 import { gatheringPull } from '../story/director.js';
 
 export function presentAt(state: SimState, placeId: number, except?: string): ResidentState[] {
@@ -295,7 +295,7 @@ export const StructuredMind: Mind = {
           relevance: ['nature', 'beauty'],
         };
         perceive(ctx, r, p);
-      } else if (s < DISLIKE_BELOW) {
+      } else if (s < DISLIKE_BELOW && !dreamBuildings(ctx.state, r).has(b.type)) {
         // Bar round 4: a place can be disliked too (no dislike in 40 settled place views). A work
         // place jars most on someone who loves the green; anywhere else it is just not their sort of place.
         const eyesore = buildingDef(b.type).kind === 'work' && unit(def.values.nature) > 0.6;

@@ -6,7 +6,7 @@ import { buildingDef, singularName } from '../../../src/content/buildings.js';
 import { residentDef } from '../../../src/content/residents.js';
 import { DILEMMA_NAMES, PROPOSALS } from '../../../src/content/story.js';
 import { residentReport, type ResidentReport } from '../../../src/inspect/inspector.js';
-import type { NarratorEntry } from '../../../src/narrate/narrator.js';
+import { withArticle, type NarratorEntry } from '../../../src/narrate/narrator.js';
 import { CLEAR_MINUTES, FAVOUR_MINUTES, considerFavour, openPlots, recentAsks } from '../../../src/sim/favours.js';
 import { opinion } from '../../../src/sim/mind/memory.js';
 import { ambientPrefs, prefScore, needIsLow } from '../../../src/sim/needs.js';
@@ -22,7 +22,7 @@ import type { AdResult, RewardedAds } from '../ads.js';
 import { TRADER_GIFT } from '../../../src/sim/sim.js';
 import { offersForCut, type ReplyKind } from '../../../src/sim/replies.js';
 import { replySaid } from '../../../src/content/replies.js';
-import { addLedgerNote, groupAsks, ledgerLine, townWorries, type LedgerNote } from '../../../src/narrate/board.js';
+import { addLedgerNote, groupAsks, ledgerLine, quietLine, townWorries, type LedgerNote } from '../../../src/narrate/board.js';
 import { vividMemories } from '../../../src/sim/recall.js';
 import { residentColor } from '../view/meshes.js';
 import { ICONS } from './icons.js';
@@ -428,6 +428,12 @@ export class Ui {
     this.lookedAround = false;
 
     game.narrator.onEntry((e) => this.onEntry(e));
+    // Bar round 5: the intro and a reload run hours before the interface listens; take in what the
+    // narrator already holds, so the log and "This morning" are not blank.
+    const held = game.narrator.entries;
+    const lastDay = held.map((e) => e.kind).lastIndexOf('day');
+    this.morning = held.slice(lastDay + 1).filter((e) => e.kind === 'board');
+    this.rerenderLog();
     game.onEvent((e) => this.onEvent(e));
     this.setSpeed(game.speedIndex);
     this.setTool({ kind: 'select' });
@@ -859,7 +865,9 @@ export class Ui {
       const opens = ({ Hamlet: 'beehives', Village: 'a chicken coop', Townlet: 'a fountain' } as Record<string, string>)[nt.name];
       tier.appendChild(el('p', { class: 'quiet' }, `${nt.need} ✦ to ${nt.name}: it opens ${opens} and room for more neighbours.`));
     } else tier.appendChild(el('p', { class: 'quiet' }, 'A Townlet: the valley is all it set out to be.'));
-    tier.appendChild(el('p', { class: 'quiet small' }, 'Renown comes from goals, granted asks and wishes, dreams come true, the winter stores, newcomers, and getting to know people.'));
+    const renownHow = 'Renown comes from goals, granted asks and wishes, dreams come true, the winter stores, newcomers, and getting to know people.';
+    tier.appendChild(el('p', { class: 'quiet small renown-how' }, renownHow));
+    tier.title = renownHow;
     pane.appendChild(tier);
     if (state.stores?.asked) pane.appendChild(this.storesCard());
     const trader = this.traderCard();
@@ -1091,7 +1099,7 @@ export class Ui {
             return;
           }
           if (!this.game.sim.canAfford(type)) {
-            this.status(`Not enough timber for a ${def.name.toLowerCase()} (${def.cost} needed).`);
+            this.status(`Not enough timber for ${withArticle(def.name)} (${def.cost} needed).`);
             show();
             this.shake(card);
             this.shake(this.stockEl.querySelector('[data-res="timber"]')?.parentElement ?? this.stockEl, 'pulse');
@@ -1540,7 +1548,7 @@ export class Ui {
     pane.appendChild(el('h3', {}, 'This morning'));
     const worth = this.morning.filter((e) => e.importance === 'major');
     const rest = this.morning.filter((e) => e.importance !== 'major').length;
-    if (worth.length === 0) pane.appendChild(el('p', { class: 'quiet' }, worries.length ? 'Nothing else new this morning.' : rest ? 'A quiet night. Nothing needs you.' : 'Nothing new on the board.'));
+    if (worth.length === 0) pane.appendChild(el('p', { class: 'quiet', 'data-testid': 'board-quiet' }, quietLine(state, worries.length, rest)));
     const list = el('ul');
     for (const e of worth) {
       const li = el('li', { class: e.importance });
@@ -1581,7 +1589,8 @@ export class Ui {
         : room < q.target
           ? `The granaries hold ${room} between them. Another would make room for ${q.target}.`
           : 'Food over what the larder needs is carried across each day. Favours that bring in food help most.';
-      card.appendChild(el('p', { class: 'quiet' }, hint));
+      card.appendChild(el('p', { class: 'quiet stores-hint' }, hint));
+      card.title = hint;
       const track = el('div', { class: 'track' });
       const fill = el('div', { class: 'fill' });
       fill.style.width = pct(Math.min(1, put / q.target));
@@ -1638,7 +1647,8 @@ export class Ui {
       track.appendChild(fill);
       card.appendChild(track);
       const beliefs = Object.values(r.beliefs).filter((b) => b.subject === 'steward');
-      if (beliefs.length) card.appendChild(el('p', {}, beliefs.map((b) => `${cap(this.game.narrator.statement(id, b))}.`).join(' ')));
+      // Said to you on your own tab (bar round 5: "The steward makes wishes come true.").
+      if (beliefs.length) card.appendChild(el('p', {}, beliefs.map((b) => `${cap(this.game.narrator.toSteward(this.game.narrator.statement(id, b)))}.`).join(' ')));
       const notes = this.standingNotes.get(id);
       if (notes?.length) {
         const ul = el('ul', { class: 'quiet' });
@@ -1817,7 +1827,8 @@ export class Ui {
     }
     p.picker.hidden = !p.pick;
     const last = this.game.narrator.lastReply;
-    p.reply.textContent = asleep ? `${residentDef(id).name} is asleep. Talk in the morning.` : last && last.who === id ? `“${last.text}”` : '';
+    // A look is shown as what they do, not as a quote (bar round 5).
+    p.reply.textContent = asleep ? `${residentDef(id).name} is asleep. Talk in the morning.` : last && last.who === id ? (/^\(.+\)$/.test(last.text) ? last.text.slice(1, -1) : `“${last.text}”`) : '';
     // The replies open to this answer, until one is made.
     // Bar round 4: the replies answer what was actually said (a long answer is trimmed), and are
     // redrawn for every answer, not only when the kinds change.

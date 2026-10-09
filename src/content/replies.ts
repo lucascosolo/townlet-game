@@ -134,6 +134,29 @@ Object.assign(REPLY_LINES, {
     chatty: ['Yes! Exactly! See!', 'Ha! Great minds!', 'Finally, someone agrees with me!', "That's what I keep saying!", 'Two of us! A movement!'],
     dreamy: ['Then we are looking at the same sky.', 'Agreed, like two notes in tune.', 'It is good to stand on the same side.', 'Yes. You see it too.', 'Then the thought is shared.'],
   },
+  // Bar round 5: "You don't seem it" to someone who really is well; a nudge between dreams; a sorry
+  // that comes too late to someone who has given up on you.
+  fine: {
+    plain: ["No, really. I'm fine.", 'Honest. All good.', "I'm well. Don't fuss.", "Fine. Really. Promise.", "Nothing wrong with me."],
+    formal: ['I assure you, I am quite well.', 'You are kind to wonder, but there is no need.', 'Truly, I am in good spirits.', 'I would tell you if it were otherwise.', 'I am well. Better than well, in fact.'],
+    warm: ["No, honestly, I'm happy! It's nice of you to check.", "I really am fine, you sweet thing.", "Truly! It's a good stretch, this.", "I mean it. I'm doing well.", "You're kind to ask twice. I'm all right, really."],
+    chatty: ['Me? Fine! Fabulous! Ask anyone!', "No no no, I'm great! Look at me!", 'Fine! Promise! Cross my heart!', "Ha! I'm the happiest person you'll meet today!", 'Seem it? I AM it!'],
+    dreamy: ['The day sits lightly on me. Truly.', 'No shadow today. I promise.', 'I am well, like a field after rain.', 'It is a good season in me.', 'Look closer. It is real.'],
+  },
+  nudged: {
+    plain: ["Not settling. Resting.", "Something'll come. Don't rush me.", "Fair. I'll think bigger.", "Maybe. I'm not done yet.", "I hear you. Give it a week."],
+    formal: ['I am not settling, merely pausing.', 'You may be right. I shall not rest too long.', 'A fair challenge. Something larger will come to me.', 'I take your point. I have not stopped wanting things.', 'Rest is not retreat. But I hear you.'],
+    warm: ["You're right, I shouldn't get too comfortable.", "Oh, I won't! I just need a breather.", "That's sweet. I'll dream something big, promise.", "Ha, you sound like my mother. But yes.", "You think I could do more? Maybe I could."],
+    chatty: ['Settle? Me? Never! Just pausing!', "Ooh, a challenge! Fine! Something BIG next!", "Too little? Watch this space!", "You're right! What's the biggest thing I could do?", 'Pausing! Not stopping! Big difference!'],
+    dreamy: ['The next wish is gathering itself.', 'I am only between tides.', 'You may be right. I will listen for something larger.', 'Fallow fields grow the best crops.', 'Perhaps I have been dreaming too small.'],
+  },
+  cheap: {
+    plain: ["Words are cheap.", "Sorry won't mend it.", "Show me, don't tell me.", "Heard sorry before.", "Do something, then."],
+    formal: ['An apology is easy. Amends are not.', 'I would sooner see it in what you do.', 'Words cost you nothing, steward.', 'I have heard fine words before.', 'Forgive me if I wait for deeds.'],
+    warm: ["I'd like to believe you. Show me.", "It's a bit late for sorry, honestly.", "Saying it doesn't make it better.", "I want things to change, not words.", "I'm too tired to accept that right now."],
+    chatty: ['Sorry? SORRY? Ha!', "Prove it! Then we'll talk!", "Words! Lovely! Where's the doing?", "Sorry's free! Try something that costs you!", "Nope! Not today!"],
+    dreamy: ['Words fall like leaves. I am waiting for the tree.', 'A sorry is a seed. Let me see it grow.', 'Too late, and too light.', 'The wound is older than your words.', 'I hear you. The ache does not.'],
+  },
   // Bar round 4: a hope cheered on, doubted by the steady, doubted by the touchy.
   encouraged: {
     plain: ['Thanks. Means something, that.', "We'll see. But thanks.", 'Good to hear.', "Ta. I'll keep at it.", 'Right. Onward, then.'],

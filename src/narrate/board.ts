@@ -49,7 +49,22 @@ export function ledgerLine(n: LedgerNote): string {
 export function townWorries(state: SimState): string[] {
   const out: string[] = [];
   const need = dayOfMeals(state);
-  const have = Math.floor(state.stock.food + (state.granary ?? 0));
+  const larder = Math.floor(state.stock.food);
+  const granary = Math.floor(state.granary ?? 0);
+  const have = larder + granary;
   if (need > 0 && have < need) out.push(have <= 0 ? `The larder is empty, and everyone knows it.` : `The larder holds ${have} food: less than a day's meals for ${Math.round(need)}. People are starting to worry.`);
+  // Bar round 5: the granary feeding the town is a worry too (a week of near-empty larder went unremarked).
+  else if (need > 0 && larder < need && granary > 0) out.push(`The larder is nearly bare, and the granary is feeding the town: ${granary} food left in it.`);
   return out;
+}
+
+/**
+ * The board's line when nothing major happened overnight (bar round 5: "A quiet night. Nothing needs
+ * you." above three people asking for work). Never says nothing needs you while something does.
+ */
+export function quietLine(state: SimState, worries: number, minorOvernight: number): string {
+  const waiting = state.requests.some((q) => q.status === 'open') || state.story.dilemmas.some((d) => d.status === 'open');
+  if (worries > 0) return 'Nothing else new this morning.';
+  if (waiting) return 'Nothing new overnight.';
+  return minorOvernight ? 'A quiet night. Nothing needs you.' : 'Nothing new on the board.';
 }

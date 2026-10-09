@@ -142,8 +142,14 @@ describe('criterion 3: today\'s goals', () => {
     // Each kind, completed by commands alone, on a twin of a morning that offered it.
     const kinds: GoalKind[] = ['talk', 'favour', 'learn', 'meet', 'green', 'answer', 'stores'];
     const done = new Set<GoalKind>();
+    // Bar round 5: the considerate steward now builds Juniper's granary on day 20, two days before
+    // winter, so the stores goal is rarely offered; this test is about each goal being completable,
+    // so the town is given the timber for the granary when she asks.
     for (let d = 2; d <= 24 && done.size < kinds.length; d++) {
       const base = runScenario('quiet', 1, 'considerate');
+      base.on((e) => {
+        if (e.type === 'stores' && e.phase === 'asked') base.state.stock.timber += 15;
+      });
       base.runUntil(at(d, 8));
       for (const g of todaysGoals(base.state)) {
         if (done.has(g.kind)) continue;

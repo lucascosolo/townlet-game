@@ -90,5 +90,7 @@ export const ACTIVITY_EFFECTS: Record<ActivityId, Partial<NeedMap>> = {
 
 /** A need shown as low: under six tenths of what they want, or under 0.3 whatever they want (bar round 3: "all met" mid-famine). */
 export function needIsLow(level: number, setpoint: number): boolean {
-  return level < setpoint * 0.6 || level < 0.3;
+  // Bar round 5: the same line as "On their mind" (urgency over 0.35), so the page never says
+  // "Hungry" above "Needs · all met".
+  return level < setpoint * 0.65 || level < 0.3;
 }

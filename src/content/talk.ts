@@ -214,7 +214,7 @@ export const TALK_HOPE_DONE: Lines = {
   plain: ["Did what I set out to do. Thinking about what's next.", 'Between plans. Enjoying {x} meanwhile.', 'Nothing big just now. {X} does me fine.', "Got there. Taking it easy for a bit. {X}, mostly.", 'No new plan yet. Making the most of {x}.'],
   formal: ['I have done what I hoped to. Something new will come.', 'For now I am content with {x}. The next ambition can wait.', 'I am between purposes, and I find I do not mind. {X} keeps me well.', 'I allow myself a pause. {X} is pleasure enough for the present.', 'Nothing grand at present. I am enjoying {x}, which is its own sort of hope.'],
   warm: ["I did it, you know! I'm still thinking what comes next.", "Honestly? Just enjoying {x} for now. Something will come.", "I'm taking a breather. {X} has been lovely.", "No big plans just now. I'm making the most of {x}.", "I'm happy as I am for a bit. {X} helps."],
-  chatty: ['Done it! What next? No idea yet!', 'Nothing! For now! Too busy enjoying {x}!', "Next plan? Brewing! Meanwhile, {x}!", "Ha! Ask me next week! I'm all about {x} right now!", 'Between dreams! Very restful! {X}!'],
+  chatty: ['Done it! What next? No idea yet!', 'Nothing! For now! Too busy enjoying {x}!', "Next plan? Brewing! Meanwhile, {x}!", "Ask me next week! I'm all about {x} right now!", 'Between dreams! Very restful! {X}!'],
   dreamy: ['My last dream came true. The next one is still forming.', 'I am resting between wishes. {X} fills the gap.', 'The next dream has not found me yet. {X} will do until it does.', 'I am letting the field lie fallow. {X} is enough for now.', 'Something new is gathering. Meanwhile there is {x}.'],
 };
 

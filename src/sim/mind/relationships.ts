@@ -13,6 +13,9 @@ import { opinion } from './memory.js';
  */
 export const STEWARD_NIGHT_CAP = { good: 0.2, bad: 0.6 } as const;
 
+/** Bar round 5: where standing relaxes with nothing happening (was 0.2, mild liking with no reason; 0 and 0.1 emptied two year-soak towns each). */
+export const STANDING_REST = 0.15;
+
 export function newRelationship(): Relationship {
   return { affinity: 0.1, familiarity: 0.3, trust: 0.4, lastContact: -1, lastArgue: -1, tags: [] };
 }
@@ -79,7 +82,8 @@ export function nightlyRelationships(ctx: MindContext, r: ResidentState, steward
       // The first week, trust is earned more slowly still (bar round 3: "you have earned my trust" on day 2).
       const firstWeek = ctx.tick < 7 * 1440;
       const ev = clamp(stewardEvidence, -STEWARD_NIGHT_CAP.bad, (firstWeek ? 0.14 : STEWARD_NIGHT_CAP.good) * (r.leaving ? 2 : 1));
-      x.affinity = clamp(x.affinity + 0.05 * (0.2 - x.affinity) + 0.5 * ev + 0.03 * op, -1, 1);
+      // Bar round 5: with nothing happening, standing relaxes nearer no view, so a town has to be kept, not won once.
+      x.affinity = clamp(x.affinity + 0.05 * (STANDING_REST - x.affinity) + 0.5 * ev + 0.03 * op, -1, 1);
       x.trust = clamp(x.trust + 0.04 * (0.5 - x.trust) + 0.3 * ev + 0.02 * op);
       continue;
     }

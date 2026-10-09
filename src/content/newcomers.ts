@@ -28,7 +28,7 @@ const TRADES: Trade[] = [
     id: 'henkeeper',
     drawnBy: ['coop', 'beehives'],
     onlyIfDrawn: true,
-    past: ['Kept hens and bees on a farm downriver', 'A smallholder whose farm was sold'],
+    past: ['Kept hens and bees on a farm downriver', 'A smallholder whose farm was sold', 'Grew turnips on a hillside nobody else wanted', 'A dairy hand who wanted a field at last'],
     job: 'coop',
     fallbackJob: 'garden',
     ages: [26, 64],
@@ -39,7 +39,7 @@ const TRADES: Trade[] = [
   {
     id: 'potter',
     drawnBy: ['workshop', 'flowerbed'],
-    past: ['A potter from the city', 'A potter whose kiln finally cracked'],
+    past: ['A potter from the city', 'A potter whose kiln finally cracked', 'Threw pots at a fairground stall for ten summers', 'Learned the wheel from a grandmother in the hills'],
     job: 'workshop',
     fallbackJob: 'garden',
     ages: [24, 55],
@@ -50,7 +50,7 @@ const TRADES: Trade[] = [
   {
     id: 'fisher',
     drawnBy: ['jetty', 'brook'],
-    past: ['A fisher from the estuary', 'Worked the boats on the coast for years'],
+    past: ['A fisher from the estuary', 'Worked the boats on the coast for years', 'Mended nets in a harbour town', 'Fished a lake so cold it froze the line'],
     job: 'jetty',
     fallbackJob: 'woodlot',
     ages: [28, 66],
@@ -61,7 +61,7 @@ const TRADES: Trade[] = [
   {
     id: 'baker',
     drawnBy: ['bakery', 'teahouse'],
-    past: ['A baker from a market town', 'Ran a bread stall on the high road'],
+    past: ['A baker from a market town', 'Ran a bread stall on the high road', 'Baked for a monastery that closed its doors', 'Kneaded dough at a big city bakery before dawn every day'],
     job: 'bakery',
     fallbackJob: 'garden',
     ages: [22, 60],
@@ -72,7 +72,7 @@ const TRADES: Trade[] = [
   {
     id: 'gardener',
     drawnBy: ['garden', 'orchard', 'glasshouse', 'flowerbed', 'hedge'],
-    past: ['A gardener from a big estate', 'Kept a walled garden for a family who moved away'],
+    past: ['A gardener from a big estate', 'Kept a walled garden for a family who moved away', 'Grew herbs for an apothecary in the city', 'Tended the roses at a seaside hotel'],
     job: 'garden',
     fallbackJob: 'woodlot',
     ages: [20, 75],
@@ -83,7 +83,7 @@ const TRADES: Trade[] = [
   {
     id: 'carpenter',
     drawnBy: ['woodlot', 'workshop'],
-    past: ['A carpenter with a cart of tools', 'A joiner who fixes things nobody asked them to'],
+    past: ['A carpenter with a cart of tools', 'A joiner who fixes things nobody asked to be fixed', 'Built boats in a yard by the river', 'Made chairs for a whole village, one a week'],
     job: 'woodlot',
     fallbackJob: 'workshop',
     ages: [24, 62],
@@ -94,7 +94,7 @@ const TRADES: Trade[] = [
   {
     id: 'tinkerer',
     drawnBy: ['workshop'],
-    past: ['A clockmaker\'s apprentice', 'An inventor whose last invention exploded'],
+    past: ['A clockmaker\'s apprentice', 'An inventor whose last invention exploded', 'Repaired mill wheels up and down the valley road', 'Built a flying machine that flew, once'],
     job: 'workshop',
     fallbackJob: 'garden',
     ages: [17, 45],
@@ -105,7 +105,7 @@ const TRADES: Trade[] = [
   {
     id: 'host',
     drawnBy: ['teahouse', 'commons', 'bench'],
-    past: ['Kept an inn on the old road until the road moved', 'Ran a busy tavern in town'],
+    past: ['Kept an inn on the old road until the road moved', 'Ran a busy tavern in town', 'Poured cider at every fair in the county', 'Cooked for travellers at a crossroads inn'],
     job: 'garden',
     fallbackJob: 'bakery',
     ages: [30, 68],
@@ -116,7 +116,7 @@ const TRADES: Trade[] = [
   {
     id: 'scholar',
     drawnBy: ['glasshouse', 'orchard', 'oak'],
-    past: ['A retired teacher of botany', 'A librarian who read every book in the building'],
+    past: ['A retired teacher of botany', 'A librarian who read every book in the building', 'Kept the parish records for forty years', 'Taught letters to children in three villages'],
     job: 'garden',
     fallbackJob: 'workshop',
     ages: [40, 80],

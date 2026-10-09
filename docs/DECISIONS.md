@@ -2,6 +2,45 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-09: Bar round 5: standing that is earned, replies that land by what was said, a log that is there, nothing that contradicts itself
+
+**The review** (`docs/reviews/2026-10-09-bar-review-5.md`) scored the game 7, 6, 7, 7, 7. It credits round 4 with chips that follow each answer, two replies on hopes, disliked places and cool neighbours, and neglect that drives people out. What holds it under now: everyone ends up adoring the steward because talking is rewarded in itself; replies land the same way whatever was said; the log is blank after the intro and Folk is squeezed out by the stores card; the board says nothing needs you when something does; a handful of raw lines; opinions that contradict their holder; sameness in facts, dreams, bios and praise; and an economy that starves early and hides hunger late. Round 5 takes all eight in rank order.
+
+**Chosen:**
+- **Standing is earned by deeds, not talk.** Agreeing, encouraging and being seen no longer raise affinity by themselves: talk builds familiarity, and what it adds to affinity is capped at a small amount a week per resident. A sorry to someone who thinks ill of you, for something old, is "words are cheap" until a deed changes things. Standing relaxes toward each resident's own starting view, so a town has to be kept, not won once.
+- **Replies land by what was said.** "You don't seem it" is denied by someone who really is well and conceded only by someone below their usual; doubting a between-dreams hope has its own answers; an answer that speaks of leaving, hunger or grief builds its chips from that; reply responses carry no verbal tic.
+- **The log is there from the first look.** The interface reads everything the narrator already holds when it starts (the intro runs hours before it), so the log and "This morning" are filled after the intro and after a reload. On a desktop the stores card shrinks to a line when space is short, so Folk keeps a row.
+- **The board never says nothing needs you while something does:** with a proposal or ask open it says "Nothing new overnight".
+- **Raw lines:** capitals kept after a tic; "an orchard", "garden plots" in the timber message; a learned bio not lowercased or doubled, and not announced again when known; "spoil" for plurals; "what was not done" named; a resident remembers their own orchard as "my orchard"; stage directions without quote marks; "you" on the You tab.
+- **Opinions agree with their holder.** Nobody dislikes their workplace, their home, or a building their dream asked for; the needs line agrees with what is on their mind; losing a place is grief, never a turn against it.
+- **Less sameness.** Love facts relative to the town as dislikes are; a dream title held by two at most; a newcomer's "get to know the neighbours" done after a few conversations; newcomer backstories vary with the seed; the same whole answer is not said to you twice in a fortnight.
+- **Economy pacing.** More timber at the start; the granary feeding the town is a worry on the board; at spring the granary carries a third of its stores forward instead of emptying in a day.
+
+**Settled while building:**
+- **Talk warmth is capped at 0.06 a week per resident.** Agreeing, encouraging, brushing off praise and being seen add 0.01 to 0.02 each up to that; only owning a complaint is remembered as something you did ("owned up to it"). With nothing happening, standing relaxes toward 0.15 (it relaxed toward 0.2, mild liking with no reason behind it; 0 and 0.1 were tried, and each emptied two of the year soak's neglected towns, since the decision to leave reads standing directly).
+- **"Words are cheap"** below −0.5 standing, for a grievance whose last cause is three days old or more; a fresh wrong can still be forgiven.
+- **"You don't seem it" is denied at a mood of 0.7 or more** when they said they were well.
+- **The log reads what the narrator already holds** when the interface starts, and "This morning" is rebuilt from the entries since the last day header.
+- **The board's quiet line** is a pure function: "Nothing else new this morning" with worries, "Nothing new overnight" while anything is open, "A quiet night. Nothing needs you." only when nothing is.
+- **Goals drops its long hints on a desktop** (they stay as hover titles), so Folk keeps a row beside the winter stores.
+- **An ignored ask's note names it:** "never got me a bench" (was "nothing was done").
+- **A bio is read on the page:** the log says "You read Bram's story on his page." instead of reciting it lowercased.
+- **A look is told, not quoted:** "Otto nods slowly." in the log, without quote marks, and the same in the talk panel.
+- **The needs line uses the same threshold as "On their mind"** (below 0.65 of the setpoint, or 0.3).
+- **The "lifts" fact is relative to the town**, as the dislikes fact is; noise counts as a love only for someone who likes it.
+- **A dream is shared by two at most** (same kind about the same thing).
+- **A newcomer's first step is done** after talking with three neighbours, or after five days.
+- **Newcomer backstories have four variants per trade** (were two), and "fixes things nobody asked them to" is "nobody asked to be fixed".
+- **The same whole answer is not given twice in a fortnight:** the lines are picked again, then the reason and a second topic are dropped; when it must repeat, they say so ("As I told you on day 9: ...").
+- **30 timber to start** (was 25; 35 put the favours steward's timber at its cap on eight days of 28); **the granary feeding the town is a board worry**; **at spring two thirds of the granary is shared out** and a third kept.
+- **A low larder caps standing at 0.85 for three days after it ends,** not just while it lasts.
+- **A neighbour's liking counts from 0.25** (17% cool neighbours on one seed at 0.2). **"A lovely spot" stays at 0.7:** 0.75 met its round-4 measure but cost five older ones (fewer residents grieve a lost place, a larder week moves mood less), so it went back, and seed 1 has "a lovely spot" for 4 of 9 settled place views; reported.
+- **A friend called on while standing at a flower bed or similar steps off it to wait**, and anyone mid-walk re-routes round a new building, errand or not (a stroller stood on a flower bed for an hour).
+- **Nine ways to tell a bad night** (five came round again within a week).
+
+**Rejected:**
+- *Making the steward's standing decay to zero.* A good steward should be liked; the fix is that liking follows what you did, not how often you chatted.
+
 ## 2026-10-09: Bar round 4: replies that answer what was said, a mood that moves, no ghosts, opinions with an edge
 
 **The review** (`docs/reviews/2026-10-09-bar-review-4.md`) scored the game 7, 6, 7, 7, 6. It credits round 3 with removing the raw text, refusals that mention you, a famine that bites, neglect that drives people out, and standing that spreads from +1.00 to −0.70. What holds it under now: reply chips and stage directions that do not match the answer just given, a mood that ordinary play never moves, dreams and pages that keep people who have left (and one dream that finishes itself), opinions of people and places that are nearly all warm with every founder sharing the same two habits, answers that still carry stock facts, a few raw fact and page lines, dreams that converge on gifts, and the Folk widget cut off at 900 px tall. Round 4 takes all eight problems in rank order.

@@ -61,9 +61,17 @@ export const GESTURES_COOL = ['shrugs', 'frowns', 'looks away', 'sniffs', 'says 
 export const GESTURES_EVEN = ['nods', 'takes that in', 'considers that', 'tilts {poss} head', 'thinks about it', 'is quiet a moment', 'nods once'];
 
 /** Building names that are plural take a plural verb (bar round 3: "the garden plots is a lovely spot"). */
-const PLURAL_NAMES = ['garden plots', 'beehives'];
-const PLURAL_OF: Record<string, string> = { is: 'are', was: 'were', has: 'have', gets: 'get', keeps: 'keep', makes: 'make', does: 'do' };
-const PLURAL_VERB = new RegExp(`\\b(${PLURAL_NAMES.join('|')}) (is|was|has|gets|keeps|makes|does)\\b`, 'gi');
+export const PLURAL_NAMES = ['garden plots', 'beehives'];
+
+/** "an orchard", "a bench", "garden plots" (bar round 5: "for a orchard", "for a garden plots"). */
+export function withArticle(name: string): string {
+  const n = name.toLowerCase();
+  if (PLURAL_NAMES.includes(n)) return n;
+  return /^[aeiou]/.test(n) ? `an ${n}` : `a ${n}`;
+}
+const PLURAL_OF: Record<string, string> = { is: 'are', was: 'were', has: 'have', gets: 'get', keeps: 'keep', makes: 'make', does: 'do', spoils: 'spoil', "isn't": "aren't", "wasn't": "weren't" };
+// Bar round 5: "the garden plots spoils the view".
+const PLURAL_VERB = new RegExp(`\\b(${PLURAL_NAMES.join('|')}) (is|was|has|gets|keeps|makes|does|spoils|isn't|wasn't)(?![\\w'])`, 'gi');
 
 /** Sentences in a reply, a verbal tic counting as part of the sentence it opens (bar round 3). */
 export function sentenceCount(text: string, tics: readonly string[] = []): number {
@@ -343,7 +351,7 @@ export class Narrator {
   }
 
   /** The words of a line in a resident's voice, without quotes, so lines can be joined. */
-  utter(who: string, lines: Lines | undefined, vars: Record<string, string> = {}, mineGapDays = 3): string {
+  utter(who: string, lines: Lines | undefined, vars: Record<string, string> = {}, mineGapDays = 3, noTic = false): string {
     const def = residentDef(who);
     const options = lines?.[def.voice.register] ?? lines?.plain ?? ['...'];
     let text = sentenceCase(fixArticles(this.fill(this.freshest(who, options, mineGapDays), FIRST_PERSON, vars)));
@@ -351,13 +359,15 @@ export class Narrator {
     // ("Honestly, you know, ..." read as a stammer).
     const opensLoud = /^(Oh|Ha|Ooh|Hey|Listen|Kaboom|What)\b/.test(text) || (this.keepsCapital(text) && !/^I\b/.test(text)) || /^[A-Z][a-z']*( [a-z']+)?,/.test(text);
     const today = dayOf(this.state.tick);
-    const tics = opensLoud ? [] : def.voice.tics.filter((t) => !text.toLowerCase().includes(t.toLowerCase()) && this.ticUsed.get(`${who}|${t}`) !== today);
+    // Bar round 5: no tic on a reply's response ("I must say, allow me my opinion, steward.").
+    const tics = opensLoud || noTic ? [] : def.voice.tics.filter((t) => !text.toLowerCase().includes(t.toLowerCase()) && this.ticUsed.get(`${who}|${t}`) !== today);
     if (tics.length > 0 && chance(this.rng, 0.25)) {
       const tic = pick(this.rng, tics);
       // Once a day each (bar round 1: "Honestly?" opened 15 answers).
       this.ticUsed.set(`${who}|${tic}`, today);
       if (/[.!?]$/.test(tic)) text = `${tic} ${text}`;
-      else text = `${cap(tic)}, ${this.keepsCapital(text) ? text : text.charAt(0).toLowerCase() + text.slice(1)}`;
+      // A shouted word keeps its capitals (bar round 5: "bONFIRE!").
+      else text = `${cap(tic)}, ${this.keepsCapital(text) || /^[A-Z]{2,}\b/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1)}`;
     }
     return text;
   }
@@ -468,6 +478,11 @@ export class Narrator {
             `${cap(place)} clatters through the night, and ${name} hears every minute of it.`,
             `${name} gives up on sleep and sits by the window; ${place} is at it again.`,
             `Another broken night for ${name}, courtesy of ${place}.`,
+            // Bar round 5: nine ways, so a week of bad nights never repeats one (five came round again in a week).
+            `${name} counts the hours by the din from ${place}.`,
+            `${name} pulls the blanket over ${p.poss} head. ${cap(place)} is louder than the blanket.`,
+            `Not much sleep for ${name}: ${place} again.`,
+            `${name} is still awake when the birds start, thanks to ${place}.`,
           ];
           this.live(e.t, this.freshLine(e.who, ways));
         }
@@ -651,7 +666,9 @@ export class Narrator {
         else if (e.phase === 'all') this.live(e.t, `All of today's goals done. The town notices.`);
         break;
       case 'fact':
-        this.aside(e.t, `${e.first ? `${this.you ? "You've" : 'The steward has'} met ${this.name(e.who)}. ` : ''}${this.you ? 'You learn' : 'The steward learns'} something about ${this.name(e.who)}: ${lowerFirst(factValue(this.state, this.state.residents[e.who]!, e.key))}.`);
+        // Bar round 5: a bio is read on their page, not recited lowercased in the log ("…Talks to dough..").
+        if (e.key === 'background') this.aside(e.t, `${e.first ? `${this.you ? "You've" : 'The steward has'} met ${this.name(e.who)}. ` : ''}${this.you ? 'You read' : 'The steward reads'} ${this.name(e.who)}'s story on ${residentDef(e.who).pronouns.poss} page.`);
+        else this.aside(e.t, `${e.first ? `${this.you ? "You've" : 'The steward has'} met ${this.name(e.who)}. ` : ''}${this.you ? 'You learn' : 'The steward learns'} something about ${this.name(e.who)}: ${lowerFirst(factValue(this.state, this.state.residents[e.who]!, e.key)).replace(/[.!?]+$/, '')}.`);
         break;
       case 'renown':
         break;
@@ -662,14 +679,14 @@ export class Narrator {
         const def = residentDef(e.who);
         const options = REPLY_LINES[e.stance]?.[def.voice.register] ?? REPLY_LINES[e.stance]?.plain ?? [];
         const fresh = options.filter((o) => e.t - (this.saidBy.get(`${e.who}|${o}`) ?? -Infinity) >= 7 * 1440 && e.t - (this.saidAny.get(o) ?? -Infinity) >= 8 * 1440);
-        const warmish = ['warm', 'forgiven', 'convinced', 'owned', 'insist', 'with_you', 'seen', 'encouraged', 'mulled'].includes(e.stance);
+        const warmish = ['warm', 'forgiven', 'convinced', 'owned', 'insist', 'with_you', 'seen', 'encouraged', 'mulled', 'fine', 'nudged'].includes(e.stance);
         // A look follows how they stand with you (bar round 4: a warm look after "you have lost my good opinion entirely").
         const standing = this.state.residents[e.who]?.rel.steward?.affinity ?? 0;
         const gestureSet = warmish ? (standing < 0 ? GESTURES_EVEN : GESTURES_WARM) : standing > 0.5 ? GESTURES_EVEN : GESTURES_COOL;
         const gestures = gestureSet.map((g) => `(${this.name(e.who)} ${g.replace('{poss}', def.pronouns.poss)}.)`);
         const freshGesture = gestures.filter((g) => e.t - (this.saidBy.get(`${e.who}|${g}`) ?? -Infinity) >= 7 * 1440);
         let words: string;
-        if (fresh.length > 0) words = this.utter(e.who, REPLY_LINES[e.stance], {}, 7);
+        if (fresh.length > 0) words = this.utter(e.who, REPLY_LINES[e.stance], {}, 7, true);
         else if (freshGesture.length) {
           words = pick(this.rng, freshGesture);
           this.saidBy.set(`${e.who}|${words}`, e.t);
@@ -679,7 +696,9 @@ export class Narrator {
         const offer = last?.used ?? last?.offers.find((o) => o.kind === e.reply) ?? { kind: e.reply };
         this.lastSaid = { who: e.who, t: e.t, text: replySaid(offer, (id) => this.subjectName(id)) };
         // Not every remark needs an answer: with nothing fresh to say, they just listen.
-        this.live(e.t, words ? `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)}: "${words}"` : `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)} listens.`);
+        // A look is told, not quoted (bar round 5: "“(Otto nods slowly.)”").
+        const look = /^\((.+)\)$/.exec(words);
+        this.live(e.t, look ? `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${look[1]}` : words ? `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)}: "${words}"` : `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)} listens.`);
         break;
       }
       case 'gift':
@@ -694,7 +713,7 @@ export class Narrator {
           progress: `${who} counts the sacks in the granary: ${e.stored} of ${e.target} put by, ${left} to winter. "${e.stored * 4 >= e.target * 3 ? 'Nearly there. One last push.' : e.stored * 2 >= e.target ? 'Halfway! We can do this.' : 'A good start. Keep it coming.'}"`,
           met: `The first morning of winter, and the granary holds ${e.stored} food. ${who} goes door to door to tell everyone. Nobody will go hungry this winter.`,
           short: `Winter comes with ${e.stored} of ${e.target} food put by. ${who}: "It will have to do. We eat carefully, and we start sooner next year."`,
-          feast: `Spring, and last year's stores won't keep: ${who} shares out the last ${e.stored} food from the granary, and the whole town eats well. The granary starts again from empty.`,
+          feast: `Spring, and the oldest of last year's stores won't keep: ${who} shares out ${e.stored} food from the granary, and the whole town eats well.${e.kept ? ` ${e.kept} is kept back for the lean weeks.` : ' The granary starts again from empty.'}`,
         };
         this.live(e.t, lines[e.phase]);
         break;
@@ -952,8 +971,10 @@ export class Narrator {
     const p = residentDef(who).pronouns;
     const me = (t: string) =>
       t.replace(new RegExp(`\\b${p.subj} (was|were)\\b`, 'g'), 'I was').replace(new RegExp(`\\b${p.obj}\\b`, 'g'), 'me');
-    const x = rec.subject === STEWARD_ID ? (youAreSteward ? 'you' : 'the steward') : this.subjectName(rec.subject);
-    const note = me(rec.note);
+    // Their own things are "my" things (bar round 5: Ada remembering "the first apples from Ada's orchard").
+    const own = new RegExp(`\\b${residentDef(who).name}'s\\b`, 'g');
+    const x = rec.subject === STEWARD_ID ? (youAreSteward ? 'you' : 'the steward') : this.subjectName(rec.subject).replace(own, 'my');
+    const note = me(rec.note).replace(own, 'my');
     const verbFirst = /^(built|put|took|granted|planted|said|never|helped|remembered|looked|fed|taught|decided|wouldn't|asked|filled|shared|gave|let)\b/.test(note);
     switch (rec.aspect) {
       case 'argued_with_me':
@@ -1019,6 +1040,8 @@ export class Narrator {
   /** `${who}|${tic}` -> the day it was last used, so a tic is heard at most once a day. */
   private ticUsed = new Map<string, number>();
 
+  /** What each resident has answered you lately (bar round 5). */
+  private readonly answersTo = new Map<string, Array<{ t: number; text: string; base: string }>>();
   /** Asks posted per morning and kind, so the third alike is a short line (bar round 4). */
   private readonly asksToday = new Map<string, number>();
   /** What of the last answer was said (bar round 4): the replies offered and taken follow it. */
@@ -1119,7 +1142,32 @@ export class Narrator {
       shown = { ...shown, topics: [] };
       head = this.toSteward(this.answer(e.who, shown));
     }
-    const words = [head, remembered, told].filter(Boolean).join(' ');
+    let words = [head, remembered, told].filter(Boolean).join(' ');
+    // Bar round 5: not the same whole answer to you twice in a fortnight (Fen's praise word for word);
+    // the lines are picked again, freshest first, a few times.
+    const said = (this.answersTo.get(e.who) ?? []).filter((x) => e.t - x.t < 14 * 1440);
+    for (let i = 0; i < 6 && said.some((x) => x.base === words); i++) {
+      // Fresh lines first; then say less: the reason goes, then the second thing on their mind.
+      if (i === 4 && shown.because) {
+        const { because: _b, ...rest } = shown;
+        shown = rest;
+      }
+      if (i === 5 && (shown.topics?.length ?? 0) > 1) shown = { ...shown, topics: shown.topics?.slice(0, 1) };
+      head = this.toSteward(this.answer(e.who, shown));
+      // A fresh pick can run longer: still four sentences at most.
+      if (total() > 4 && (shown.topics?.length ?? 0) > 0) {
+        shown = { ...shown, topics: shown.topics?.slice(0, Math.max(0, (shown.topics?.length ?? 0) - 1)) };
+        head = this.toSteward(this.answer(e.who, shown));
+      }
+      if (total() > 4) remembered = '';
+      words = [head, remembered, told].filter(Boolean).join(' ');
+    }
+    // Still the same: they say so, and when ("As I told you on day 9: ...").
+    const base = words;
+    const before = said.filter((x) => x.base === base).pop();
+    if (before) words = `As I told you on day ${dayOf(before.t)}: ${words}`;
+    said.push({ t: e.t, text: words, base });
+    this.answersTo.set(e.who, said.slice(-40));
     this.lastReply = { who: e.who, t: e.t, text: words };
     // What was actually said, so the replies answer it (bar round 4).
     const cut: AnswerCut = { topics: shown.topics?.length ?? 0, memory: !!remembered, because: !!shown.because };

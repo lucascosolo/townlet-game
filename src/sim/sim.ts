@@ -68,7 +68,7 @@ import {
   type SimEvent,
   type SimState,
 } from './types.js';
-import { ambientAt, canPlace, distanceTo, emptyQualities, footprint, getBuilding, liveBuildings, mainSource, nearestOpen, placeTile, route, seedWear, sizeOf, wearDawn, wearStep } from './world.js';
+import { ambientAt, canPlace, distanceTo, emptyQualities, footprint, getBuilding, liveBuildings, mainSource, nearestOpen, onFootprint, placeTile, route, seedWear, sizeOf, wearDawn, wearStep } from './world.js';
 
 export type Command =
   | { at: number; kind: 'build'; type: string; x: number; y: number; rot?: number }
@@ -136,7 +136,8 @@ export const LOW_STANDING = 0.15;
 export const FELT_CAP = 0.22;
 /** Bar round 4: the most anyone thinks of you while the larder has been low two dawns running. */
 export const LOW_LARDER_TOP = 0.85;
-export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
+/** Bar round 5: 30 timber to start (was 25): seventeen builds were refused for timber in the first fortnight. */
+export const START_STOCK: Record<Resource, number> = { food: 20, timber: 30 };
 /** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */
 /** How much telling a memory rehearses it: about as much as reminiscing with a friend. */
 export const RECALL_REHEARSAL = 0.15;
@@ -446,11 +447,13 @@ export class Simulation implements AspirationHost {
       // sank a town nobody feeds to the bottom of the scale and emptied it in the year soak.
       if (lowLarder(state) > 0) {
         state.lowRun = (state.lowRun ?? 0) + 1;
-        if (state.lowRun >= 2) for (const r of this.activeResidents()) {
-          const x = r.rel[STEWARD];
-          if (x && x.affinity > LOW_LARDER_TOP) x.affinity = LOW_LARDER_TOP;
-        }
+        // Bar round 5: and for three days after, so a hungry week is not forgotten overnight.
+        if (state.lowRun >= 2) state.lowCapUntil = state.tick + 3 * TICKS_PER_DAY;
       } else state.lowRun = 0;
+      if ((state.lowCapUntil ?? -1) > state.tick) for (const r of this.activeResidents()) {
+        const x = r.rel[STEWARD];
+        if (x && x.affinity > LOW_LARDER_TOP) x.affinity = LOW_LARDER_TOP;
+      }
       storesDawn(this);
       progressDawn(this);
       wearDawn(state);
@@ -769,7 +772,8 @@ export class Simulation implements AspirationHost {
           const out = nearestOpen(state, r.x, r.y);
           if (out) [r.x, r.y] = out;
         }
-        if (r.path.length === 0 || !r.pending) continue;
+        // Bar round 5: a stroller with no errand re-routes too (Juniper walked over a new flower bed).
+        if (r.path.length === 0) continue;
         const dest = r.path[r.path.length - 1] as [number, number];
         const crosses = r.path.slice(0, -1).some(([px, py]) => px >= x && px < x + w && py >= y && py < y + h);
         if (crosses) r.path = route([r.x, r.y], dest, state);
@@ -1171,14 +1175,18 @@ export class Simulation implements AspirationHost {
     const lonely = Math.max(0, friend.setpoints.company - friend.needs.company);
     if (!chance(r, clamp(0.3 + 0.5 * fx.affinity + 0.6 * lonely))) return;
     const target = placeTile(getBuilding(state, next.placeId));
-    const toFriend = route([r.x, r.y], [friend.x, friend.y], state);
-    const together = route([friend.x, friend.y], target, state);
+    // Bar round 5: a friend standing at a flower bed or the like steps off it to wait, rather than
+    // waiting on the bed (Juniper stood on one for an hour).
+    const meet: [number, number] = onFootprint(state, friend.x, friend.y) ? (nearestOpen(state, friend.x, friend.y) ?? [friend.x, friend.y]) : [friend.x, friend.y];
+    const toFriend = route([r.x, r.y], meet, state);
+    const together = route(meet, target, state);
     r.path = [...toFriend, ...together];
     friend.at = null;
     friend.activity = null;
     friend.visitAppraised = false;
     friend.pending = { ...next };
-    friend.path = [...toFriend.map(() => [friend.x, friend.y] as [number, number]), ...together];
+    const stepOff = meet[0] === friend.x && meet[1] === friend.y ? [] : [meet];
+    friend.path = [...stepOff, ...toFriend.slice(stepOff.length).map(() => meet), ...together];
     adjust(r, friend.id, { familiarity: 0.02 }, state.tick);
     adjust(friend, r.id, { familiarity: 0.02 }, state.tick);
     this.emit({ t: state.tick, type: 'invite', a: r.id, b: friend.id, place: next.placeId });
@@ -1266,7 +1274,9 @@ export class Simulation implements AspirationHost {
         const before = lapsesOf(state, r.id, q.kind, tick);
         q.status = 'lapsed';
         q.closedTick = tick;
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'ignores_me', valence: -0.7, base: before === 0 ? 0.6 : 0.3, source: 'witnessed', note: 'nothing was done' });
+        // Bar round 5: name what was not done ("(what the steward did: nothing was done)").
+        const forWhat = q.kind === 'aspiration' && q.wants ? `${/^[aeiou]/i.test(buildingDef(q.wants).name) ? 'an' : 'a'} ${buildingDef(q.wants).name.toLowerCase()}` : WISH_LABELS[q.kind].toLowerCase();
+        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'ignores_me', valence: -0.7, base: before === 0 ? 0.6 : 0.3, source: 'witnessed', note: `never got ${def.pronouns.obj} ${forWhat}` });
         this.emit({ t: tick, type: 'request_closed', request: { ...q } });
       }
     }

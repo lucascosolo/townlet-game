@@ -1383,7 +1383,8 @@ export class Ui {
     // A long line is cut at a sentence, never mid-word and never with an ellipsis (bar round 2):
     // whole sentences up to the limit, or the first sentence alone when even that runs over.
     // Three lines at most (bar round 3): whole sentences up to the width, or the first clause of a long first sentence.
-    const limit = this.phone ? 90 : 120;
+    // 100 on a desktop: at 14px in 240px a wider fallback font took 120 characters to three full lines.
+    const limit = this.phone ? 90 : 100;
     let cut = text;
     if (text.length > limit) {
       const sentences = text.match(/[^.!?]+[.!?]+["”]?\s*|[^.!?]+$/g) ?? [text];

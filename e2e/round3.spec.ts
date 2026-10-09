@@ -74,8 +74,14 @@ test('desktop layout: the Folk album is usable, the hint is not cut, bubbles sta
   for (let i = 0; i < 40; i++) {
     await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.runTicks(6));
     await frames(page);
-    const heights = await page.evaluate(() => [...document.querySelectorAll('.bubble')].filter((b) => !(b as HTMLElement).hidden).map((b) => (b as HTMLElement).getBoundingClientRect().height));
-    for (const h of heights) expect(h).toBeLessThanOrEqual(3 * 12.5 * 1.3 + 4 * 2 + 6 + 2);
+    // Three lines at the bubble's own computed size (the 12.5px first assumed is overridden by a later 14px rule).
+    const sizes = await page.evaluate(() => [...document.querySelectorAll('.bubble')].filter((b) => !(b as HTMLElement).hidden).map((b) => {
+      const cs = getComputedStyle(b);
+      const px = (v: string) => parseFloat(v) || 0;
+      const line = cs.lineHeight === 'normal' ? 1.2 * px(cs.fontSize) : px(cs.lineHeight);
+      return { h: (b as HTMLElement).getBoundingClientRect().height, max: 3 * line + px(cs.paddingTop) + px(cs.paddingBottom) + px(cs.borderTopWidth) + px(cs.borderBottomWidth) + 2, text: b.textContent };
+    }));
+    for (const s of sizes) expect(s.h, s.text ?? '').toBeLessThanOrEqual(s.max);
     toastsMax = Math.max(toastsMax, await page.locator('.toasts .toast').count());
   }
   expect(toastsMax).toBeLessThanOrEqual(1);

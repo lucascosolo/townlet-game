@@ -142,6 +142,49 @@ DILEMMAS.push(
   },
 );
 
+// Bar round 6: three more, so a proposal can rest a month without the town running out of things to
+// disagree about (with seven kinds resting a month, standing drifted up for want of decisions).
+DILEMMAS.push(
+  {
+    // Leave the far field to the bees: lovely to some, wasted ground to others.
+    type: 'wild_meadow',
+    stance: { nature: 1, beauty: 0.4, prosperity: -0.6, craft: -0.2 },
+    proposer: (state) => mostBy(state, (r) => residentDef(r.id).values.nature, 0.6),
+    eligible: (state) => !state.story.wildMeadow,
+    approve: (host) => {
+      host.state.story.wildMeadow = true;
+    },
+  },
+  {
+    // A bell at ten, and quiet after it: rest for some, a curfew to others.
+    type: 'quiet_bell',
+    stance: { quiet: 1, community: -0.6, prosperity: -0.3 },
+    proposer: (state) => mostBy(state, (r) => residentDef(r.id).values.quiet, 0.6),
+    eligible: (state) => !state.story.quietBell,
+    approve: (host) => {
+      host.state.story.quietBell = true;
+    },
+  },
+  {
+    // Supper for everyone from the larder: generous, or careless with the stores.
+    type: 'shared_supper',
+    stance: { community: 1, beauty: 0.2, prosperity: -0.6, quiet: -0.4 },
+    proposer: (state) => mostBy(state, (r) => residentDef(r.id).values.community + 0.2 * residentDef(r.id).traits.sociable, 0.6),
+    eligible: (state) => placeFor(state, ['commons']) !== null && state.stock.food >= SUPPER_FOOD * 2 && !upcoming(state, 'supper'),
+    approve: (host) => {
+      const state = host.state;
+      const place = placeFor(state, ['commons']);
+      if (place === null) return;
+      const day = dayOf(state.tick) + 1;
+      state.stock.food = Math.max(0, state.stock.food - SUPPER_FOOD);
+      addGathering(host, { kind: 'supper', label: 'a shared supper', placeId: place, from: at(day, 18), until: at(day, 20, 30), pull: 0.8, appeal: { community: 0.7, beauty: 0.1 }, emits: { noise: 0.35, bustle: 0.5 }, radius: 3 });
+    },
+  },
+);
+
+/** Food a shared supper takes from the larder. */
+export const SUPPER_FOOD = 8;
+
 export function dilemmaDef(type: DilemmaType): DilemmaDef {
   const d = DILEMMAS.find((x) => x.type === type);
   if (!d) throw new Error(`unknown dilemma ${type}`);

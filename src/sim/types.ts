@@ -408,7 +408,7 @@ export interface Wish {
 
 export type Tone = 'good' | 'bad' | 'neutral';
 
-export type GatheringKind = 'festival' | 'trade_cart' | 'musician' | 'market' | 'contraption' | 'lantern_walk' | 'tales' | 'bonfire';
+export type GatheringKind = 'festival' | 'trade_cart' | 'musician' | 'market' | 'contraption' | 'lantern_walk' | 'tales' | 'bonfire' | 'supper';
 
 /** A time-boxed reason to be somewhere: a festival, a visitor, a market. */
 export interface Gathering {
@@ -445,7 +445,7 @@ export interface Spark {
   until: number;
 }
 
-export type DilemmaType = 'market_day' | 'night_baking' | 'contraption' | 'lantern_walk' | 'tales_night' | 'cart_stop' | 'bonfire_night';
+export type DilemmaType = 'market_day' | 'night_baking' | 'contraption' | 'lantern_walk' | 'tales_night' | 'cart_stop' | 'bonfire_night' | 'wild_meadow' | 'quiet_bell' | 'shared_supper';
 export type DilemmaStatus = 'open' | 'approved' | 'declined' | 'lapsed';
 
 export interface Dilemma {
@@ -482,6 +482,9 @@ export interface StoryState {
   wishes: Wish[];
   /** Approved standing arrangements. */
   marketDay: boolean;
+  /** Bar round 6: the far field left wild, and a bell for quiet at ten (proposals said yes to). */
+  wildMeadow?: boolean;
+  quietBell?: boolean;
   /** Buildings working outside their shift, [buildingId, from, until]. */
   extraShifts: Array<[number, number, number]>;
 }

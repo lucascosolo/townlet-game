@@ -29,6 +29,10 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **Standing: a night's good news is capped at 0.15** (was 0.3); newcomers arrive at 0 affinity and 0.4 trust; a favour needs a score of 0.5 (was 0.45), standing weighs 0.8 and a low mood counts from 0.55 down; the tier gift is 8 timber.
 - **Lines rest four days town-wide** (three for the same speaker), and about three hundred lines were added where a key had under five per register.
 - **Tiers at 100, 300 and 650 renown** (were 40, 180, 520).
+- **Founders start with no view of the steward** (affinity 0, not 0.1): the 0.1 read as "like" with no reason behind it and hid the grievances they held, so a memory of you never came up.
+- **Foragers eat as they pick** (+0.35 to the food need) and go twice a day when very hungry: the first year soak flagged two seeds for a resident starving half their waking hours.
+- **Lines rest eight days town-wide** (four was not enough: a warm joy line still came six times in a month).
+- **A journal page is not redrawn while nothing has moved** (same tick, nothing said, no command): at the low frame rate of software rendering the half-second redraw swapped buttons out under the browser tests' clicks.
 
 **Criteria read as built (reported in the status, not quietly):** "praise" in criterion 1 means a kind view with nothing conceded; the concession clause is one coherent statement and is not counted as pulling both ways under criterion 2; the hungry week in criterion 3 is a larder emptied every minute, foraging finds included, since foraging is the sim's own answer to a bare larder; the favours steward's refusal rate came out at 7.5% against the 15% declared and is kept as a visible expected failure.
 

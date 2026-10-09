@@ -1134,7 +1134,7 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
    - Random-builder soak departures: 6 of 10 runs over 28 days (band 4, re-set in round 1 from 1): hunger now weighs on mood and that steward never feeds the town. Kept as a visible expected failure rather than re-set a second time.
    - Winter stores: the larder sits at its cap for five days on seed 5 (band two) because with the tier gift cut to 8 timber the considerate steward reaches Juniper's granary on day 20 there. Kept visible.
    - Marlow's "stay or go" now gives a week's notice like anyone else, and a very good week can still turn it round; the founding-walks count leaves doorstep tiles out; the hearsay twin allows for the town's own gossip now that rivalries form; the bench twin starts with a full larder, since hunger now moves where people go.
-   - The year-long bakery soak with newcomers: SOAK_RESULT.
+   - The year-long bakery soak with newcomers (10 seeds, 112 days) finds no degenerate state: seed 3, which lost 24 of 35 residents in round 1 and 14 of 33 after the hunger fade, loses nobody now that a hungry town forages. A first run flagged two seeds for a resident starving half their waking hours; foragers now eat as they pick and go twice when very hungry, and the rerun is clean. Round 1's soak miss is closed.
 
 ### 9.4 The bar (set 2026-10-08)
 

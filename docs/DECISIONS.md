@@ -2,6 +2,39 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-09: Bar round 4: replies that answer what was said, a mood that moves, no ghosts, opinions with an edge
+
+**The review** (`docs/reviews/2026-10-09-bar-review-4.md`) scored the game 7, 6, 7, 7, 6. It credits round 3 with removing the raw text, refusals that mention you, a famine that bites, neglect that drives people out, and standing that spreads from +1.00 to −0.70. What holds it under now: reply chips and stage directions that do not match the answer just given, a mood that ordinary play never moves, dreams and pages that keep people who have left (and one dream that finishes itself), opinions of people and places that are nearly all warm with every founder sharing the same two habits, answers that still carry stock facts, a few raw fact and page lines, dreams that converge on gifts, and the Folk widget cut off at 900 px tall. Round 4 takes all eight problems in rank order.
+
+**Chosen:**
+- **Replies answer what was said.**
+  - The chips are redrawn for every answer, not only when the kinds change.
+  - Offers are built from what the answer actually says after it is trimmed. A chip that names a subject names one the answer named. Sorry and explain answer the grievance the answer states, not the strongest one they hold. An answer that carries a grievance is never offered "Thank you" for praise.
+  - "What are you hoping for?" gets two more replies: encouragement ("I hope it comes true") and doubt ("Is that really what you want?"). Encouragement warms; doubt is taken as care by the steady and as a slight by the touchy.
+  - A stage direction is picked by how they stand with you: nobody who thinks ill of you gives you a warm look.
+- **Everyday play moves mood.**
+  - A larder below a day's meals is a worry everyone shares, a little before it becomes a shortage, and the board says so.
+  - Losing a place someone loved weighs on their mood for days, not only in their feelings.
+  - Standing with you weighs more in mood at the low end, so a neglected town is visibly glummer while it empties, and "how are you" follows.
+- **No ghosts, and nothing finishes by itself.**
+  - A dream step that needs a building only the steward can give (Bram's ovens) waits for it and lets go after eight days, as the others do; it never completes on the nine-day rule.
+  - A gift dream for someone who has left is let go the next morning.
+  - Board lines, progress lines and season notes count only those still in town.
+  - A dream's ask card quotes the dream that posted the ask.
+- **Opinions with an edge.**
+  - Places can be disliked: values and the noise or bustle a place gives off produce dislikes ("too loud at night", "an eyesore"), with their own sentence shapes.
+  - A cool relationship shows when you ask about that person.
+  - The noise and rest facts are given only to those who stand out among the cast, so they tell people apart.
+  - A week of the larder below a day's meals keeps anyone from the top of the standing scale.
+- **Answers without stock facts.** A known fact is added only when the question is about it or the player has not heard it; the same verdict on a subject is never said twice in one answer; between dreams the hope answer says what they are enjoying meanwhile.
+- **Raw lines.** Fact lines are whole sentences with a capital and the right name; standing notes say "you"; a proposal shown in a modal does not say "approve on the board"; one morning's log never carries the same ask line more than twice; a "you built X for me" memory names what was built that day.
+- **Dreams that do not converge.** "Do something for the steward" counts against the gift cap; each trade has a second dream; a hope answer says how the dream is going.
+- **Layout.** The Folk widget gets the rest of the column at 900 px tall; worn ground fades back to grass when it is not walked for a few days.
+
+**Rejected:**
+- *Free-text replies.* Still four moves (five on hopes); the work is in their fitting.
+- *Raising every mood weight.* The year soak sits on a knife edge; mood moves through what happens (a low larder, a lost place, standing at the low end), not a bigger multiplier on everything.
+
 ## 2026-10-09: Bar round 3: no raw text, hunger that hurts, replies with substance, shorter answers, a tidier board
 
 **The review** (`docs/reviews/2026-10-09-bar-review-3.md`) scored the game 6, 5, 7, 6, 6. It credits round 2 with replies that name the grievance, proposals every few days that lapse as promised, residents who give up waiting and warn before leaving, and a phone start without a modal. What still holds it under: raw ids and broken grammar on screen, a famine nobody feels, replies that are one chip and a stock answer, answers that are stitched lists, and a board that repeats itself. Round 3 takes all nine problems in rank order, plus the round-2 misses (the year soak under total neglect, the hungry week's 0.10, the favours refusal rate).

@@ -1178,6 +1178,36 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 10. **Places have opinions: met.** On day 10 at most 30% of answers about buildings are neutral, in at least three shapes.
 11. **No regressions: met with these moved measures, each kept visible.** Seven expected failures remain: the do-nothing steward's 2.0 of 6 aspirations (M3a), the larder at its cap on stores seed 5, round 2's favours refusal rate, round 3's favours refusal reason, two path measures, and the four-question reveal rate (M4). Marlow's notice is read from the event that gives it, since a good week can turn him round before the check. Determinism holds (its test passes). 10× stepping costs 0.95 ms a frame in the browser test (under 2 ms).
 
+**Bar round 4 criteria (predeclared 2026-10-09, before code).** Quiet town, seeds 1–5, unless stated. A failure is reported as a failure, not redefined.
+
+1. **Replies that answer what was said.** Over 20 days of every question to everyone, considerate steward:
+   - an agree or disagree chip that names a subject names one whose name appears in the answer;
+   - a sorry or explain chip answers a grievance the answer states (the grievance came from a sentence still in the answer);
+   - no "praise" chip is offered under an answer that carries a grievance;
+   - every "What are you hoping for?" answer offers at least two replies;
+   - no warm stage direction from anyone below zero standing, and no cold one from anyone above 0.5;
+   - in the browser, an answer left without a reply and followed by another question shows the new answer's chips.
+2. **Everyday play moves mood.** Bakery town, seeds 1–5, against a twin run with the same seed:
+   - removing the place most residents hold dear on day 10 (considerate steward) lowers the next day's mean mood of those who held it dear by at least 0.05;
+   - a larder held below a day's meals but not empty from day 13 to 19 lowers mean mood on day 19 by at least 0.06, and the board names the low larder as a worry;
+   - quiet town, steward none: mean mood on day 21 is at least 0.10 below day 2 on every seed, and at least half of the "how are you" answers on day 21 are fair or lower;
+   - the year-long bakery soak with newcomers is flagged on no more seeds than in round 3 (one).
+3. **No ghosts.** Steward none and considerate, 30 days, plus the bakery year soak's departures:
+   - no dream whose subject has left survives the next morning;
+   - no dream step that asks for a building completes while that building is not in town (Bram's ovens without a bakery included);
+   - no board, progress or season line names a departed resident after the morning following their departure;
+   - every dream ask card quotes the dream that posted the ask.
+4. **Opinions with an edge.** Considerate steward, day 20:
+   - at least 20% of "what do you think of <person>" answers are cool or worse;
+   - at least one "what do you think of <building>" answer is a dislike on every seed, and "a lovely spot" is at most 30% of the settled place statements;
+   - no noise or rest fact is held by more than half the founders;
+   - after a week with the larder below a day's meals, nobody is above 0.9 standing.
+5. **Answers without stock facts.** Same run as criterion 1: no fact sentence appears in more than 3% of answers; no answer gives the same subject's verdict twice; at least five between-dreams hope lines per register.
+6. **No raw lines.** Every fact line starts with a capital and names no one as "them"; no standing note says "the steward"; no proposal text says "on the board"; in 30-day considerate, favours and none runs, no morning's log has the same ask line more than twice; every "you built X for me" memory names a building the steward built that day.
+7. **Dreams that do not converge.** 30-day considerate runs: never more than two residents with a gift dream at once, "do something for the steward" included; on day 30 at most a third of dreams are gifts.
+8. **Layout.** At 1440×900 the Folk widget shows its cards in full (browser); on day 21 of an unbuilt quiet town, no tile unwalked for four days shows wear (headless).
+9. **No regressions.** Earlier tests pass or their moved measures are re-measured and reported; determinism holds; 10× stepping stays under 2 ms a frame.
+
 ### 9.4 The bar (set 2026-10-08)
 
 Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:

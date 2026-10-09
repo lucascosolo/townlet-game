@@ -186,7 +186,8 @@ describe('criterion 3: relationships you can see', () => {
     const c = coLocation('random');
     expect(c.friend / c.neutral).toBeGreaterThanOrEqual(1.9);
   });
-  it.fails('friends keep company under a careless steward too (missed in round 5: 1.98; see the note)', { timeout: 240_000 }, () => {
+  // Met again in bar round 6.
+  it('friends keep company under a careless steward too, at least twice as often (missed in round 5: 1.98)', { timeout: 240_000 }, () => {
     const c = coLocation('random');
     expect(c.friend / c.neutral).toBeGreaterThanOrEqual(2);
   });

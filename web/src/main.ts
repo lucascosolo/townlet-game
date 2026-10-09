@@ -8,6 +8,7 @@ import { canPlace, footprint } from '../../src/sim/world.js';
 import { Game } from './game.js';
 import { clearSave, loadSave, restore, saveGame } from './save.js';
 import { Ui } from './ui/ui.js';
+import { TIMBER_FROM } from '../../src/narrate/board.js';
 import { TownView, seatingOrder } from './view/scene.js';
 
 const params = new URLSearchParams(location.search);
@@ -29,7 +30,8 @@ const game = new Game(
     ? { scenario: saved.scenario, seed: saved.seed, steward: saved.steward }
     : {
         scenario: params.get('scenario') ?? 'quiet',
-        seed: fresh ? 1 + Math.floor(Math.random() * 1_000_000) : Number(params.get('seed') ?? 1) || 1,
+        // Bar round 6: ?new=1 with a named seed starts that seed afresh; without one, a random town.
+        seed: fresh && !params.has('seed') ? 1 + Math.floor(Math.random() * 1_000_000) : Number(params.get('seed') ?? 1) || 1,
         // In the browser, the player is the steward.
         steward: stewardParam && STEWARD_POLICIES.includes(stewardParam) ? stewardParam : 'none',
       },
@@ -110,7 +112,7 @@ function placeGhost(): void {
   if (tool.kind !== 'build' || !ghostAt) return;
   const err = canPlace(game.sim.state, tool.type, ghostAt[0], ghostAt[1], ui.rotation);
   if (err) return ui.status(`Can't build there: ${err.replace(/ #\d+/, '')}.`);
-  if (!game.sim.canAfford(tool.type)) return ui.status(`Not enough timber (${buildingDef(tool.type).cost} needed).`);
+  if (!game.sim.canAfford(tool.type)) return ui.status(`Not enough timber (${buildingDef(tool.type).cost} needed). ${TIMBER_FROM}`);
   game.command({ kind: 'build', type: tool.type, x: ghostAt[0], y: ghostAt[1], ...(ui.rotation ? { rot: ui.rotation } : {}) });
   ui.status(`${buildingDef(tool.type).name} placed. Move the outline for another, or Cancel.`);
   game.runTicks(0);
@@ -206,6 +208,7 @@ canvas.addEventListener('pointermove', (e) => {
     const dy = e.clientY - prev.y;
     if (down.turn) view.orbit(dx);
     else view.pan(dx, dy);
+    ui.lookAround();
     return;
   }
   if (e.pointerType === 'mouse') {
@@ -275,6 +278,7 @@ function hover(cx: number, cy: number): void {
 }
 
 function click(cx: number, cy: number): void {
+  ui.lookAround();
   const tool = ui.tool;
   if (tool.kind === 'build') {
     const tile = view.tileAt(cx, cy);

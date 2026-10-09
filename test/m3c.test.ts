@@ -8,7 +8,7 @@ import { considerFavour, openPlots, WILLING } from '../src/sim/favours.js';
 import { assess } from '../src/sim/asks.js';
 import { rel } from '../src/sim/mind/relationships.js';
 import { topOfMind } from '../src/sim/mind/thoughts.js';
-import { feelingAbout, feelingBand, moodBand, reconcile } from '../src/sim/talk.js';
+import { STEWARD_LOVE, feelingAbout, feelingBand, moodBand, reconcile } from '../src/sim/talk.js';
 import { dreamTitle, nextStep } from '../src/sim/story/aspirations.js';
 import { at, TICKS_PER_DAY } from '../src/sim/time.js';
 import { TRAITS, VALUES, type SimEvent } from '../src/sim/types.js';
@@ -217,13 +217,19 @@ describe('criterion 3: newcomers', () => {
     const n = new Narrator(sim);
     sim.runUntil(awake(2));
     sim.state.stock.timber = 50;
+    let arrived = -1;
+    sim.on((e) => {
+      if (e.type === 'arrived' && arrived < 0) arrived = e.t;
+    });
     sim.build('cottage', 12, 20);
-    sim.runDays(10);
+    while (arrived < 0 && sim.state.tick < awake(12)) sim.runUntil(sim.state.tick + 60);
     const id = sim.state.order[6] as string;
     expect(id).toBeTruthy();
-    // They arrive with a hope of their own (settling in), not one already done.
+    // They arrive with a hope of their own (settling in), not one already done. Asked on arrival:
+    // bar round 6 settles a first step within four days, so ten days on it may well be done.
     const first = sim.talk(id, 'hope');
     if (first) expect(first.hope?.done).toBe(false);
+    sim.runDays(10);
     expect(n.entries.some((e) => e.who.includes(id) && /"/.test(e.text))).toBe(true);
     expect(sim.resident(id).aspiration.kind).toBeTruthy();
   });
@@ -260,10 +266,15 @@ describe('criterion 4 (M3b criterion 4): talking to a resident', () => {
           expect(Math.sign(a?.value ?? 0)).toBe(Math.sign(feelingAbout(r, `r:${other}`, sim.state.tick)));
           // Bar round 4: someone known well and not liked is "cool", not "no view".
           const band = feelingBand(feelingAbout(r, `r:${other}`, sim.state.tick));
-          expect(a?.band).toBe(band === 'neutral' && (r.rel[other]?.familiarity ?? 0) >= 0.5 ? 'cool' : band);
+          // Bar round 6: or someone they share a memory with.
+          const known = (r.rel[other]?.familiarity ?? 0) >= 0.5 || [...r.episodes, ...r.buffer].some((e) => e.subject === `r:${other}`);
+          expect(a?.band).toBe(band === 'neutral' && known ? 'cool' : band);
         }
         const me = sim.talk(id, 'me');
-        expect(me?.band).toBe(feelingBand(r.rel.steward?.affinity ?? 0));
+        // Bar round 6: the steward's top band needs standing above 0.6 and nothing conceded.
+        const v = r.rel.steward?.affinity ?? 0;
+        const expected = feelingBand(v);
+        expect(me?.band).toBe(expected === 'love' && (v <= STEWARD_LOVE || me?.but) ? 'like' : expected);
         const hope = sim.talk(id, 'hope');
         expect(hope?.hope?.done).toBe(r.aspiration.done);
       }

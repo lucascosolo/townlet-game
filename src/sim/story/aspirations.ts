@@ -17,7 +17,7 @@ import { chooseDream, templateDream } from './dreams.js';
 
 /** What the aspiration engine needs beyond the storyteller's host. */
 export interface AspirationHost extends StoryHost {
-  ask(r: ResidentState, kind: Request['kind'], wants?: string): Request;
+  ask(r: ResidentState, kind: Request['kind'], wants?: string, why?: string): Request;
   depart(r: ResidentState): void;
 }
 
@@ -56,6 +56,9 @@ export interface AspirationDef {
 }
 
 const exists = (state: SimState, type: string) => liveBuildings(state).some((b) => b.type === type);
+/** Bar round 6: a dream's first step that needs nothing from the steward is done within this many days. */
+export const FIRST_STEP_DAYS = 4;
+
 const days = (h: AspirationHost, r: ResidentState) => (h.state.tick - r.aspiration.since) / TICKS_PER_DAY;
 const feel = (h: AspirationHost, r: ResidentState, p: Omit<Perception, 'source'>) => h.mind.perceive(h.mindContext(), r, { ...p, source: 'witnessed' });
 
@@ -197,6 +200,14 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
         together: true,
         check: (_h, r) => r.aspiration.minutes >= 4 * 60,
         enter: (h, r) => {
+          // Bar round 6: a search that ran out of days still ends with a pupil, the one Fen likes best
+          // ("someone has learned a great deal").
+          if (!r.aspiration.partner) {
+            const best = active(h.state)
+              .filter((x) => x !== r)
+              .sort((a, b) => rel(r, b.id).affinity - rel(r, a.id).affinity || (a.id < b.id ? -1 : 1))[0];
+            if (best) r.aspiration.partner = best.id;
+          }
           const p = r.aspiration.partner && (h.state.residents[r.aspiration.partner] as ResidentState | undefined);
           if (p) {
             adjust(r, p.id, { affinity: 0.12, trust: 0.1 }, h.state.tick);
@@ -298,6 +309,14 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
     who: 'marlow',
     title: 'Decide whether to stay, or follow the trade cart',
     stages: [
+      // Bar round 6: a first step done in a day or two, so "watch the trade cart" is not his bubble
+      // four days running, and his choice keeps its old pace after it.
+      {
+        id: 'asking',
+        next: 'Ask around about where the trade cart goes',
+        // Done by the passing of days, quietly: a question asked is not a milestone.
+        check: () => false,
+      },
       {
         id: 'restless',
         next: 'Watch the trade cart come and go',
@@ -507,8 +526,14 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
   const waitingOnYou = h.state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open');
   // Never a step that needs a building that is not there (bar round 4).
   const lacking = (stage.needs && !exists(h.state, stage.needs)) || (stage.place && stage.place !== 'home' && !exists(h.state, stage.place));
-  const longEnough = !stage.until && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= 9 * TICKS_PER_DAY;
-  if (!stage.check(h, r) && !longEnough) return;
+  // A first step is done within four days: due after three, since steps move at the morning check (bar round 6: "watch the trade cart come and go" was
+  // Marlow's bubble four days running, "find someone willing to learn" Fen's for three).
+  const longEnough = !stage.until && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 1 : 9) * TICKS_PER_DAY;
+  const passed = stage.check(h, r);
+  if (!passed && !longEnough) return;
+  // Bar round 6: a first step that only ran out of days is moved past, not celebrated (the quicker
+  // first steps lifted a neglected town's mood).
+  const quiet = !passed && r.aspiration.stage === 0;
   stage.enter?.(h, r);
   r.aspiration.stage++;
   r.aspiration.since = h.state.tick;
@@ -519,8 +544,10 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
     r.aspiration.doneTick = h.state.tick;
   }
   // Every step forward feels like something.
-  addEmotion(r, { kind: r.aspiration.done ? 'pride' : 'joy', intensity: r.aspiration.done ? 0.8 : 0.4, tick: h.state.tick });
-  r.needs.purpose = clamp(r.needs.purpose + (r.aspiration.done ? 0.4 : 0.15));
+  if (!quiet) {
+    addEmotion(r, { kind: r.aspiration.done ? 'pride' : 'joy', intensity: r.aspiration.done ? 0.8 : 0.4, tick: h.state.tick });
+    r.needs.purpose = clamp(r.needs.purpose + (r.aspiration.done ? 0.4 : 0.15));
+  }
   h.emitEvent({
     t: h.state.tick,
     type: 'aspiration',

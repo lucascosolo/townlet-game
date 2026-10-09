@@ -207,7 +207,7 @@ export const DREAM_TEMPLATES: DreamTemplate[] = [
         },
         {
           id: 'give',
-          next: 'Give it to {x}',
+          next: 'Give {x} the gift',
           check: (_h, rr) => (rr.lastExchange[idOf(subject)] ?? -1) >= rr.aspiration.since,
           enter: (h, rr) => {
             const o = h.state.residents[idOf(subject)] as ResidentState | undefined;
@@ -280,7 +280,7 @@ export const DREAM_TEMPLATES: DreamTemplate[] = [
         },
         {
           id: 'ask',
-          next: 'Ask the steward for a bench to remember it by',
+          next: 'Ask the steward for a bench to remember {x} by',
           check: () => true,
           enter: (h, rr) => h.ask(rr, 'aspiration', 'bench'),
         },
@@ -309,7 +309,7 @@ export const DREAM_TEMPLATES: DreamTemplate[] = [
         },
         {
           id: 'give',
-          next: 'Leave it on the steward\'s step',
+          next: 'Leave the parcel on the steward\'s step',
           check: (h, rr) => days(h, rr) >= 1,
           enter: (h) => {
             h.state.stock.timber += 3;

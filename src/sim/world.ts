@@ -330,13 +330,25 @@ export const WEAR_SHOW = 6;
  */
 export function shownWear(state: SimState): Map<string, number> {
   const settled = state.settled ?? { width: state.width, height: state.height };
-  const cap = Math.floor((settled.width * settled.height) / 8);
+  // Bar round 6: a sixteenth (an eighth still left a slab in a town nobody built in).
+  const cap = Math.floor((settled.width * settled.height) / 16);
   // Bar round 4: ground nobody has walked for a few days greens over at once, whatever its count.
   const today = Math.floor(state.tick / 1440) + 1;
   const walked = state.wearDay ?? {};
   const worn = Object.entries(state.wear ?? {}).filter(([k, w]) => (w as number) >= WEAR_SHOW && today - (walked[k] ?? today) < WEAR_FADE_DAYS) as Array<[string, number]>;
   worn.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
-  return new Map(worn.slice(0, cap));
+  // Tracks, not slabs: a tile that would make a whole two-by-two block of worn ground is left green.
+  const shown = new Map<string, number>();
+  const has = (x: number, y: number) => shown.has(`${x},${y}`);
+  for (const [k, w] of worn) {
+    if (shown.size >= cap) break;
+    const [x, y] = k.split(',').map(Number) as [number, number];
+    const corners: Array<[number, number]> = [[-1, -1], [0, -1], [-1, 0], [0, 0]];
+    const cells: Array<[number, number]> = [[0, 0], [1, 0], [0, 1], [1, 1]];
+    const block = corners.some(([dx, dy]) => cells.every(([ex, ey]) => (dx + ex === 0 && dy + ey === 0) || has(x + dx + ex, y + dy + ey)));
+    if (!block) shown.set(k, w);
+  }
+  return shown;
 }
 
 /** A footstep off the laid paths wears the ground a little. */

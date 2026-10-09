@@ -54,6 +54,27 @@ export const PROPOSALS: Record<DilemmaType, Lines> = {
     chatty: ['BONFIRE! Tomorrow! Big one! Three timber, who cares!'],
     dreamy: ['A fire on the commons tomorrow, and all our faces in it.'],
   },
+  wild_meadow: {
+    plain: ['Leave the far field wild. For the bees.'],
+    formal: ['I propose we leave the far field unmown this year, as a meadow for the bees and the birds.'],
+    warm: ["Could we let the far field go wild? Flowers, bees, the lot. It wouldn't cost a thing."],
+    chatty: ['A wild meadow! No mowing! Bees everywhere! Say yes!'],
+    dreamy: ['If we left the far field alone, it would fill with flowers by itself.'],
+  },
+  quiet_bell: {
+    plain: ['A bell at ten. Quiet after. That is all I ask.'],
+    formal: ['I propose a bell at ten each night, and quiet in the lanes after it.'],
+    warm: ['Could we ring a bell at ten, and keep things quiet after? Some of us need our sleep.'],
+    chatty: ['A quiet bell! Ten o\'clock! Then hush! Honestly, it would change my life!'],
+    dreamy: ['One bell at ten, and then the valley could hear itself breathe.'],
+  },
+  shared_supper: {
+    plain: ['Supper for everyone tomorrow, on the commons. Eight food from the larder.'],
+    formal: ['I propose a shared supper on the commons tomorrow evening, eight food from the larder, everyone welcome.'],
+    warm: ['What if we all ate together tomorrow, on the commons? It would take a bit from the larder, but it would be worth it.'],
+    chatty: ['Supper on the commons! Everyone! Tomorrow! Long tables! Eight food, who is counting!'],
+    dreamy: ['One long table on the commons tomorrow, and all of us at it.'],
+  },
 };
 
 export const DILEMMA_NAMES: Record<DilemmaType, string> = {
@@ -64,6 +85,9 @@ export const DILEMMA_NAMES: Record<DilemmaType, string> = {
   tales_night: 'night of tales',
   cart_stop: "night's stop for Pip's cart",
   bonfire_night: 'bonfire on the commons',
+  wild_meadow: 'wild meadow in the far field',
+  quiet_bell: 'bell for quiet at ten',
+  shared_supper: 'shared supper on the commons',
 };
 
 // {at} is the place with its preposition: "on the commons", "at the teahouse", "under the old oak".
@@ -76,6 +100,7 @@ export const GATHERING_START: Record<string, string> = {
   lantern_walk: 'Lanterns are lit {at}: the lantern walk sets off.',
   tales: 'Chairs are pulled round {at}: {festival} begins.',
   bonfire: 'The bonfire catches {at}.',
+  supper: 'Long tables go out {at}, and everyone comes to supper.',
 };
 
 export const PREPOSITIONS: Record<string, string> = {
@@ -112,6 +137,7 @@ export const ASPIRATION_LINES: Record<string, string> = {
   'wren:ask': 'Wren asks {you}, quietly, for a banner pole on the green.',
   'wren:paint': "Wren's banner goes up. Everyone finds their own house in it.",
   'wren:paint:early': 'Wren finds a banner pole already standing on the green, waiting. "For me?" The banner goes up that same day, and everyone finds their own house in it.',
+  'marlow:asking': 'Marlow has been asking everyone where the trade cart goes after the valley. Nobody quite knows, which seems to please him.',
   'marlow:restless': 'Marlow watches the trade cart leave again. He stands there a long time after it has gone.',
   'marlow:decide:stay': 'Marlow lets the trade cart go without him. "Turns out I live here."',
   'marlow:decide:leave': 'Marlow climbs onto the trade cart with his bag. He waves until the bend in the road.',

@@ -68,3 +68,6 @@ export function quietLine(state: SimState, worries: number, minorOvernight: numb
   if (waiting) return 'Nothing new overnight.';
   return minorOvernight ? 'A quiet night. Nothing needs you.' : 'Nothing new on the board.';
 }
+
+/** Bar round 6: a build refused for timber says where timber comes from. */
+export const TIMBER_FROM = 'Timber comes from the woodlot each day, or ask someone to fetch some as a favour.';

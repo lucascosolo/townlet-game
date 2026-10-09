@@ -77,7 +77,8 @@ describe('winter stores', () => {
   // five days while the considerate steward saved for Juniper's granary). Met in bar round 4; missed
   // again in bar round 5 by one day on seed 1 (three days at the cap) with the town's timber and
   // building order changed, so an expected failure once more.
-  it.fails('the larder stops sitting at its cap once the granary is asked for (missed on seed 1; see the note)', () => {
+  // Met again in bar round 6.
+  it('the larder stops sitting at its cap once the granary is asked for (missed on seed 1 in rounds 2, 3 and 5)', () => {
     for (const r of considerate) expect(r.capDays, `seed ${r.seed}: days at the larder cap`).toBeLessThanOrEqual(2);
   });
 

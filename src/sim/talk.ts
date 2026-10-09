@@ -19,6 +19,23 @@ export function moodBand(mood: number): string {
   return mood >= 0.8 ? 'great' : mood >= 0.65 ? 'good' : mood >= 0.5 ? 'fair' : mood >= 0.35 ? 'low' : 'bad';
 }
 
+/** Bar round 6: the steward's top band ("I could not ask for a better steward") needs standing above this. */
+export const STEWARD_LOVE = 0.6;
+/** Annoyance at the steward this strong is said, even in a kind answer. */
+export const CROSS_AT = 0.3;
+
+/** The strongest thing they hold against the steward, with its latest note. */
+function heldAgainst(r: ResidentState): { aspect: string; note: string } | null {
+  let best: { aspect: string; note: string; weight: number } | null = null;
+  const consider = (aspect: string, weight: number, sources: Array<{ tick: number; note: string }>) => {
+    const last = [...sources].sort((a, b) => b.tick - a.tick)[0];
+    if (last?.note && (!best || weight > best.weight)) best = { aspect, note: last.note, weight };
+  };
+  for (const b of Object.values(r.beliefs)) if (b.subject === STEWARD && b.valence < -0.1) consider(b.aspect, b.strength * -b.valence, b.sources);
+  for (const t of Object.values(r.traces)) if (t.subject === STEWARD && t.evidence < -0.1) consider(t.aspect, -t.evidence * 0.5, t.sources);
+  return best ? { aspect: (best as { aspect: string }).aspect, note: (best as { note: string }).note } : null;
+}
+
 export function feelingBand(v: number): string {
   return v > 0.3 ? 'love' : v > 0.05 ? 'like' : v >= -0.05 ? 'neutral' : v >= -0.3 ? 'dislike' : 'hate';
 }
@@ -138,15 +155,23 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
       const b = strongestBelief(r, subject, {}, reasonSign(v), state.tick);
       // Someone known well and not liked is cool, not "no view" (bar round 4).
       let band = feelingBand(v);
-      if (band === 'neutral' && subject.startsWith('r:') && (r.rel[subject.slice(2)]?.familiarity ?? 0) >= 0.5) band = 'cool';
+      // Bar round 6: nor is someone they share a memory with ("I don't really know Fen yet... Fen and I made it up").
+      if (band === 'neutral' && subject.startsWith('r:') && ((r.rel[subject.slice(2)]?.familiarity ?? 0) >= 0.5 || [...r.episodes, ...r.buffer].some((e) => e.subject === subject))) band = 'cool';
       return { question, about: subject, band, value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}) };
     }
     case 'me': {
       const v = feelingAbout(r, STEWARD, state.tick);
       const b = strongestBelief(r, STEWARD, r.cited ?? {}, reasonSign(v), state.tick);
       // A kind view still concedes a fresh wrong (bar round 2): "I think well of you, though you felled the oak".
-      const fresh = reasonSign(v) >= 0 ? freshGrievance(r, state.tick) : null;
-      return { question, about: STEWARD, band: feelingBand(v), value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}), ...(fresh ? { but: { aspect: fresh.aspect, note: fresh.note } } : {}) };
+      // Bar round 6: someone cross with you who still thinks well of you says what they hold
+      // against you (the bubble said "the steward still irritates me", the answer "I think well of you").
+      const cross = r.emotions.some((e) => e.target === STEWARD && (e.kind === 'annoyance' || e.kind === 'grief') && e.intensity >= CROSS_AT);
+      const fresh = reasonSign(v) >= 0 ? (freshGrievance(r, state.tick) ?? (cross ? heldAgainst(r) : null)) : null;
+      // The top praise is for real standing with nothing held against you ("I could not ask for a
+      // better steward" at 0.41, the morning after a famine).
+      let band = feelingBand(v);
+      if (band === 'love' && (v <= STEWARD_LOVE || fresh)) band = 'like';
+      return { question, about: STEWARD, band, value: v, ...(b ? { because: { subject: b.subject, aspect: b.aspect } } : {}), ...(fresh ? { but: { aspect: fresh.aspect, note: fresh.note } } : {}) };
     }
   }
 }

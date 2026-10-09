@@ -92,11 +92,11 @@ export const TALK_OPINION: Record<string, Lines> = {
 
 /** The reason behind an opinion, after the opinion itself. {statement} is the belief in their words. */
 export const TALK_REASON: Lines = {
-  plain: ['{statement}.'],
-  formal: ['You see, {statement}.'],
-  warm: ['Well, {statement}.'],
-  chatty: ['I mean, {statement}!'],
-  dreamy: ['Somehow, {statement}.'],
+  plain: ['{statement}.', 'Simple: {statement}.'],
+  formal: ['You see, {statement}.', 'I would say {statement}.'],
+  warm: ['Well, {statement}.', 'Thing is, {statement}.', 'The way I see it, {statement}.'],
+  chatty: ['I mean, {statement}!', 'Because {statement}!'],
+  dreamy: ['Somehow, {statement}.', 'The way I feel it, {statement}.'],
 };
 
 /** A concession after a kind view (bar round 2): "though you took away the old oak". {x} is the grievance in their words. */

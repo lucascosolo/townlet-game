@@ -29,7 +29,27 @@ async function putOff(page: Page): Promise<void> {
   }
 }
 
-test('the Goals widget shows all of itself on a desktop: no child is cut by its bottom edge', async ({ page }) => {
+// Bar round 6: Goals now gives way before Folk does and scrolls (Folk was squeezed to a header beside
+// the winter stores). Where both cannot fit, Goals' foot is cut inside its scrolling body, which fades
+// to show there is more. The round-2 measure is kept below as an expected failure at 1280x800.
+test('Goals is never cut by its widget: what does not fit scrolls inside its body, with the fade showing more below', async ({ page }) => {
+  await open(page, 'scenario=bakery&seed=2&speed=0', at(5, 10));
+  await putOff(page);
+  const widget = page.getByTestId('widget-goals');
+  const box = (await widget.boundingBox())!;
+  const body = await widget.evaluate((w) => {
+    const b = w.querySelector('.widget-body') as HTMLElement;
+    return { scrolls: b.scrollHeight > b.clientHeight + 4, fade: b.classList.contains('more-below'), bottom: b.getBoundingClientRect().bottom };
+  });
+  expect(body.bottom).toBeLessThanOrEqual(box.y + box.height + 1);
+  const bottoms = await widget.evaluate((w) => [...w.querySelectorAll('.widget-body *')].map((e) => e.getBoundingClientRect().bottom));
+  if (bottoms.some((b) => b > box.y + box.height + 1)) {
+    expect(body.scrolls).toBe(true);
+    expect(body.fade).toBe(true);
+  }
+});
+
+test.fail('the Goals widget shows all of itself on a desktop: no child is cut by its bottom edge (moved in round 6; see the note)', async ({ page }) => {
   await open(page, 'scenario=bakery&seed=2&speed=0', at(5, 10));
   await putOff(page);
   const widget = page.getByTestId('widget-goals');

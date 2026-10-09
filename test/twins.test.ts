@@ -92,6 +92,9 @@ describe('twin: memories change behaviour', () => {
       base.runDays(2);
       // A full larder (bar round 2): hunger now weighs on where people go, and this twin is about memory.
       base.state.stock.food = 200;
+      // Bar round 6: and Fen's dream is held still (its first step now ends within four days and its
+      // jetty lessons pull Fen away in both twins); this twin is about the memory.
+      base.resident('fen').aspiration.done = true;
       const bench = base.state.buildings.find((b) => b.type === 'bench')!;
       const twin = base.clone();
       for (let i = 0; i < 3; i++) {

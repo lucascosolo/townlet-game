@@ -17,7 +17,7 @@ export const ASK_LAPSE_DAYS: Record<RequestKind, number> = {
   aspiration: 10,
   quieter_home: 5,
   workplace: 7,
-  more_food: 4,
+  more_food: 7,
   somewhere_to_sit: 7,
   more_green: 7,
   place_to_gather: 7,
@@ -78,7 +78,9 @@ export function assess(state: SimState, r: ResidentState, kind: RequestKind, sin
     }
     case 'more_food': {
       const want = state.lastShortageDay > 0 && dayOf(state.tick) - state.lastShortageDay <= 1;
-      const met = state.stock.food >= 15 && builtSince(state, since, (t) => !!buildingDef(t).produces?.food);
+      // Bar round 6: building a food place answers the ask, whatever the larder holds (a winter
+      // rescue lapsed because the larder could not refill in two days); the larder only decides the worry.
+      const met = builtSince(state, since, (t) => !!buildingDef(t).produces?.food);
       return { want, met, subject: self };
     }
     case 'somewhere_to_sit': {

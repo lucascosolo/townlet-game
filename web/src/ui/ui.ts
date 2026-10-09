@@ -13,7 +13,7 @@ import { ambientPrefs, prefScore, needIsLow } from '../../../src/sim/needs.js';
 import { wishProgress } from '../../../src/sim/story/director.js';
 import { dilemmaDef, stanceScore } from '../../../src/sim/story/dilemmas.js';
 import { clock, dayOf, seasonOf } from '../../../src/sim/time.js';
-import { daysToWinter, granaryRoom, hasGranary } from '../../../src/sim/stores.js';
+import { STORES_WHY, daysToWinter, granaryRoom, hasGranary } from '../../../src/sim/stores.js';
 import { dreamTitle } from '../../../src/sim/story/aspirations.js';
 import { TIER_GIFT, ALL_FACTS, FACTS, TIERS, factValue, goalLabel, knownFacts, nextTier, progressOf, todaysGoals, unlocked, RENOWN } from '../../../src/sim/progress.js';
 import type { Dilemma, FavourKind, QualityMap, Request, ResidentState, SimEvent, TalkQuestion } from '../../../src/sim/types.js';
@@ -22,7 +22,7 @@ import type { AdResult, RewardedAds } from '../ads.js';
 import { TRADER_GIFT } from '../../../src/sim/sim.js';
 import { offersForCut, type ReplyKind } from '../../../src/sim/replies.js';
 import { replySaid } from '../../../src/content/replies.js';
-import { addLedgerNote, groupAsks, ledgerLine, quietLine, townWorries, type LedgerNote } from '../../../src/narrate/board.js';
+import { TIMBER_FROM, addLedgerNote, groupAsks, ledgerLine, quietLine, townWorries, type LedgerNote } from '../../../src/narrate/board.js';
 import { vividMemories } from '../../../src/sim/recall.js';
 import { residentColor } from '../view/meshes.js';
 import { ICONS } from './icons.js';
@@ -503,8 +503,14 @@ export class Ui {
     return this.modal !== null;
   }
 
-  showTab(key: string): void {
+  /** The player has touched the town itself (a tap or a drag on the map): proposals may come (bar round 6). */
+  lookAround(): void {
     this.lookedAround = true;
+  }
+
+  showTab(key: string): void {
+    // Bar round 6: opening a tab is not looking at the town (a phone player tapped Log after Begin
+    // and met a proposal about five people they had not seen).
     // On a desktop, goals and the Folk album are widgets of their own: bring the one asked for to the fore.
     if (!this.phone && (key === 'goals' || key === 'folk')) {
       this.setWidget(key, true);
@@ -695,7 +701,6 @@ export class Ui {
 
   /** The phone's tab bar. */
   private nav(key: 'town' | 'goals' | 'folk' | 'build' | 'log'): void {
-    this.lookedAround = true;
     if (key === 'town' || key === 'build') {
       this.quick.hidden = true;
       if (!this.scroll.classList.contains('rolled')) this.toggleScroll();
@@ -1099,7 +1104,7 @@ export class Ui {
             return;
           }
           if (!this.game.sim.canAfford(type)) {
-            this.status(`Not enough timber for ${withArticle(def.name)} (${def.cost} needed).`);
+            this.status(`Not enough timber for ${withArticle(def.name)} (${def.cost} needed). ${TIMBER_FROM}`);
             show();
             this.shake(card);
             this.shake(this.stockEl.querySelector('[data-res="timber"]')?.parentElement ?? this.stockEl, 'pulse');
@@ -1526,7 +1531,8 @@ export class Ui {
       const who = residentDef(q.by);
       const names = group.map((x) => residentDef(x.by).name);
       const people = names.length === 1 ? who.name : names.length <= 3 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
-      const title = names.length === 1 ? ASK_TITLES[q.kind] : ASK_TITLES[q.kind].replace(/^asks\b/, 'ask').replace(/^wants\b/, 'want').replace(/^would like\b/, 'would like');
+      const base = q.dream === STORES_WHY ? 'asks for help with the winter stores' : ASK_TITLES[q.kind];
+      const title = names.length === 1 ? base : base.replace(/^asks\b/, 'ask').replace(/^wants\b/, 'want').replace(/^would like\b/, 'would like');
       card.appendChild(el('div', { class: 'card-title' }, `${people} ${title}${q.wants ? `: ${/^[aeiou]/.test(singularName(q.wants)) ? 'an' : 'a'} ${singularName(q.wants)}` : ''}`));
       if (q.kind === 'quieter_home') card.appendChild(el('p', {}, `${cap(this.game.narrator.statement(q.by, { subject: q.subject, aspect: 'noisy_at_night' }))}.`));
       if (q.kind === 'more_green') card.appendChild(el('p', { 'data-testid': 'green-progress' }, this.greenLine(q.by)));

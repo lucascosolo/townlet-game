@@ -263,7 +263,24 @@ export class TownView {
       if (lamp) lamp.material = lit ? glow.lantern : glow.lanternOut;
       this.lampsDirty = true;
     }
+    // Street lamps burn while anyone in the valley is still up, and go out when the last one is in
+    // bed (owner, 2026-10-09: "not at a set time").
+    const up = Object.values(state.residents).some((r) => !r.departed && r.activity?.id !== 'sleep');
+    if (up !== this.streetLit) {
+      this.streetLit = up;
+      for (const g of this.buildings.values()) {
+        g.traverse((o) => {
+          if (o.name !== 'street-lamp') return;
+          (o.userData.spot as THREE.Object3D).visible = up;
+          (o.userData.lamp as THREE.Mesh).material = up ? glow.lantern : glow.lanternOut;
+        });
+      }
+      this.lampsDirty = true;
+    }
   }
+
+  /** Whether the street lamps are lit; null until first set, so a new building is brought into line. */
+  private streetLit: boolean | null = null;
 
   /** Put the real lights at the lamps nearest the middle of the view. */
   private placeLamps(night: number): void {
@@ -287,10 +304,14 @@ export class TownView {
     for (const l of this.lamps) l.intensity = night * 2.2;
   }
 
+  /** The stage size the renderer was last fitted to. */
+  private sized: [number, number] = [0, 0];
+
   resize(): void {
     const el = this.renderer.domElement.parentElement as HTMLElement;
     const w = el.clientWidth || window.innerWidth;
     const h = el.clientHeight || window.innerHeight;
+    this.sized = [el.clientWidth, el.clientHeight];
     this.renderer.setSize(w, h);
     this.composer?.setSize(w, h);
     const view = 15;
@@ -472,6 +493,8 @@ export class TownView {
         g.userData.porch = g.getObjectByName('porch');
         g.userData.porchLamp = g.getObjectByName('porch-lamp');
       }
+      // A new street lamp takes the town's state (lit or out) on the next frame.
+      if (g.getObjectByName('street-lamp')) this.streetLit = null;
       g.traverse((o) => {
         if (o instanceof THREE.Mesh && o.name === 'canopy') o.material = this.leafMat;
         if (o instanceof THREE.Mesh && o.name === 'canopy-v') o.material = this.leafMatV;
@@ -748,6 +771,10 @@ export class TownView {
   private frames = 0;
 
   frame(dt: number): void {
+    // The stage can change size without a resize event (iOS Safari restoring a tab or folding its
+    // toolbar left the town drawn in a box at the top of the screen, 2026-10-09): check every frame.
+    const el = this.renderer.domElement.parentElement as HTMLElement | null;
+    if (el && (el.clientWidth !== this.sized[0] || el.clientHeight !== this.sized[1])) this.resize();
     this.syncBuildings();
     this.syncResidents(dt);
     this.placeCamera(dt);

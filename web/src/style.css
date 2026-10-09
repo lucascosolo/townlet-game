@@ -18,7 +18,8 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: #9db8c8; }
 #app { position: fixed; inset: 0; }
 #stage { position: absolute; inset: 0; }
-#stage canvas { display: block; touch-action: none; }
+/* Always the whole stage, even before the renderer catches up with a new size (the drawing stretches for a frame instead of sitting in a box). */
+#stage canvas { display: block; touch-action: none; width: 100% !important; height: 100% !important; }
 .paper {
   background: var(--paper);
   border: 1px solid var(--paper-edge);
@@ -370,7 +371,8 @@ body.phone .desk-only, body.phone .dash-left, body.phone .widget-menu { display:
 /* Goals shows all of itself (bar round 2: its tier card was cut in half); the Folk album takes what is left. */
 /* Bar round 3: Goals shows all of itself and the Folk album keeps a usable height; when both do not fit, the column scrolls. */
 .dash-left { overflow-y: auto; }
-.widget[data-widget='goals'] { flex: 0 0 auto; }
+/* Bar round 6: Goals gives way before Folk does (Folk was squeezed to a header beside the winter stores); Goals scrolls. */
+.widget[data-widget='goals'] { flex: 0 1 auto; min-height: 140px; }
 /* Bar round 4: the Folk album takes the rest of the column and shows whole rows, scrolling row by row. */
 .widget[data-widget='folk'] { flex: 1 1 0; min-height: 260px; }
 /* Bar round 5: on a desktop the Goals pane drops its long hints (they stay as hover titles), so Folk keeps a row beside the winter stores. */

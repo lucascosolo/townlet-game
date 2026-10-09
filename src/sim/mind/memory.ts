@@ -122,6 +122,9 @@ export function opinion(r: ResidentState, subject: SubjectId): number {
   return clamp(s, -1, 1);
 }
 
+/** Views of a place as a matter of taste: liking it and finding it not for you cannot both stand. */
+export const TASTE_ASPECTS = new Set(['good_times', 'peaceful_spot', 'smells_lovely', 'not_for_me', 'eyesore']);
+
 /** Opinion plus half the weight of feelings still forming, for losses that come before a belief settles. */
 export function attachment(r: ResidentState, subject: SubjectId): number {
   let s = opinion(r, subject);
@@ -236,6 +239,20 @@ export function consolidate(ctx: MindContext, r: ResidentState): void {
     delete r.traces[k];
     const hearsay = belief.sources.every((s) => s.kind === 'told');
     ctx.emit({ t: tick, type: 'belief_formed', who: r.id, belief: structuredClone(belief), hearsay });
+  }
+
+  // 3b. Bar round 6: one taste per place. When a view of a place settles or is borne out, its
+  // opposite on the same place is retired ("isn't his sort of place" beside "where the good evenings happen").
+  for (const k of reinforced) {
+    const b = r.beliefs[k];
+    if (!b || !TASTE_ASPECTS.has(b.aspect) || !b.subject.startsWith('b:')) continue;
+    for (const [k2, o] of Object.entries(r.beliefs)) {
+      if (k2 === k || o.subject !== b.subject || !TASTE_ASPECTS.has(o.aspect) || Math.sign(o.valence) === Math.sign(b.valence)) continue;
+      // Both borne out tonight: the stronger stands.
+      if (reinforced.has(k2) && o.strength > b.strength) continue;
+      delete r.beliefs[k2];
+      ctx.emit({ t: tick, type: 'belief_faded', who: r.id, subject: o.subject, aspect: o.aspect });
+    }
   }
 
   // 4. Use it or lose it.

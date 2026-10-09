@@ -75,7 +75,8 @@ describe('criteria 2, 3 and 7: pacing, gentle friction, spread (soak, 10 seeds x
     const meanBusiest = report.runs.reduce((s, m) => s + m.busiestShare, 0) / report.runs.length;
     expect(meanBusiest).toBeLessThan(0.65);
   });
-  it.fails('spread: the busiest place takes under 60% of socialising (missed in round 5: 0.62; see the note)', { timeout: 180_000 }, () => {
+  // Met again in bar round 6.
+  it('spread: the busiest place takes under 60% of socialising (missed in round 5: 0.62)', { timeout: 180_000 }, () => {
     const report = soak({ scenario: 'quiet', seeds: 10, days: 28 });
     const meanBusiest = report.runs.reduce((s, m) => s + m.busiestShare, 0) / report.runs.length;
     expect(meanBusiest).toBeLessThan(0.6);

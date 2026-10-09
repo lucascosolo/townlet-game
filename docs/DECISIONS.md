@@ -31,6 +31,20 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **Dreams that do not converge.** "Do something for the steward" counts against the gift cap; each trade has a second dream; a hope answer says how the dream is going.
 - **Layout.** The Folk widget gets the rest of the column at 900 px tall; worn ground fades back to grass when it is not walked for a few days.
 
+**Settled while building (recorded so the numbers are not a mystery later):**
+- **What was said decides the replies.** The narrator trims a long answer; it records what survived (topics kept, memory, reason, and whether the words named the subject), the chips are built from that, and a reply carries it as part of its command, so a save replays the same offer. "That's fair, about the commons" is not offered under "Is it a crime to be this happy?", which never names it.
+- **An answer that holds anything against you is a complaint** for the chips, whatever the rest of it says, so "Thank you" is never offered under "you kept me waiting".
+- **Hope answers between dreams get two replies too:** "Take your time" and "Don't settle for too little".
+- **A look follows standing:** below zero, a kind reply gets an even look ("nods", "takes that in"), never a warm one; above 0.5, a push-back gets an even look, never a cold one.
+- **Mood terms (each kept out of the slow decision to leave, as town hunger is):** a larder below a day's meals (two each, four in winter), up to 0.06; a loved place lost, up to 0.09, fading over four days; below zero standing, 0.15 per unit; asks left waiting over a day (0.02 each, up to 0.06) and asks lapsed in the last fortnight (0.03 each, up to 0.09). Together they take at most 0.22: past that it is resignation (uncapped, the year soak's neglected towns sat at a mean mood of 0.29).
+- **A low larder caps standing rather than counting against you.** The first version held a low larder against the steward every dawn; under the year soak's steward, who never feeds anyone, that sank whole towns to −1 and emptied them (24 of 24 gone). Now, from the second low dawn, nobody stands above 0.85 with you while it lasts.
+- **"A lovely spot" needs a visit that scores in the top fifth of what they like** (0.7; 0.5 and 0.6 still left it 59% and 43% of settled place views), and a visit in the bottom sixth leaves a dislike ("isn't my sort of place", or "spoils the view" for a workplace seen by someone who loves the green) that settles as readily as a liking.
+- **A neighbour's liking is counted from where acquaintance starts (0.2), not zero,** and someone known well but not liked is "cool": civil, not close.
+- **The needs and dislikes facts are relative to the rest of the town:** the need they feel more than most, the thing they mind more than most, or "easy to please" and "not much bothers her".
+- **The third ask of a kind in one morning is a short line** ("Fen asks for more food too"), so the log never carries the same quoted ask more than twice.
+- **A dream about someone who has left is put away the next morning**, except a dream of remembering someone gone, which is about someone who left by design.
+- **The neglected town's measure is met in part:** 0.083 to 0.140 by seed; seed 2 lost its two unhappiest residents and gained a newcomer, so the mean of those still there rose. Reported, not tuned for that seed.
+
 **Rejected:**
 - *Free-text replies.* Still four moves (five on hopes); the work is in their fitting.
 - *Raising every mood weight.* The year soak sits on a knife edge; mood moves through what happens (a low larder, a lost place, standing at the low end), not a bigger multiplier on everything.

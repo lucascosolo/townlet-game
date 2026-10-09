@@ -64,6 +64,9 @@ describe('criterion 1: writing and minds', { timeout: 300_000 }, () => {
       const late: string[] = [];
       sim.on((e) => {
         if (e.type === 'built') built.set(e.btype, e.t);
+        // Bar round 4: the town spends its timber on Juniper's granary first and the glasshouse ask
+        // lapsed before it could be paid for; this test is about the step's timing, so the timber is given.
+        if (e.type === 'request_posted' && e.request.by === 'juniper' && e.request.wants === 'glasshouse') sim.state.stock.timber += 20;
         if (e.type === 'aspiration' && e.who === 'juniper' && e.stage === 'built') {
           checked++;
           const t = built.get('glasshouse');

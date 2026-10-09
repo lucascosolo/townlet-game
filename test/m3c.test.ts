@@ -258,7 +258,9 @@ describe('criterion 4 (M3b criterion 4): talking to a resident', () => {
         for (const other of sim.state.order.filter((o) => o !== id)) {
           const a = sim.talk(id, 'opinion', `r:${other}`);
           expect(Math.sign(a?.value ?? 0)).toBe(Math.sign(feelingAbout(r, `r:${other}`, sim.state.tick)));
-          expect(a?.band).toBe(feelingBand(feelingAbout(r, `r:${other}`, sim.state.tick)));
+          // Bar round 4: someone known well and not liked is "cool", not "no view".
+          const band = feelingBand(feelingAbout(r, `r:${other}`, sim.state.tick));
+          expect(a?.band).toBe(band === 'neutral' && (r.rel[other]?.familiarity ?? 0) >= 0.5 ? 'cool' : band);
         }
         const me = sim.talk(id, 'me');
         expect(me?.band).toBe(feelingBand(r.rel.steward?.affinity ?? 0));

@@ -132,6 +132,10 @@ export const LOSS_WEIGHT = 0.09;
 export const LOSS_DAYS = 4;
 /** Bar round 4: below zero standing, mood falls this much more per unit (so −1 costs 0.15 more). */
 export const LOW_STANDING = 0.15;
+/** Bar round 4: the most the town's troubles take off mood together. */
+export const FELT_CAP = 0.22;
+/** Bar round 4: the most anyone thinks of you while the larder has been low two dawns running. */
+export const LOW_LARDER_TOP = 0.85;
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 25 };
 /** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */
 /** How much telling a memory rehearses it: about as much as reminiscing with a friend. */
@@ -437,9 +441,16 @@ export class Simulation implements AspirationHost {
       }
       // Bar round 4: a larder below a day's meals at dawn is held against the steward a little, so a
       // hungry week leaves nobody thinking the world of you (Bram at +1.00 through an empty larder).
+      // Bar round 4: while the larder is below a day's meals nobody thinks the world of you (Bram at
+      // +1.00 through an empty larder). A cap, not a grievance: held against you every low dawn, it
+      // sank a town nobody feeds to the bottom of the scale and emptied it in the year soak.
       if (lowLarder(state) > 0) {
-        for (const r of this.activeResidents()) this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'larder_low', valence: -0.5, base: 0.45, source: 'witnessed', note: 'let the larder run low' });
-      }
+        state.lowRun = (state.lowRun ?? 0) + 1;
+        if (state.lowRun >= 2) for (const r of this.activeResidents()) {
+          const x = r.rel[STEWARD];
+          if (x && x.affinity > LOW_LARDER_TOP) x.affinity = LOW_LARDER_TOP;
+        }
+      } else state.lowRun = 0;
       storesDawn(this);
       progressDawn(this);
       wearDawn(state);
@@ -1368,7 +1379,8 @@ export class Simulation implements AspirationHost {
       // lost in the last few days, and standing with you at the low end.
       const aff = r.rel[STEWARD]?.affinity ?? 0;
       const lost = r.lostPlace ? LOSS_WEIGHT * r.lostPlace.weight * Math.max(0, 1 - (this.state.tick - r.lostPlace.tick) / (LOSS_DAYS * TICKS_PER_DAY)) : 0;
-      const felt = townHunger(this.state) + larder + lost + LOW_STANDING * Math.max(0, -aff) + waitingOnYou(this.state, r.id);
+      // Together at most FELT_CAP: past that it is resignation (year soak: 0.29 mean mood under a steward who never answers or feeds).
+      const felt = Math.min(FELT_CAP, townHunger(this.state) + larder + lost + LOW_STANDING * Math.max(0, -aff) + waitingOnYou(this.state, r.id));
       r.mood = clamp(MOOD_MIX.needs * needsWellbeing(r.needs, r.setpoints, def) + MOOD_MIX.feelings * (0.5 + 0.5 * emotionBalance(r)) + MOOD_MIX.home * home + MOOD_MIX.fond * fond + MOOD_MIX.standing * standing - felt);
       // Bar round 3: a famine lowers mood and talk, but the slow decision to leave is weighed without
       // it; round 4's terms likewise (standing is already in the decision directly).

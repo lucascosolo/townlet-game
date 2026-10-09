@@ -1157,6 +1157,13 @@ export class Narrator {
       shown = { ...shown, topics: shown.topics?.slice(0, 1) };
       head = this.toSteward(this.answer(e.who, shown));
     }
+    // Bar round 6: a dated memory says more than a stock reason, so for "what do you think of me" the
+    // reason goes first ("You see, you hear me out" was kept and the day you built the hedge dropped).
+    if (total() > cap && remembered && shown.because && a.question === 'me') {
+      const { because: _b, ...rest } = shown;
+      shown = rest;
+      head = this.toSteward(this.answer(e.who, shown));
+    }
     if (total() > cap) remembered = '';
     // "What do you think of me": the reason gives way before the concession does.
     if (total() > cap && shown.because) {

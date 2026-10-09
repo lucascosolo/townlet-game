@@ -65,7 +65,9 @@ test('closing a modal restores the speed from before it opened, paused included'
   expect(await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.game.speedIndex)).toBe(0);
 });
 
-test('the first proposal waits until the player has opened a page or two game hours have passed', async ({ page }) => {
+// Bar round 6 moved this: opening a page no longer counts, only a tap on the town itself (a phone
+// player tapped Log after Begin and met a proposal about people they had not seen).
+test('the first proposal waits until the player has touched the town or two game hours have passed', async ({ page }) => {
   // Played from the start at a fast speed (never a jump of two hours in one frame) to day 1, 09:30.
   await open(page, 'scenario=quiet&seed=1&speed=0', 0);
   for (let i = 0; i < 19; i++) {
@@ -77,6 +79,9 @@ test('the first proposal waits until the player has opened a page or two game ho
   expect(open1).toBe(true);
   await expect(page.getByTestId('decision')).toHaveCount(0);
   await page.getByTestId('tab-journal').click();
+  await frames(page);
+  await expect(page.getByTestId('decision')).toHaveCount(0);
+  await page.locator('canvas').first().click({ position: { x: 700, y: 400 } });
   await frames(page);
   await expect(page.getByTestId('decision')).toBeVisible();
 });

@@ -415,8 +415,9 @@ export class Narrator {
   private plotsCleared?: number;
   private pageReadDay = -1;
   private readonly lastMemoryAt = new Map<string, number>();
+  private memoryTemplate: string | null = null;
 
-  private freshest(who: string, options: string[], mineGapDays = 3): string {
+  private freshest(who: string, options: string[], mineGapDays = 3, mark = true): string {
     const t = this.state.tick;
     const mine = (o: string) => this.saidBy.get(`${who}|${o}`) ?? -Infinity;
     const any = (o: string) => this.saidAny.get(o) ?? -Infinity;
@@ -424,9 +425,14 @@ export class Narrator {
     // last eight days (bar round 2: one chatty line twelve times in a month).
     const fresh = options.filter((o) => t - mine(o) >= mineGapDays * 1440 && t - any(o) >= 8 * 1440);
     const line = fresh.length ? pick(this.rng, fresh) : [...options].sort((a, b) => Math.max(mine(a), any(a)) - Math.max(mine(b), any(b)))[0] ?? '...';
+    if (mark) this.markSaid(who, line);
+    return line;
+  }
+
+  private markSaid(who: string, line: string): void {
+    const t = this.state.tick;
     this.saidBy.set(`${who}|${line}`, t);
     this.saidAny.set(line, t);
-    return line;
   }
 
   /** A belief as a third-person clause about its holder: "the bakery keeps her up at night". */
@@ -1090,8 +1096,10 @@ export class Narrator {
     // No verbal tic: it follows an answer that may have had one ("I must say ... I must say").
     const lines = rec.valence >= 0 ? RECALL_LINES.good : RECALL_LINES.bad;
     const options = lines[residentDef(who).voice.register] ?? lines.plain;
-    // Rested a week each (bar round 7).
-    return sentenceCase(fixArticles(this.fill(this.freshest(who, options, 7), FIRST_PERSON, { clause: this.memoryClause(who, rec, youAreSteward), when: this.whenSaid(rec.tick) })));
+    // Rested a week each (bar round 7), and counted as said only when the answer keeps it.
+    const line = this.freshest(who, options, 7, false);
+    this.memoryTemplate = line;
+    return sentenceCase(fixArticles(this.fill(line, FIRST_PERSON, { clause: this.memoryClause(who, rec, youAreSteward), when: this.whenSaid(rec.tick) })));
   }
 
   /** `${who}|${tic}` -> the day it was last used, so a tic is heard at most once a day. */
@@ -1180,9 +1188,9 @@ export class Narrator {
     }
     // A memory they bring up (2026-10-08), in their own words, after the answer itself.
     // Bar round 7: not every answer is a reminiscence: one memory in two days each ("Do you know, I
-    // still smile about it" ten times in a month).
+    // still smile about it" ten times in a month); one memory in three days each.
     const lastMem = this.lastMemoryAt.get(e.who) ?? -Infinity;
-    let remembered = a.memory && e.t - lastMem >= 2 * 1440 ? this.memoryLine(e.who, a.memory, this.you) : '';
+    let remembered = a.memory && e.t - lastMem >= 3 * 1440 ? this.memoryLine(e.who, a.memory, this.you) : '';
     // Four sentences at most (bar round 3): a fact takes the place of a second thing on their
     // mind, then the second thing goes, then the memory waits for another day.
     const tics = residentDef(e.who).voice.tics;
@@ -1240,7 +1248,10 @@ export class Narrator {
     const base = words;
     const before = said.filter((x) => x.base === base).pop();
     if (before) words = `As I told you on day ${dayOf(before.t)}: ${words}`;
-    if (remembered) this.lastMemoryAt.set(e.who, e.t);
+    if (remembered) {
+      this.lastMemoryAt.set(e.who, e.t);
+      if (this.memoryTemplate) this.markSaid(e.who, this.memoryTemplate);
+    }
     said.push({ t: e.t, text: words, base });
     this.answersTo.set(e.who, said.slice(-40));
     this.lastReply = { who: e.who, t: e.t, text: words };

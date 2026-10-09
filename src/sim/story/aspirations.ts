@@ -311,7 +311,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       },
       {
         id: 'paint',
-        next: 'Paint the banner',
+        next: 'Get the colours on the cloth and hang it up',
         check: (h, r) => {
           if (!exists(h.state, 'banner')) askFor(h, r, 'banner');
           return exists(h.state, 'banner');

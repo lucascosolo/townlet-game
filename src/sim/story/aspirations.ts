@@ -49,6 +49,8 @@ export interface Stage {
   needs?: string;
   /** Bar round 7: waits on a date (a season, a supper, the cart's last visit), so it is never done by days passing. */
   dated?: boolean;
+  /** Bar round 7: waits on another resident (making peace), so it keeps the slower nine-day fallback. */
+  waitsOnOther?: boolean;
 }
 
 export interface AspirationDef {
@@ -549,7 +551,7 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
   // A first step is done within four days: due after three, since steps move at the morning check (bar round 6: "watch the trade cart come and go" was
   // Marlow's bubble four days running, "find someone willing to learn" Fen's for three).
   // Bar round 7: and every later step within six (Fen's "teach someone at the jetty" ran a week).
-  const longEnough = !stage.until && !stage.dated && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 1 : STEP_DAYS - 1) * TICKS_PER_DAY;
+  const longEnough = !stage.until && !stage.dated && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 1 : stage.waitsOnOther ? 9 : STEP_DAYS - 1) * TICKS_PER_DAY;
   const passed = stage.check(h, r);
   if (!passed && !longEnough) return;
   // Bar round 6: a first step that only ran out of days is moved past, not celebrated (the quicker

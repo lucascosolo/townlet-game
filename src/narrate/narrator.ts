@@ -1106,8 +1106,8 @@ export class Narrator {
     // No verbal tic: it follows an answer that may have had one ("I must say ... I must say").
     const lines = rec.valence >= 0 ? RECALL_LINES.good : RECALL_LINES.bad;
     const options = lines[residentDef(who).voice.register] ?? lines.plain;
-    // Rested a week each (bar round 7), and counted as said only when the answer keeps it.
-    const line = this.freshest(who, options, 7, false);
+    // Rested a fortnight each by each resident (bar round 7), and counted as said only when the answer keeps it.
+    const line = this.freshest(who, options, 14, false);
     this.memoryTemplate = line;
     return sentenceCase(fixArticles(this.fill(line, FIRST_PERSON, { clause: this.memoryClause(who, rec, youAreSteward), when: this.whenSaid(rec.tick) })));
   }

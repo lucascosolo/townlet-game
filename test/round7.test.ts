@@ -236,7 +236,7 @@ describe('round 7, criterion 6: middle dream steps move', () => {
           for (const r of here(sim)) {
             if (r.aspiration.done) continue;
             const s = currentStage(sim.state, r);
-            if (!s || s.until || s.needs || s.dated || (s.place && s.place !== 'home' && !liveBuildings(sim.state).some((b) => b.type === s.place))) continue;
+            if (!s || s.until || s.needs || s.dated || s.waitsOnOther || (s.place && s.place !== 'home' && !liveBuildings(sim.state).some((b) => b.type === s.place))) continue;
             if (sim.state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open')) continue;
             const limit = r.aspiration.stage === 0 ? FIRST_STEP_DAYS : STEP_DAYS;
             expect(sim.state.tick - r.aspiration.since, `${steward} seed ${seed} ${r.id} on "${s.next}"`).toBeLessThanOrEqual(limit * 1440 + 60);

@@ -712,6 +712,8 @@ export class Ui {
 
   /** The phone's tab bar. */
   private nav(key: 'town' | 'goals' | 'folk' | 'build' | 'log'): void {
+    // Bar round 8: another tab puts the build tool away (a cottage stayed in hand on the Folk tab).
+    if (key !== 'build' && this.tool.kind !== 'select') this.setTool({ kind: 'select' });
     if (key === 'town' || key === 'build') {
       this.quick.hidden = true;
       if (!this.scroll.classList.contains('rolled')) this.toggleScroll();

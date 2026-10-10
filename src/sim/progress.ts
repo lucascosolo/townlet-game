@@ -354,7 +354,10 @@ export function nextFact(state: SimState, who: string, question: TalkQuestion, a
   // mind" answers all ended "I need a good long sleep").
   const k = pool.length ? Math.max(0, state.order.indexOf(who)) % pool.length : 0;
   const turned = [...pool.slice(k), ...pool.slice(0, k)];
-  return turned.find((f) => !known.includes(f)) ?? null;
+  // Bar round 8: the dream is learned only while there is one ("No big plans" as the album revealed the banner).
+  const r = state.residents[who];
+  const dreaming = !!r && !r.aspiration.done && dreamTitle(state, r) !== null;
+  return turned.find((f) => !known.includes(f) && (f !== 'dream' || dreaming)) ?? null;
 }
 
 /** Learn a fact outright, as reading their page does for the background (bar round 2). */

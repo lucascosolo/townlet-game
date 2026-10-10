@@ -353,7 +353,7 @@ export function chooseDream(state: SimState, r: ResidentState): { kind: string; 
     // Two people making something for someone is plenty at once (bar round 3: eight of ten).
     // Bar round 4: "do something for the steward" is a gift too (six of eleven dreams were one or the other).
     const gifting = Object.values(state.residents).filter((o) => o.id !== r.id && !o.departed && !o.aspiration.done && GIFT_KINDS.has(o.aspiration.kind ?? '')).length;
-    // Bar round 5: two people at most share a dream ("Share the commons with a friend" three times).
+    // Bar round 5: two people at most shared a dream. Bar round 8: no two hold the same one at once.
     const sharing = (kind: string) => Object.values(state.residents).filter((o) => o.id !== r.id && !o.departed && !o.aspiration.done && o.aspiration.kind === kind && o.aspiration.subject === a.subject).length;
     const t = DREAM_TEMPLATES.find((x) => !recent.has(x.id) && !(GIFT_KINDS.has(x.id) && gifting >= 2) && sharing(x.id) === 0 && x.fits(state, r, a));
     if (t) options.push({ kind: t.id, subject: a.subject, weight: a.strength + (t.id === 'remember_gone' ? 2 : 0) });

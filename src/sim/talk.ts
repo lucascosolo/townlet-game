@@ -11,7 +11,7 @@ import { townHunger } from './hunger.js';
 import { freshGrievance } from './mind/thoughts.js';
 import { TICKS_PER_DAY } from './time.js';
 import { rel } from './mind/relationships.js';
-import { topOfMind } from './mind/thoughts.js';
+import { subjectWord, topOfMind } from './mind/thoughts.js';
 import { dreamTitle, nextStep } from './story/aspirations.js';
 import { STEWARD, type Belief, type ResidentState, type SimState, type SubjectId, type TalkAnswer, type TalkQuestion } from './types.js';
 
@@ -133,6 +133,12 @@ export function talkAnswer(state: SimState, r: ResidentState, question: TalkQues
       const day = Math.floor(state.tick / TICKS_PER_DAY) + 1;
       const hungry = ((r.hungryRun ?? 0) >= 2 && (r.lastHungryDay ?? -9) >= day - 1) || townHunger(state) >= 0.12;
       const band = moodBand(r.mood);
+      // Bar round 8: the morning after losing a place of theirs, no better than fair, and they say what ("Very well" the day after the jetty went).
+      const lost = r.hurtAt !== undefined && state.tick - r.hurtAt < 2 * TICKS_PER_DAY && r.lostPlace?.building !== undefined ? (`b:${r.lostPlace.building}` as SubjectId) : null;
+      if (lost && !sour && !hungry) {
+        const grief = { key: 'feel:grief', about: lost, vars: { x: subjectWord(state, lost) }, rank: 0 };
+        return { question, band: band === 'good' || band === 'great' ? 'fair' : band, value: Math.min(r.mood, 0.6), topics: [grief] };
+      }
       const capped = (sour || hungry) && (band === 'good' || band === 'great');
       const reason = hungry ? { key: 'larder', vars: {}, rank: 0 } : { key: 'steward:-', about: STEWARD as SubjectId, vars: {}, rank: 0 };
       const rest = top.filter((t) => !(hungry && (t.key === 'feel:joy' || t.key === 'larder')));

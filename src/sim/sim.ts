@@ -136,9 +136,10 @@ export const LOW_STANDING = 0.15;
 export const FELT_CAP = 0.25;
 /** Bar round 4: the most anyone thinks of you while the larder has been low two dawns running. */
 export const LOW_LARDER_TOP = 0.85;
-/** Bar round 7: standing after a loss you caused (workplace, dream building, a place held dear), for HURT_DAYS. */
-export const HURT_TOP = 0.6;
-export const HURT_DAYS = 10;
+/** Bar round 7: standing after a loss you caused (workplace, dream building, a place held dear), for HURT_DAYS.
+ * Bar round 8: 0.5 for a fortnight (was 0.6 for ten days), so the You tab never says "thinks the world of you" of them. */
+export const HURT_TOP = 0.5;
+export const HURT_DAYS = 14;
 /** Bar round 7: nobody holding something against you from the last week thinks the world of you. */
 export const FRESH_GRIEVANCE_TOP = 0.85;
 export const FRESH_GRIEVANCE_DAYS = 7;
@@ -577,6 +578,8 @@ export class Simulation implements AspirationHost {
       this.emit({ t: state.tick, type: 'favour', who, phase: 'refused', kind, reason: verdict.reason, ...(other ? { other } : {}) });
       return verdict;
     }
+    // Bar round 8: a favour moves the conversation on; the last answer's replies are put away.
+    if (r.lastAnswer) r.lastAnswer.replied = true;
     r.favoursAsked = [...(r.favoursAsked ?? []).filter((t) => state.tick - t < 7 * TICKS_PER_DAY), state.tick];
     if (recentAsks(r, state.tick) > ASKS_BEFORE_GRATING) {
       this.mind.perceive(this.ctx(), r, { subject: STEWARD, aspect: 'asks_too_much', valence: -0.6, base: 0.5, source: 'witnessed', note: 'asked me for yet another favour' });
@@ -883,7 +886,7 @@ export class Simulation implements AspirationHost {
         r.hurtAt = state.tick;
         this.emit({ t: state.tick, type: 'grief', who: r.id, building: b.id, btype: b.type, how });
         // Bar round 4: a loss weighs on mood for days, not only in feelings that fade by evening.
-        r.lostPlace = { tick: state.tick, weight: Math.max(r.lostPlace && state.tick - r.lostPlace.tick < LOSS_DAYS * TICKS_PER_DAY ? r.lostPlace.weight : 0, clamp(0.5 + op)) };
+        r.lostPlace = { tick: state.tick, weight: Math.max(r.lostPlace && state.tick - r.lostPlace.tick < LOSS_DAYS * TICKS_PER_DAY ? r.lostPlace.weight : 0, clamp(0.5 + op)), building: b.id };
         return;
       }
     }
@@ -1075,7 +1078,11 @@ export class Simulation implements AspirationHost {
               this.mind.perceive(ctx, r, { subject: `r:${w.id}`, aspect: 'noisy_at_night', valence: -0.5, base: base * 0.4, source: 'witnessed', note: `${residentDef(w.id).name} at the ${name}` });
             }
           }
-          if (src.placedBy === 'steward') {
+          // Bar round 8: not your fault when it is their own workplace, a late shift they proposed, or what they asked for.
+          const own = src.id === r.jobId || !!src.dreamOf?.includes(r.id);
+          const theirIdea = state.story.extraShifts.some(([id]) => id === src.id) && state.story.dilemmas.some((d) => d.proposer === r.id && d.status === 'approved');
+          const asked = state.requests.some((q) => q.by === r.id && q.status === 'fulfilled' && q.wants === src.type);
+          if (src.placedBy === 'steward' && !own && !theirIdea && !asked) {
             this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'spoils_town', valence: -0.5, base: base * 0.55, source: 'witnessed', note: `put the ${name} there` });
           }
         }

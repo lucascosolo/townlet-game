@@ -12,7 +12,7 @@ import { STEWARD, type ResidentState, type SimState, type TalkAnswer } from './t
 export type ReplyKind = 'agree' | 'disagree' | 'sorry' | 'explain';
 
 /** How the reply landed, which picks the resident's response. */
-export type ReplyStance = 'warm' | 'respect' | 'sulk' | 'forgiven' | 'enough' | 'convinced' | 'unconvinced' | 'puzzled' | 'owned' | 'insist' | 'differ' | 'seen' | 'with_you' | 'encouraged' | 'mulled' | 'bristled' | 'fine' | 'nudged' | 'cheap' | 'too_soon' | 'best_of';
+export type ReplyStance = 'warm' | 'respect' | 'sulk' | 'forgiven' | 'enough' | 'convinced' | 'unconvinced' | 'puzzled' | 'owned' | 'insist' | 'differ' | 'seen' | 'with_you' | 'encouraged' | 'mulled' | 'bristled' | 'fine' | 'nudged' | 'cheap' | 'too_soon' | 'best_of' | 'we_ll_see';
 
 /** What an answer said, which decides how agreeing or disagreeing with it lands (bar round 3). */
 export type ReplyTone = 'praise' | 'complaint' | 'view' | 'mood' | 'hope';
@@ -75,6 +75,10 @@ export function explainable(aspect: string, note: string): boolean {
 export const SORRY_GAP = 3 * TICKS_PER_DAY;
 /** Bar round 7: a sorry for a loss you caused, this soon after it, is "not yet". */
 export const TOO_SOON = 2 * TICKS_PER_DAY;
+/** Bar round 8: for a day after a loss you caused, every answer offers a sorry for it (so "not yet" can be heard). */
+export const HURT_SORRY = TICKS_PER_DAY;
+/** Bar round 8: below zero standing, a sorry moves standing by no more than this. */
+export const WE_LL_SEE_GAIN = 0.01;
 
 /** Bar round 7: a grievance forgiven in the last week is not raised again (Juniper brought one up the day after forgiving it). */
 export const FORGIVEN_QUIET = 7 * TICKS_PER_DAY;
@@ -116,6 +120,12 @@ export function carriedGrievance(r: ResidentState, answer: TalkAnswer, now = 0):
   if (answer.question === 'me' && DARK_BANDS.has(answer.band ?? '') && answer.because && answer.because.subject === STEWARD) {
     return { aspect: answer.because.aspect, note: grievanceNote(r, answer.because.aspect) };
   }
+  // Bar round 8: grief for a place you took away is something to say sorry for ("what's on your mind" about the jetty offered none).
+  const mourns = answer.topics?.some((t) => (t.about?.startsWith('b:') ?? false) && (t.key === 'feel:grief' || t.key === 'feel:sadness' || t.vars.aspect === 'lost_place'));
+  if (mourns) {
+    const g = grievances(r, now).find((x) => x.aspect === 'destroyed_place');
+    if (g) return { aspect: g.aspect, note: grievanceNote(r, g.aspect) };
+  }
   const letDown = answer.topics?.some((t) => t.key === 'leaving' || t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)));
   if (letDown) {
     const g = grievances(r, now)[0];
@@ -150,7 +160,9 @@ export function offersFor(r: ResidentState, answer: TalkAnswer, now = 0): ReplyO
   // A hope can be doubted too (bar round 4: every hope answer offered only "That's fair").
   const saysSomething = (answer.band !== undefined && answer.band !== 'neutral') || (answer.topics?.length ?? 0) > 0 || !!answer.memory || answer.question === 'hope';
   if (saysSomething) offers.push({ kind: 'disagree', ...named });
-  const g = carriedGrievance(r, answer, now);
+  let g = carriedGrievance(r, answer, now);
+  // Bar round 8: the day after a loss you caused, anything they say can be answered with a sorry for it.
+  if (!g && r.hurtAt !== undefined && now - r.hurtAt < HURT_SORRY && now >= r.hurtAt) g = { aspect: 'destroyed_place', note: grievanceNote(r, 'destroyed_place') };
   if (g) {
     offers.push({ kind: 'sorry', aspect: g.aspect, about: g.note });
     if (explainable(g.aspect, g.note)) offers.push({ kind: 'explain', aspect: g.aspect, about: g.note });
@@ -299,6 +311,13 @@ export function applyReply(
       if (aspect === 'destroyed_place' && r.hurtAt !== undefined && tick - r.hurtAt < TOO_SOON) {
         adjust(r, STEWARD, { familiarity: 0.02 }, tick);
         return { stance: 'too_soon', aspect };
+      }
+      // Bar round 8: below zero, a sorry is heard but not yet believed ("we'll see").
+      if ((r.rel[STEWARD]?.affinity ?? 0) < 0) {
+        (r.sorryFor ??= {})[aspect] = tick;
+        soften(r, aspect, 0.9);
+        adjust(r, STEWARD, { affinity: WE_LL_SEE_GAIN, familiarity: 0.02 }, tick);
+        return { stance: 'we_ll_see', aspect };
       }
       (r.sorryFor ??= {})[aspect] = tick;
       // An apology clears the air: everything fresh softens most, older grievances a little.

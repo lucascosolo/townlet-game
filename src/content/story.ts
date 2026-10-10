@@ -124,7 +124,7 @@ export const ASPIRATION_LINES: Record<string, string> = {
   'bram:win': 'Word has got round: Bram\'s bread is worth getting up for.',
   'bram:plan': 'Bram is planning a feast for the Harvest Supper, flour on every surface.',
   'bram:feast': 'Bram feeds the whole valley at the Harvest Supper. He pretends not to watch everyone eat.',
-  'fen:student': 'Fen asks {partner}, gruffly, whether they want to learn to fish. {partner} says yes.',
+  'fen:student': 'Fen asks {partner}, gruffly, whether {psubj} would like to learn to fish. {partner} says yes.',
   'fen:lessons': 'Fen and {partner} have spent long afternoons at the jetty. Fen has said almost nothing. {partner} has learned a great deal.',
   'fen:proud': '{partner} lands a fish alone. Fen nods once, which from Fen is a speech.',
   'juniper:design': 'Juniper has covered the workshop wall in drawings of a glasshouse.',

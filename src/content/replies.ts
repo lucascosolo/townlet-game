@@ -167,6 +167,14 @@ Object.assign(REPLY_LINES, {
     chatty: ['Not yet! Too soon! Far too soon!', 'Ask me next week! Maybe!', "Nope! Still cross! Very cross!", 'Too fresh! Try again later!', "Not today, not tomorrow, we'll see!"],
     dreamy: ['The ground is still bare where it stood.', 'Not yet. The ache is new.', 'Let the hole close a little first.', 'Some things want a season.', 'Too soon. The birds have not come back.'],
   },
+  // Bar round 8: a sorry from someone they think a little less of: heard, not yet believed.
+  we_ll_see: {
+    plain: ["We'll see.", 'Maybe. Time will tell.', "Noted. Let's see what you do.", "Alright. We'll see.", "I'll believe it when I see it."],
+    formal: ['We shall see, steward.', 'I note it. Time will tell.', 'Very well. I shall watch what follows.', 'I hear you. I reserve judgement.', 'Perhaps. Deeds will settle it.'],
+    warm: ["I want to believe you. We'll see.", "Thank you for saying it. Let's see.", "Okay. I'm not there yet, but okay.", "That's a start, I suppose.", "I hope you mean it. We'll see."],
+    chatty: ["We'll see! We will! See!", 'Hmm! Noted! Watching you!', "Okay! Maybe! Ask me in a week!", "A start! A small one!", "Sorry, is it? We'll see about that!"],
+    dreamy: ['We shall see what grows from it.', 'A start. Seeds take time.', 'Perhaps. The season will tell.', 'I will wait and watch the weather.', 'Maybe. Let it settle.'],
+  },
   cheap: {
     plain: ["Words are cheap.", "Sorry won't mend it.", "Show me, don't tell me.", "Heard sorry before.", "Do something, then."],
     formal: ['An apology is easy. Amends are not.', 'I would sooner see it in what you do.', 'Words cost you nothing, steward.', 'I have heard fine words before.', 'Forgive me if I wait for deeds.'],

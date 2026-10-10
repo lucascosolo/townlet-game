@@ -581,7 +581,7 @@ addLines(THOUGHTS['lost_place-'], {
  */
 export const STEWARD_REASONS: Record<string, string[]> = {
   listens_to_me: ['the steward listens', 'the steward hears me out', 'the steward takes the time to listen', 'when I ask, the steward answers'],
-  ignores_me: ["the steward doesn't listen", 'the steward lets things slide', 'asking the steward gets me nowhere', "the steward's ears are elsewhere"],
+  ignores_me: ["the steward doesn't listen", 'the steward lets things slide', 'the steward never gets round to what I ask', "the steward's ears are elsewhere"],
   improves_town: ['the steward is making the town better', 'the valley looks better for the steward', 'the steward builds what we need', 'things are coming on, thanks to the steward'],
   spoils_town: ["the steward doesn't think things through", 'the steward builds without thinking', 'the steward has made a muddle of the valley'],
   decided_well: ['the steward makes good decisions', 'the steward chooses well', 'the steward has a good head for a decision'],

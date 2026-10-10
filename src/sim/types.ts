@@ -231,7 +231,7 @@ export interface ResidentState {
   hurtAt?: number;
   /** The last tick they took in something against you (bar round 7: nobody with a fresh grievance thinks the world of you). */
   grievedAt?: number;
-  lostPlace?: { tick: number; weight: number };
+  lostPlace?: { tick: number; weight: number; building?: number };
   /** Warmth that talk added lately, [tick, amount] (bar round 5: capped weekly). */
   talkWarmth?: Array<[number, number]>;
   id: string;

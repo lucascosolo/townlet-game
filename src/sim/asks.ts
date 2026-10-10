@@ -38,8 +38,9 @@ export interface AskAssessment {
   wants?: string;
 }
 
+// Bar round 8: a well is somewhere to stop and talk too (the tray said so; the ask did not count it).
 function isGatheringPlace(type: string): boolean {
-  return buildingDef(type).kind === 'social' || type === 'bench' || type === 'oak';
+  return buildingDef(type).kind === 'social' || type === 'bench' || type === 'oak' || type === 'well';
 }
 
 function homeTile(state: SimState, r: ResidentState): [number, number] {

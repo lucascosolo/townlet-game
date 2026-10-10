@@ -117,7 +117,8 @@ export class TownView {
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // PCFSoftShadowMap is gone from three.js and fell back to this anyway (it logged a warning on every load).
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     container.appendChild(this.renderer.domElement);
 
     this.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 200);

@@ -20,3 +20,22 @@ export function testContext(state: SimState, tick = 0): MindContext & { events: 
 }
 
 export const SEEDS = [1, 2, 3, 4, 5];
+
+/**
+ * Audit 2026-10-10: favours asked the way a player asks, of a different resident each morning,
+ * rather than the favours steward's "whoever is likeliest to say yes" (which is never refused).
+ * Returns each answer's reason, or 'yes'.
+ */
+export function askLikeAPlayer(sim: import('../src/sim/sim.js').Simulation, seed: number, days = 30): string[] {
+  const answers: string[] = [];
+  for (let d = 2; d <= days; d++) {
+    sim.runUntil(d * 1440 - 1440 + 10 * 60);
+    const here = sim.state.order.filter((id) => !sim.resident(id).departed && sim.resident(id).activity?.id !== 'sleep');
+    if (here.length === 0) continue;
+    const who = here[(d * 7 + seed) % here.length]!;
+    const v = sim.askFavour(who, (['timber', 'catch', 'garden'] as const)[d % 3]!);
+    if (v.reason === 'nowhere' || v.reason === 'asleep' || v.reason === 'gone') continue;
+    answers.push(v.yes ? 'yes' : (v.reason ?? 'no'));
+  }
+  return answers;
+}

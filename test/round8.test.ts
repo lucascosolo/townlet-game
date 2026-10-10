@@ -9,7 +9,7 @@ import { Narrator } from '../src/narrate/narrator.js';
 import { runScenario } from '../src/scenarios/index.js';
 import { assess } from '../src/sim/asks.js';
 import { nextFact } from '../src/sim/progress.js';
-import { applyReply, offersFor, WE_LL_SEE_GAIN } from '../src/sim/replies.js';
+import { answerTone, applyReply, offersFor, WE_LL_SEE_GAIN } from '../src/sim/replies.js';
 import type { Simulation } from '../src/sim/sim.js';
 import { SURPLUS_SPOILS, storesDawn } from '../src/sim/stores.js';
 import { at, dayOf, TICKS_PER_DAY } from '../src/sim/time.js';
@@ -81,6 +81,8 @@ describe('round 8, criterion 2: apologies must be earned', () => {
     expect(sim.state.tick - r.hurtAt!).toBeLessThan(TICKS_PER_DAY);
     for (const q of ['how', 'mind', 'hope', 'me'] as TalkQuestion[]) {
       const a = sim.talk(r.id, q)!;
+      // Audit 2026-10-10: except praise, where round 2 rules a sorry out.
+      if (answerTone(a).tone === 'praise') continue;
       expect(offersFor(r, a, sim.state.tick).some((o) => o.kind === 'sorry'), `${q}`).toBe(true);
     }
     const res = sim.reply(r.id, 'sorry');

@@ -143,16 +143,16 @@ export const HURT_DAYS = 14;
 /** Bar round 7: nobody holding something against you from the last week thinks the world of you. */
 export const FRESH_GRIEVANCE_TOP = 0.85;
 export const FRESH_GRIEVANCE_DAYS = 7;
-/** Bar round 5: 30 timber to start (was 25): seventeen builds were refused for timber in the first fortnight. */
 /** Bar round 6: the woodlot yields this much more in the first fortnight (16 builds were refused for timber on days 3 to 14). */
 export const EARLY_TIMBER = 2.5;
 /** ...while the store is low: a full woodyard needs no help. */
 export const EARLY_TIMBER_BELOW = 20;
 export const EARLY_TIMBER_DAYS = 14;
+/** Bar round 5: 30 timber to start (was 25): seventeen builds were refused for timber in the first fortnight. */
 export const START_STOCK: Record<Resource, number> = { food: 20, timber: 30 };
-/** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */
 /** How much telling a memory rehearses it: about as much as reminiscing with a friend. */
 export const RECALL_REHEARSAL = 0.15;
+/** What the trader's cart brings (the rewarded bonus): less than a cottage costs. */
 export const TRADER_GIFT: Record<Resource, number> = { timber: 8, food: 6 };
 /** Seasonal yield of buildings that grow food on their own. */
 const PASSIVE_SEASON: Record<string, Record<ReturnType<typeof seasonOf>, number>> = {
@@ -186,7 +186,6 @@ function detailFor(q: Quality, change: number): string {
   }
 }
 
-/** How often a resident's asks of this kind went ignored in the last fortnight. */
 /** Every ask of theirs lapsed in the last fortnight. */
 function allLapses(state: SimState, who: string, tick: number): number {
   // Bar round 8: a cottage for someone else's kin does not count towards giving up on you.
@@ -196,6 +195,7 @@ function allLapses(state: SimState, who: string, tick: number): number {
   return state.requests.filter((q) => q.by === who && q.kind !== 'home_for_kin' && q.status === 'lapsed' && (q.closedTick ?? 0) > since).length;
 }
 
+/** How often a resident's asks of this kind went ignored in the last fortnight. */
 function lapsesOf(state: SimState, who: string, kind: Request['kind'], tick: number): number {
   return state.requests.filter((q) => q.by === who && q.kind === kind && q.status === 'lapsed' && (q.closedTick ?? 0) > tick - 14 * TICKS_PER_DAY).length;
 }
@@ -744,7 +744,7 @@ export class Simulation implements AspirationHost {
   private newcomers(): void {
     const state = this.state;
     if (this.activeResidents().length >= Math.min(MAX_RESIDENTS, residentCap(this.state))) return;
-    // Nobody moves into a town that went hungry in the last two days (bar round 3).
+    // Nobody moves into a town that went hungry today or in the last two days (bar round 3).
     if ((state.shortRun ?? 0) > 0 && state.lastShortageDay >= dayOf(state.tick) - 2) return;
     const home = this.emptyHomes().find((b) => state.tick - b.placedTick >= NEWCOMER_DELAY);
     if (!home) return;

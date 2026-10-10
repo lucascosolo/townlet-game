@@ -148,7 +148,7 @@ interface Grid {
   key: string;
   /** Per tile: 0 open, 1 laid path, 2 commons, 3 brook, otherwise the id + 10 of the building on it. */
   cells: Int32Array;
-  /** How much cheaper a worn tile is to cross, from the day's dawn (bar round 2: desire paths). */
+  /** How much cheaper a worn tile is to cross, from the wear when the grid was built: the day before, or the last building change (bar round 2: desire paths). */
   worn: Float32Array;
   width: number;
   height: number;

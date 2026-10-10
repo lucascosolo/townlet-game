@@ -492,7 +492,16 @@ export class Simulation implements AspirationHost {
         aspirationsAfterBuild(this, waiting);
         this.closeMetAfterBuild();
       }
-    } else if (c.kind === 'remove') this.remove(c.x, c.y);
+    } else if (c.kind === 'remove') {
+      // A remove whose building is already gone (a double click queues two in one tick), or that
+      // names a home, is dropped like an unplaceable build. It used to throw out of the frame loop,
+      // freezing the game, and the saved command then stopped the save from loading.
+      const b = liveBuildings(this.state).find((bb) => {
+        const [w, h] = sizeOf(bb);
+        return c.x >= bb.x && c.x < bb.x + w && c.y >= bb.y && c.y < bb.y + h;
+      });
+      if (b && buildingDef(b.type).kind !== 'home') this.remove(c.x, c.y);
+    }
     else if (c.kind === 'talk') {
       if (this.state.residents[c.who]) this.talk(c.who, c.question, c.about);
     } else if (c.kind === 'favour') {
@@ -1139,7 +1148,9 @@ export class Simulation implements AspirationHost {
     const needDecide =
       !act ||
       tick >= act.until ||
-      (act.id !== 'sleep' && act.id !== 'eat' && r.needs.food < 0.12) ||
+      // Foraging is how the hungriest eat: hunger does not call them off it (it used to, after a
+      // minute, so those below 0.12 never brought anything back).
+      (act.id !== 'sleep' && act.id !== 'eat' && act.id !== 'forage' && r.needs.food < 0.12) ||
       (act.id !== 'sleep' && act.id !== 'work' && minute === def.sleep);
     if (!needDecide) return;
     if (act?.id === 'sleep' && act.night && tick >= act.until) {
@@ -1365,7 +1376,9 @@ export class Simulation implements AspirationHost {
       }
     } else if (r.disposition > (r.leaving.dream ? 0.7 : STAYING_ABOVE)) {
       // A change of heart is recorded as staying (bar round 7: Marlow's page still said "Decided to go").
-      if (r.leaving.dream && r.aspiration.outcome === 'leave') r.aspiration.outcome = 'stay';
+      // Audit 2026-10-10: whether or not the notice came from his choice itself (Marlow already
+      // thinking of leaving on day 23 kept "leave" after staying, and never dreamt again).
+      if (r.aspiration.outcome === 'leave') r.aspiration.outcome = 'stay';
       r.leaving = null;
       r.lowDays = 0;
       this.emit({ t: tick, type: 'decided_to_stay', who: r.id });

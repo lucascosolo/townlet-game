@@ -51,6 +51,12 @@ export interface Stage {
   dated?: boolean;
   /** Bar round 7: waits on another resident (making peace), so it keeps the slower nine-day fallback. */
   waitsOnOther?: boolean;
+  /**
+   * Audit 2026-10-10: the step IS the steward's gift (the orchard planted, the glasshouse up), and
+   * its `enter` thanks them for it. It is never done by days passing, which granted wishes nobody
+   * built; unmet after LET_GO_DAYS it is let go like a `needs` step.
+   */
+  grants?: string;
 }
 
 export interface AspirationDef {
@@ -79,9 +85,10 @@ function askFor(h: AspirationHost, r: ResidentState, wants: string): void {
   h.ask(r, 'aspiration', wants);
 }
 
-function friendsOf(r: ResidentState): string[] {
+/** Friends still in the valley (audit 2026-10-10: a departed friend counted, for Ada's confiding and Marlow's choice). */
+function friendsOf(state: SimState, r: ResidentState): string[] {
   return Object.entries(r.rel)
-    .filter(([id, x]) => id !== 'steward' && x.tags.includes('friend'))
+    .filter(([id, x]) => id !== 'steward' && x.tags.includes('friend') && !!state.residents[id] && !state.residents[id]?.departed)
     .map(([id]) => id);
 }
 
@@ -97,9 +104,11 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       {
         id: 'confide',
         next: 'Tell a close friend about her sister\'s orchard',
-        check: (_h, r) => friendsOf(r).length > 0,
+        check: (h, r) => friendsOf(h.state, r).length > 0,
         enter: (h, r) => {
-          const friend = friendsOf(r).sort((a, b) => rel(r, b).affinity - rel(r, a).affinity)[0] as string;
+          // The four-day fallback moves on without a friend to tell (it used to crash here).
+          const friend = friendsOf(h.state, r).sort((a, b) => rel(r, b).affinity - rel(r, a).affinity)[0];
+          if (!friend) return;
           r.aspiration.partner = friend;
           adjust(r, friend, { affinity: 0.05, trust: 0.05 }, h.state.tick);
           adjust(h.state.residents[friend] as ResidentState, r.id, { affinity: 0.05 }, h.state.tick);
@@ -117,6 +126,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       {
         id: 'planted',
         next: 'Wait for the orchard to be planted',
+        grants: 'orchard',
         check: (h, r) => {
           if (!exists(h.state, 'orchard')) askFor(h, r, 'orchard');
           return exists(h.state, 'orchard');
@@ -271,6 +281,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       {
         id: 'built',
         next: 'Wait for the glasshouse to go up',
+        grants: 'glasshouse',
         check: (h, r) => {
           if (!exists(h.state, 'glasshouse')) askFor(h, r, 'glasshouse');
           return exists(h.state, 'glasshouse');
@@ -316,6 +327,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
       {
         id: 'paint',
         next: 'Get the colours on the cloth and hang it up',
+        grants: 'banner',
         check: (h, r) => {
           if (!exists(h.state, 'banner')) askFor(h, r, 'banner');
           return exists(h.state, 'banner');
@@ -351,7 +363,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
         check: (h) => dayOf(h.state.tick) >= 23,
         enter: (h, r) => {
           // What he has here: friends, how settled he feels, how the steward treats him.
-          const friends = friendsOf(r).length;
+          const friends = friendsOf(h.state, r).length;
           const score = 0.3 * Math.min(friends, 3) + 0.9 * r.disposition + 0.4 * (rel(r, 'steward').affinity) - 1.05;
           r.aspiration.outcome = score > 0 ? 'stay' : 'leave';
           // Going is said before it is done (bar round 2): the week's notice the town gets from anyone else.
@@ -360,7 +372,7 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
             h.emitEvent({ t: h.state.tick, type: 'thinking_of_leaving', who: r.id });
           }
           if (score > 0) {
-            for (const f of friendsOf(r)) {
+            for (const f of friendsOf(h.state, r)) {
               const x = h.state.residents[f] as ResidentState | undefined;
               if (x && !x.departed) feel(h, x, { subject: `r:${r.id}`, aspect: 'kind_to_me', valence: 0.7, base: 0.5, note: 'decided to stay' });
             }
@@ -476,9 +488,13 @@ function letGo(h: AspirationHost, r: ResidentState): boolean {
   if (!def) return false;
   // A step that cannot be done without a building nobody has built lets go the same way.
   const stage = currentStage(state, r);
-  if (stage?.needs && !exists(state, stage.needs)) {
+  // Audit 2026-10-10: a gift step still unmet, or a step whose place has been taken away, lets go
+  // the same way (Fen waited at "teach someone at the jetty" for five weeks after the jetty went).
+  const placeGone = !!stage?.place && stage.place !== 'home' && (stage.placeId !== undefined ? !!state.buildings.find((b) => b.id === stage.placeId)?.removed : !exists(state, stage.place));
+  const missing = stage?.needs && !exists(state, stage.needs) ? stage.needs : stage?.grants && !stage.check(h, r) ? stage.grants : placeGone ? stage?.place : undefined;
+  if (stage && missing) {
     for (const q of state.requests) {
-      if (q.by !== r.id || q.status !== 'open' || q.wants !== stage.needs) continue;
+      if (q.by !== r.id || q.status !== 'open' || q.wants !== missing) continue;
       q.status = 'lapsed';
       q.closedTick = state.tick;
       h.emitEvent({ t: state.tick, type: 'request_closed', request: { ...q } });
@@ -487,7 +503,7 @@ function letGo(h: AspirationHost, r: ResidentState): boolean {
     r.aspiration.outcome = 'let_go';
     r.aspiration.doneTick = state.tick;
     addEmotion(r, { kind: 'worry', intensity: 0.3, tick: state.tick });
-    h.emitEvent({ t: state.tick, type: 'dream_let_go', who: r.id, wants: stage.needs });
+    h.emitEvent({ t: state.tick, type: 'dream_let_go', who: r.id, wants: missing });
     return true;
   }
   const refs = new Set(def.stages.flatMap((st) => [st.until, st.place, st.needs]).filter((x): x is string => !!x && x !== 'home'));
@@ -553,7 +569,7 @@ function advanceStage(h: AspirationHost, r: ResidentState): void {
   // A first step is done within four days: due after three, since steps move at the morning check (bar round 6: "watch the trade cart come and go" was
   // Marlow's bubble four days running, "find someone willing to learn" Fen's for three).
   // Bar round 7: and every later step within six (Fen's "teach someone at the jetty" ran a week).
-  const longEnough = !stage.until && !stage.dated && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 1 : stage.waitsOnOther ? 9 : STEP_DAYS - 1) * TICKS_PER_DAY;
+  const longEnough = !stage.until && !stage.dated && !stage.grants && !lacking && !waitingOnYou && h.state.tick - r.aspiration.since >= (r.aspiration.stage === 0 ? FIRST_STEP_DAYS - 1 : stage.waitsOnOther ? 9 : STEP_DAYS - 1) * TICKS_PER_DAY;
   const passed = stage.check(h, r);
   if (!passed && !longEnough) return;
   // Bar round 6: a first step that only ran out of days is moved past, not celebrated (the quicker

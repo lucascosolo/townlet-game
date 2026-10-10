@@ -386,7 +386,7 @@ export interface MindMention {
   rank: number;
 }
 
-export type RequestKind = 'quieter_home' | 'workplace' | 'more_food' | 'somewhere_to_sit' | 'more_green' | 'place_to_gather' | 'aspiration';
+export type RequestKind = 'quieter_home' | 'workplace' | 'more_food' | 'somewhere_to_sit' | 'more_green' | 'place_to_gather' | 'home_for_kin' | 'aspiration';
 
 export interface Request {
   id: number;

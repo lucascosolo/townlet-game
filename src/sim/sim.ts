@@ -203,6 +203,7 @@ const ASK_THANKS: Record<Request['kind'], string> = {
   somewhere_to_sit: 'somewhere to sit near home',
   more_green: 'green by my door',
   place_to_gather: 'another place to gather',
+  home_for_kin: 'a cottage for my cousin',
 };
 
 export const DETAIL_NOTES: Record<string, string> = {

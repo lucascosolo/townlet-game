@@ -161,7 +161,7 @@ describe('round 6, criterion 4: a dream\'s building is grieved', () => {
     const sim = runScenario('quiet', 1, 'none');
     sim.runUntil(at(3, 10));
     const ada = sim.resident('ada');
-    const q = sim.ask(ada, 'aspiration', 'glasshouse');
+    const q = sim.ask(ada, 'aspiration', 'glasshouse')!;
     const id = place(sim, 'glasshouse');
     sim.runUntil(at(4, 10));
     expect(q.status).toBe('fulfilled');

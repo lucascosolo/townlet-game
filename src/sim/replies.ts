@@ -90,7 +90,8 @@ export function recentlyForgiven(r: ResidentState, aspect: string, now: number):
 /** Everything they hold against the steward, strongest first: settled beliefs and feelings still forming. */
 export function grievances(r: ResidentState, now = 0): Array<{ aspect: string; weight: number; settled: boolean; last: number }> {
   const out: Array<{ aspect: string; weight: number; settled: boolean; last: number }> = [];
-  const lastOf = (sources: Array<{ tick: number }>) => sources.reduce((m, x) => Math.max(m, x.tick), -1);
+  // Audit 2026-10-10: telling you about it again is not something new you did.
+  const lastOf = (sources: Array<{ tick: number; kind?: string }>) => sources.filter((x) => x.kind !== 'recalled').reduce((m, x) => Math.max(m, x.tick), -1);
   for (const b of Object.values(r.beliefs)) if (b.subject === STEWARD && b.valence < -0.1 && !recentlyForgiven(r, b.aspect, now)) out.push({ aspect: b.aspect, weight: b.strength * -b.valence, settled: true, last: Math.max(b.reinforcedTick, lastOf(b.sources)) });
   for (const t of Object.values(r.traces)) if (t.subject === STEWARD && t.evidence < -0.1 && !recentlyForgiven(r, t.aspect, now)) out.push({ aspect: t.aspect, weight: -t.evidence * 0.5, settled: false, last: lastOf(t.sources) });
   // Something that happened in the last three days comes first: a sorry is for what is fresh.
@@ -101,7 +102,8 @@ export function grievances(r: ResidentState, now = 0): Array<{ aspect: string; w
 /** The latest note behind a grievance about the steward: what they would say it was. */
 function grievanceNote(r: ResidentState, aspect: string): string {
   const k = beliefKey(STEWARD, aspect);
-  const sources = [...(r.beliefs[k]?.sources ?? []), ...(r.traces[k]?.sources ?? [])].sort((a, b) => b.tick - a.tick);
+  // Audit 2026-10-10: not the note of telling you about it ("I'm sorry I told the steward about it").
+  const sources = [...(r.beliefs[k]?.sources ?? []), ...(r.traces[k]?.sources ?? [])].filter((x) => x.kind !== 'recalled').sort((a, b) => b.tick - a.tick);
   return sources[0]?.note ?? '';
 }
 
@@ -190,6 +192,9 @@ export interface ReplyResult {
   aspect?: string;
 }
 
+/** Audit 2026-10-10: replies to one resident that move trust or liking in a day (answering a complaint is not counted against it). */
+export const REPLY_MOVES_PER_DAY = 3;
+
 /** The most talk alone can add to someone's liking of you in seven days (bar round 5: everyone adored the steward). */
 export const TALK_WARMTH_WEEK = 0.06;
 
@@ -236,49 +241,58 @@ export function applyReply(
   const def = residentDef(r.id);
   const steady = def.traits.steady > 0 || def.voice.register === 'formal' || def.voice.register === 'plain';
   const tick = state.tick;
+  // Audit 2026-10-10: only the first few replies in a day move how they see you; after that they
+  // still answer, but asking and pushing back twenty times in a row no longer drove trust to 1.
+  const recent = (r.replyMoves ?? []).filter((t) => tick - t < TICKS_PER_DAY);
+  // Answering a complaint (owning it, saying sorry) always counts: that is what the reply is for.
+  const counts = recent.length < REPLY_MOVES_PER_DAY || offer.tone === 'complaint' || kind === 'sorry' || kind === 'explain';
+  if (counts) recent.push(tick);
+  r.replyMoves = recent;
+  const move = (d: { affinity?: number; trust?: number; familiarity?: number }, t: number) =>
+    adjust(r, STEWARD, counts ? d : { ...(d.familiarity !== undefined ? { familiarity: d.familiarity } : {}) }, t);
   switch (kind) {
     case 'agree':
       // Encouraging a hope (bar round 4).
       // Bar round 5: talk builds familiarity; what it adds to liking is capped weekly, and only
       // owning a complaint is remembered as something you did.
       if (offer.tone === 'hope') {
-        adjust(r, STEWARD, { familiarity: 0.03 }, tick);
+        move({ familiarity: 0.03 }, tick);
         talkWarmth(r, 0.02, tick);
         return { stance: 'encouraged' };
       }
       // Owning a complaint is worth more than agreeing with praise (bar round 3).
       if (offer.tone === 'complaint') {
-        adjust(r, STEWARD, { familiarity: 0.03, trust: 0.04 }, tick);
+        move({ familiarity: 0.03, trust: 0.04 }, tick);
         talkWarmth(r, 0.02, tick);
         perceive({ aspect: 'heard_me_out', valence: 0.5, base: 0.25, note: 'owned up to it' });
         return { stance: 'owned' };
       }
-      adjust(r, STEWARD, { familiarity: 0.03 }, tick);
+      move({ familiarity: 0.03 }, tick);
       talkWarmth(r, 0.02, tick);
       return { stance: offer.tone === 'praise' ? 'warm' : 'with_you' };
     case 'disagree':
       // Brushing off praise is modesty, not a slight; doubting "I'm fine" is being seen.
       if (offer.tone === 'praise') {
-        adjust(r, STEWARD, { familiarity: 0.03 }, tick);
+        move({ familiarity: 0.03 }, tick);
         talkWarmth(r, 0.01, tick);
         return { stance: 'insist' };
       }
       // Bar round 5: doubting a pause between dreams is a nudge, with its own answers.
       if (offer.tone === 'hope' && offer.rest) {
-        adjust(r, STEWARD, { familiarity: 0.03 }, tick);
+        move({ familiarity: 0.03 }, tick);
         return { stance: 'nudged' };
       }
       if (offer.tone === 'hope') {
         // Doubting a dream: the steady take it as care and think again; the touchy bristle.
         if (steady) {
-          adjust(r, STEWARD, { familiarity: 0.04, trust: 0.02 }, tick);
+          move({ familiarity: 0.04, trust: 0.02 }, tick);
           return { stance: 'mulled' };
         }
-        adjust(r, STEWARD, { familiarity: 0.03, affinity: -0.02 }, tick);
+        move({ familiarity: 0.03, affinity: -0.02 }, tick);
         return { stance: 'bristled' };
       }
       if (offer.tone === 'mood') {
-        adjust(r, STEWARD, { familiarity: 0.04 }, tick);
+        move({ familiarity: 0.04 }, tick);
         // Bar round 7: to someone who says they are well, the challenge is "What's been the best of
         // it?", and they tell you ("You don't seem it" was denied 18 of 18 and led nowhere).
         if (offer.well) {
@@ -289,34 +303,37 @@ export function applyReply(
         return { stance: 'seen' };
       }
       if (offer.tone === 'view') {
-        adjust(r, STEWARD, steady ? { trust: 0.03, familiarity: 0.03 } : { affinity: -0.02, familiarity: 0.03 }, tick);
+        move(steady ? { trust: 0.03, familiarity: 0.03 } : { affinity: -0.02, familiarity: 0.03 }, tick);
         return { stance: 'differ' };
       }
       if (steady) {
-        adjust(r, STEWARD, { trust: 0.05, familiarity: 0.03 }, tick);
+        move({ trust: 0.05, familiarity: 0.03 }, tick);
         perceive({ aspect: 'spoke_plainly', valence: 0.3, base: 0.3, note: 'spoke plainly to me' });
         return { stance: 'respect' };
       }
-      adjust(r, STEWARD, { affinity: -0.05, familiarity: 0.02 }, tick);
+      move({ affinity: -0.05, familiarity: 0.02 }, tick);
       perceive({ aspect: 'argued_with_me', valence: -0.4, base: 0.35, note: 'argued with me' });
       return { stance: 'sulk' };
     case 'sorry': {
       const aspect = offer.aspect as string;
       const last = r.sorryFor?.[aspect];
       if (last !== undefined && tick - last < SORRY_GAP) return { stance: 'enough', aspect };
+      // Audit 2026-10-10: already forgiven this week, a sorry for it again is enough, not more standing
+      // (a recalled memory every three days re-offered it, and each sorry was forgiven again).
+      if (recentlyForgiven(r, aspect, tick)) return { stance: 'enough', aspect };
       // Bar round 5: someone who thinks ill of you hears a sorry for something old as words, not
       // amends ("You have lost my good opinion entirely" then "let us put it behind us").
       // Bar round 7: and below -0.5 that holds whatever the grievance's age (Juniper at -0.60,
       // "has lost faith in you", took a sorry with "I will try to let it go").
       if ((r.rel[STEWARD]?.affinity ?? 0) < -0.5) {
         (r.sorryFor ??= {})[aspect] = tick;
-        adjust(r, STEWARD, { familiarity: 0.02 }, tick);
+        move({ familiarity: 0.02 }, tick);
         return { stance: 'cheap', aspect };
       }
       // Bar round 7: too soon after taking away what was theirs ("Not yet. You took my jetty.").
       // Bar round 8: any sorry, for whatever it is, while that loss is fresh.
       if (r.hurtAt !== undefined && tick - r.hurtAt < TOO_SOON && tick >= r.hurtAt) {
-        adjust(r, STEWARD, { familiarity: 0.02 }, tick);
+        move({ familiarity: 0.02 }, tick);
         return { stance: 'too_soon', aspect };
       }
       // Bar round 8: below zero, a sorry is heard but not yet believed ("we'll see").
@@ -324,14 +341,14 @@ export function applyReply(
         (r.sorryFor ??= {})[aspect] = tick;
         // The air clears a little (what is fresh eases), but they wait to see what you do.
         for (const g of grievances(r, tick)) soften(r, g.aspect, tick - g.last < 3 * TICKS_PER_DAY ? 0.8 : 0.92);
-        adjust(r, STEWARD, { affinity: WE_LL_SEE_GAIN, familiarity: 0.02 }, tick);
+        move({ affinity: WE_LL_SEE_GAIN, familiarity: 0.02 }, tick);
         r.sorryOnTrial = { aspect, tick };
         return { stance: 'we_ll_see', aspect };
       }
       (r.sorryFor ??= {})[aspect] = tick;
       // An apology clears the air: everything fresh softens most, older grievances a little.
       for (const g of grievances(r, tick)) soften(r, g.aspect, tick - g.last < 3 * TICKS_PER_DAY ? 0.6 : 0.85);
-      adjust(r, STEWARD, { affinity: 0.06, trust: 0.03 }, tick);
+      move({ affinity: 0.06, trust: 0.03 }, tick);
       perceive({ aspect: 'made_amends', valence: 0.6, base: 0.5, note: 'said sorry' });
       (r.forgiven ??= {})[aspect] = tick;
       return { stance: 'forgiven', aspect };
@@ -344,7 +361,7 @@ export function applyReply(
         return { stance: 'unconvinced', aspect };
       }
       soften(r, aspect, 0.5);
-      adjust(r, STEWARD, { trust: 0.02 }, tick);
+      move({ trust: 0.02 }, tick);
       perceive({ aspect: 'explained', valence: 0.3, base: 0.3, note: 'explained the decision to me' });
       return { stance: 'convinced', aspect };
     }

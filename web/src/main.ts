@@ -341,13 +341,14 @@ window.addEventListener('keydown', (e) => {
 let last = performance.now();
 let fps = 60;
 function loop(now: number): void {
+  // The next frame is asked for first, so one bad frame cannot stop the game for good.
+  requestAnimationFrame(loop);
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
   fps = fps * 0.95 + (dt > 0 ? 1 / dt : 60) * 0.05;
   game.advance(dt);
   view.frame(dt);
   ui.frame();
-  requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 // The page's own loading screen (index.html) fades once the first frame is drawn.

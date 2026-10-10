@@ -290,6 +290,7 @@ export const DREAM_TEMPLATES: DreamTemplate[] = [
         {
           id: 'bench',
           next: 'Wait for the bench',
+          grants: 'bench',
           check: (h, rr) => builtSince(h.state, 'bench', rr.aspiration.since),
           enter: (h, rr) => feel(h, rr, STEWARD, 'granted_wish', 1, 0.9, 'built a bench to remember by'),
         },

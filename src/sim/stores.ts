@@ -211,7 +211,8 @@ export function storesDawn(h: AspirationHost): void {
       valence: -0.2,
       base: 0.15,
       source: "witnessed",
-      note: "winter came with the granary short",
+      // Audit 2026-10-10: a deed, so "you let winter come..." reads ("You winter came..." did not).
+      note: "let winter come with the granary short",
     });
   }
   h.emitEvent({

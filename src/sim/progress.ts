@@ -366,9 +366,13 @@ export function learnFact(h: ProgressHost, who: string, fact: string): boolean {
   const p = progressOf(state);
   const known = (p.known[who] ??= []);
   if (known.includes(fact)) return false;
-  const first = known.length === 0;
+  // Audit 2026-10-10: reading someone's page is not meeting them. It used to complete "Talk to
+  // someone you haven't met yet" and the learning goal without a word said.
+  const page = PAGE_FACTS.includes(fact);
+  const first = !page && known.every((f) => PAGE_FACTS.includes(f));
   known.push(fact);
   h.emitEvent({ t: state.tick, type: 'fact', who, key: fact, first });
+  if (page) return true;
   addRenown(h, RENOWN.fact, 'getting to know someone');
   bump(h, 'learn');
   if (first) bump(h, 'meet');

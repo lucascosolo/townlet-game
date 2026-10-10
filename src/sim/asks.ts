@@ -104,7 +104,10 @@ export function assess(state: SimState, r: ResidentState, kind: RequestKind, sin
       const here = Object.values(state.residents).filter((x) => !x.departed);
       const room = here.length < residentCap(state);
       const asker = [...here].sort((a, b) => residentDef(b.id).values.community - residentDef(a.id).values.community || (a.id < b.id ? -1 : 1))[0];
-      return { want: room && !empty && asker?.id === r.id, met: empty, subject: self, wants: 'cottage' };
+      // Audit 2026-10-10: met by a home built since it was asked, not by someone leaving (which
+      // thanked you for a departure).
+      const built = liveBuildings(state).some((b) => buildingDef(b.type).kind === 'home' && !lived.has(b.id) && b.placedTick >= since);
+      return { want: room && !empty && asker?.id === r.id, met: built, subject: self, wants: 'cottage' };
     }
     case 'place_to_gather': {
       const crowded = [...Object.values(r.beliefs), ...Object.values(r.traces)].some(

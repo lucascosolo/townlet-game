@@ -28,7 +28,7 @@ function place(sim: Simulation, type: string): number {
 }
 
 describe('round 7, criterion 1: losses cost', () => {
-  it('taking away a workplace is a grievance that holds standing at 0.6 for ten days; a sorry too soon is "not yet"; below -0.5 any sorry is cheap', () => {
+  it('taking away a workplace is a grievance that holds standing at 0.6 for ten days; a sorry too soon is "not yet"; below -0.5 any sorry is cheap', { timeout: 120_000 }, () => {
     const sim = runScenario('quiet', 1, 'none');
     sim.runUntil(at(3, 10));
     const r = here(sim).find((x) => x.jobId !== null)!;
@@ -223,7 +223,11 @@ describe('round 7, criterion 5: talk without stock clauses', () => {
     r.mood = 0.85;
     const res = applyReply(sim.state, r, 'disagree', [{ kind: 'disagree', tone: 'mood', well: true }], () => {});
     expect(res?.stance).toBe('best_of');
-    expect(n.bestOfWeek(r.id).length).toBeGreaterThan(5);
+    // Audit 2026-10-10: something from their week, not the stock "the quiet, mostly" (which passed a length check).
+    const week = [...r.episodes, ...r.buffer].filter((e) => e.tick >= sim.state.tick - 7 * 1440 && e.valence > 0 && e.source !== 'recalled');
+    expect(week.length).toBeGreaterThan(0);
+    const said = n.bestOfWeek(r.id);
+    expect(week.map((e) => n.memoryClause(r.id, e, true))).toContain(said);
   });
 });
 

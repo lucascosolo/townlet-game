@@ -27,8 +27,9 @@ export const CROSS_AT = 0.3;
 /** The strongest thing they hold against the steward, with its latest note. */
 function heldAgainst(r: ResidentState, now: number): { aspect: string; note: string } | null {
   let best: { aspect: string; note: string; weight: number } | null = null;
-  const consider = (aspect: string, weight: number, sources: Array<{ tick: number; note: string }>) => {
-    const last = [...sources].sort((a, b) => b.tick - a.tick)[0];
+  const consider = (aspect: string, weight: number, sources: Array<{ tick: number; note: string; kind?: string }>) => {
+    // Audit 2026-10-10: the latest thing they hold against you, not the time they told you of it.
+    const last = sources.filter((x) => x.kind !== 'recalled').sort((a, b) => b.tick - a.tick)[0];
     if (last?.note && (!best || weight > best.weight)) best = { aspect, note: last.note, weight };
   };
   // Bar round 7: not one they forgave you for in the last week.

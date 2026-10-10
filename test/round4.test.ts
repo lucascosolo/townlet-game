@@ -344,6 +344,7 @@ describe('round 4, criterion 4: "a lovely spot"', () => {
 
 describe('round 4, criterion 6: no raw lines', () => {
   it('fact lines are whole sentences, standing notes say you, proposals are not "on the board", one morning never repeats an ask line, "built it for me" names a fresh building', { timeout: 900_000 }, () => {
+    let builtFor = 0;
     for (const steward of ['considerate', 'favours', 'none'] as const) {
       for (const seed of SEEDS) {
         const sim = runScenario('bakery', seed, steward, { scripted: false });
@@ -363,8 +364,10 @@ describe('round 4, criterion 6: no raw lines', () => {
           }
           for (const x of [...Object.values(r.beliefs), ...Object.values(r.traces)]) {
             for (const src of x.sources) {
-              const m = /^built the (.+) for (him|her|them)$/.exec(src.note ?? '');
+              // Audit 2026-10-10: the note has read "for me" since round 6, so this matched nothing.
+              const m = /^built the (.+) for (me|him|her|them)$/.exec(src.note ?? '');
               if (!m) continue;
+              builtFor++;
               const fresh = sim.state.buildings.some((b) => buildingDef(b.type).name.toLowerCase() === m[1] && src.tick - b.placedTick < 1440 && src.tick >= b.placedTick);
               expect(fresh, `${r.id}: "${src.note}" on day ${dayOf(src.tick)}`).toBe(true);
             }
@@ -380,6 +383,8 @@ describe('round 4, criterion 6: no raw lines', () => {
         }
       }
     }
+    // Audit 2026-10-10: the case must actually come up.
+    expect(builtFor).toBeGreaterThan(0);
   });
 });
 

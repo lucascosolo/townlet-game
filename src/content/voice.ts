@@ -26,10 +26,10 @@ export const BELIEF_STATEMENTS: Record<string, string> = {
   unwelcome_addition: '{s} was a mistake',
   my_workplace: '{s} is {poss} place',
   lost_place: "the town isn't the same without {s}",
-  kind_to_me: '{S} is kind',
-  rude_to_me: '{S} can be unkind',
-  argued_with_me: '{S} is hard to get along with',
-  made_amends: '{S} means well',
+  kind_to_me: '{s} is kind',
+  rude_to_me: '{s} can be unkind',
+  argued_with_me: '{s} is hard to get along with',
+  made_amends: '{s} means well',
   listens_to_me: 'the steward listens',
   ignores_me: "the steward doesn't listen",
   improves_town: 'the steward is making the town better',
@@ -40,7 +40,7 @@ export const BELIEF_STATEMENTS: Record<string, string> = {
   too_noisy: '{s} was far too loud',
   weathered_together: 'the town came through {s} together',
   kept_awake: "{s} cost {obj} a night's sleep",
-  let_me_down: '{S} let {obj} down',
+  let_me_down: '{s} let {obj} down',
   decided_well: 'the steward makes good decisions',
   decided_badly: 'the steward makes poor decisions',
   turned_me_down: 'the steward turned {obj} down',
@@ -55,7 +55,7 @@ export const BELIEF_STATEMENTS: Record<string, string> = {
   heard_me_out: 'the steward hears {obj} out',
   explained: 'the steward explains things',
   excuses: 'the steward makes excuses',
-  disagreement: '{S} and {subj} see things differently',
+  disagreement: '{s} and {subj} see things differently',
 };
 
 /** Thoughts and speech, keyed by aspect and sign ("+" or "-"). */

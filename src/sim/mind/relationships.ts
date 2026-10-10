@@ -11,6 +11,8 @@ import { opinion } from './memory.js';
  * world of you by day 3; a kindness lands twice as hard on someone thinking of leaving, so the
  * window to turn them round stays open.
  */
+/** Bar round 7: at standing 1 good news lifts this much less (0.5: half as much). */
+export const HIGH_REGARD_DAMPING = 0.5;
 export const STEWARD_NIGHT_CAP = { good: 0.2, bad: 0.6 } as const;
 
 /** Bar round 5: where standing relaxes with nothing happening (was 0.2, mild liking with no reason; 0 and 0.1 emptied two year-soak towns each). */
@@ -83,7 +85,11 @@ export function nightlyRelationships(ctx: MindContext, r: ResidentState, steward
       const firstWeek = ctx.tick < 7 * 1440;
       const ev = clamp(stewardEvidence, -STEWARD_NIGHT_CAP.bad, (firstWeek ? 0.14 : STEWARD_NIGHT_CAP.good) * (r.leaving ? 2 : 1));
       // Bar round 5: with nothing happening, standing relaxes nearer no view, so a town has to be kept, not won once.
-      x.affinity = clamp(x.affinity + 0.05 * (STANDING_REST - x.affinity) + 0.5 * ev + 0.03 * op, -1, 1);
+      // Bar round 7: good news counts for less with someone who already thinks highly of you, so
+      // "thinks the world of you" is earned and not merely accumulated (all six founders at 0.9 to 1.0).
+      const gain = 0.5 * ev + 0.03 * op;
+      const lift = gain > 0 ? gain * (1 - HIGH_REGARD_DAMPING * Math.max(0, x.affinity)) : gain;
+      x.affinity = clamp(x.affinity + 0.05 * (STANDING_REST - x.affinity) + lift, -1, 1);
       x.trust = clamp(x.trust + 0.04 * (0.5 - x.trust) + 0.3 * ev + 0.02 * op);
       continue;
     }

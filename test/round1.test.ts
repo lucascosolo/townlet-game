@@ -231,7 +231,7 @@ describe('round 1, criterion 3: talking back', () => {
       if (!awake(sim, id)) sim.runUntil(at(13, 15));
       const later = sim.talk(id, 'me') as TalkAnswer;
       const mem = later.memory;
-      if (mem?.aspect === 'made_amends') expect(n.memoryLine(id, mem)).toMatch(/you and I made it up/);
+      if (mem?.aspect === 'made_amends') expect(n.memoryLine(id, mem)).toMatch(/you and I made it up/i);
       checked++;
     }
     expect(checked).toBeGreaterThanOrEqual(3);

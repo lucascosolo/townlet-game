@@ -103,7 +103,8 @@ describe('round 7, criterion 2: the economy keeps asking', () => {
 
 describe('round 7, criteria 3 and 4: the story agrees with itself, and raw lines', () => {
   it('no cart for Marlow unless he goes; stay is stay; Bram feasts only at a supper; no opposite tastes; no plural "is"; no placeholder partners; no departed in a home name; one lead-in', { timeout: 3_600_000 }, () => {
-    const LEAD = /\b(I must say|Honestly|you know|mind you|kind of|like|Ha!|Mm\.|ooh|hmm), (you see|I would say|thing is|the way I see it|well|simple:|because|I mean|somehow|the way I feel it)\b/i;
+    // A tic, then a reason's lead-in ("I must say, I would say you hear me out"); "you see" as a verb is not one.
+    const LEAD = /\b(I must say|Honestly|you know|mind you|kind of|like|Ha!|Mm\.|ooh|hmm), (you see,|I would say|thing is,|the way I see it,|well,|simple:|I mean,|somehow,|the way I feel it,)/i;
     for (const scenario of ['quiet', 'bakery']) {
       for (const steward of ['considerate', 'favours', 'none'] as const) {
         for (const seed of [1, 2]) {

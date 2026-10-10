@@ -416,6 +416,7 @@ export class Narrator {
   private pageReadDay = -1;
   private readonly lastMemoryAt = new Map<string, number>();
   private memoryTemplate: string | null = null;
+  private readonly bestTold = new Map<string, Array<{ id: number; t: number }>>();
 
   private freshest(who: string, options: string[], mineGapDays = 3, mark = true): string {
     const t = this.state.tick;
@@ -730,8 +731,13 @@ export class Narrator {
         const gestures = gestureSet.map((g) => `(${this.name(e.who)} ${g.replace('{poss}', def.pronouns.poss)}.)`);
         const freshGesture = gestures.filter((g) => e.t - (this.saidBy.get(`${e.who}|${g}`) ?? -Infinity) >= 7 * 1440);
         let words: string;
-        if (e.stance === 'best_of') words = this.utter(e.who, REPLY_LINES.best_of, { x: this.bestOfWeek(e.who) }, 7, true);
-        else if (fresh.length > 0) words = this.utter(e.who, REPLY_LINES[e.stance], {}, 7, true);
+        // The best of their week: not the same thing told the same way twice in a week (bar round 7).
+        const best = e.stance === 'best_of' ? this.utter(e.who, REPLY_LINES.best_of, { x: this.bestOfWeek(e.who) }, 7, true) : '';
+        const bestFresh = !!best && e.t - (this.saidBy.get(`${e.who}|${best}`) ?? -Infinity) >= 7 * 1440;
+        if (bestFresh) {
+          words = best;
+          this.saidBy.set(`${e.who}|${best}`, e.t);
+        } else if (e.stance !== 'best_of' && fresh.length > 0) words = this.utter(e.who, REPLY_LINES[e.stance], {}, 7, true);
         else if (freshGesture.length) {
           words = pick(this.rng, freshGesture);
           this.saidBy.set(`${e.who}|${words}`, e.t);
@@ -1079,7 +1085,11 @@ export class Narrator {
   bestOfWeek(who: string): string {
     const r = this.state.residents[who];
     const since = this.state.tick - 7 * 1440;
-    const best = r ? [...r.episodes, ...r.buffer].filter((e) => e.tick >= since && e.valence > 0 && e.source !== 'recalled').sort((a, b) => b.valence * b.intensity - a.valence * a.intensity || b.tick - a.tick)[0] : undefined;
+    const ranked = r ? [...r.episodes, ...r.buffer].filter((e) => e.tick >= since && e.valence > 0 && e.source !== 'recalled').sort((a, b) => b.valence * b.intensity - a.valence * a.intensity || b.tick - a.tick) : [];
+    // Something not already told you as the best of it this week, where there is one.
+    const told = this.bestTold.get(who) ?? [];
+    const best = ranked.find((x) => !told.some((y) => y.id === x.id && this.state.tick - y.t < 7 * 1440)) ?? ranked[0];
+    if (best) this.bestTold.set(who, [...told.filter((y) => this.state.tick - y.t < 7 * 1440), { id: best.id, t: this.state.tick }]);
     return best ? this.memoryClause(who, best, this.you) : 'the quiet, mostly';
   }
 

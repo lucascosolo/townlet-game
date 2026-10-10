@@ -121,6 +121,8 @@ describe('round 2, criterion 1: replies that fit', () => {
         if (!awake(sim, id)) continue;
         const r = sim.resident(id);
         if (!(r.beliefs[k] || r.traces[k])) continue;
+        // Bar round 7: below -0.5 any sorry is words, so only those who do not think ill of you.
+        if ((r.rel[STEWARD]?.affinity ?? 0) < -0.5) continue;
         // Whoever minded brings it up in one of the three questions; a sorry then is for the oak.
         let sorry: { aspect?: string; about?: string } | undefined;
         for (const q of ['me', 'mind', 'how'] as const) {

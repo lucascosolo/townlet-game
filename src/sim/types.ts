@@ -232,6 +232,8 @@ export interface ResidentState {
   grievedAt?: number;
   /** A place they held dear that was taken away (bar round 4): weighs on mood for a few days; `building` is which (bar round 8). */
   lostPlace?: { tick: number; weight: number; building?: number };
+  /** Audit 2026-10-10: ticks of the replies that moved their view of you in the last day. */
+  replyMoves?: number[];
   /** Warmth that talk added lately, [tick, amount] (bar round 5: capped weekly). */
   talkWarmth?: Array<[number, number]>;
   id: string;

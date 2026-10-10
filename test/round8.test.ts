@@ -287,16 +287,28 @@ describe('round 8, criterion 6: less repetition', () => {
       const n = new Narrator(sim, { stewardIsYou: true });
       let total = 0;
       let whole = 0;
+      let kinds = 0;
+      // Audit 2026-10-10: every wording of "everyone turned out" counts (round 8 added three), and the
+      // kind of each memory is read from what was said, not from the narrator's own record.
+      const WHOLE = /whole valley turned out|everyone came out for|we were all together for|whole town gathered for/;
+      const saidKinds = new Map<string, Array<{ t: number; aspect: string }>>();
       for (let day = 2; day <= 30; day++) {
         sim.runUntil(at(day, 12));
         for (const r of here(sim)) {
           const said = n.bestOfWeek(r.id);
           total++;
-          if (/whole valley turned out/.test(said)) whole++;
-          const told = ((n as unknown as { bestTold: Map<string, Array<{ id: number; aspect: string; t: number }>> }).bestTold.get(r.id) ?? []).filter((y) => sim.state.tick - y.t < 7 * TICKS_PER_DAY);
-          if (said !== 'the quiet, mostly') expect(new Set(told.map((y) => y.aspect)).size, `seed ${seed} day ${dayOf(sim.state.tick)} ${r.id}`).toBe(told.length);
+          if (WHOLE.test(said)) whole++;
+          if (said === 'the quiet, mostly') continue;
+          const since = sim.state.tick - 7 * TICKS_PER_DAY;
+          const ep = [...r.episodes, ...r.buffer].find((e) => e.tick >= since && e.valence > 0 && n.memoryClause(r.id, e, true) === said);
+          if (!ep) continue;
+          kinds++;
+          const before = (saidKinds.get(r.id) ?? []).filter((x) => sim.state.tick - x.t < 7 * TICKS_PER_DAY);
+          expect(before.map((x) => x.aspect), `seed ${seed} day ${dayOf(sim.state.tick)} ${r.id}: ${said}`).not.toContain(ep.aspect);
+          saidKinds.set(r.id, [...before, { t: sim.state.tick, aspect: ep.aspect }]);
         }
       }
+      expect(kinds, `seed ${seed}`).toBeGreaterThan(20);
       expect(whole / total, `seed ${seed}`).toBeLessThanOrEqual(0.2);
     }
   });

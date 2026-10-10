@@ -223,7 +223,11 @@ describe('round 7, criterion 5: talk without stock clauses', () => {
     r.mood = 0.85;
     const res = applyReply(sim.state, r, 'disagree', [{ kind: 'disagree', tone: 'mood', well: true }], () => {});
     expect(res?.stance).toBe('best_of');
-    expect(n.bestOfWeek(r.id).length).toBeGreaterThan(5);
+    // Audit 2026-10-10: something from their week, not the stock "the quiet, mostly" (which passed a length check).
+    const week = [...r.episodes, ...r.buffer].filter((e) => e.tick >= sim.state.tick - 7 * 1440 && e.valence > 0 && e.source !== 'recalled');
+    expect(week.length).toBeGreaterThan(0);
+    const said = n.bestOfWeek(r.id);
+    expect(week.map((e) => n.memoryClause(r.id, e, true))).toContain(said);
   });
 });
 

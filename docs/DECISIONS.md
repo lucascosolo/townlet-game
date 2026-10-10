@@ -2,6 +2,32 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-10: Audit of rounds 1 to 8, and stopping the review loop
+
+**Why.** The owner asked to stop after round 8's deploy and go back over the last two days of work for anything broken. Five reviewers read the code since 2026-10-08 by area (sim core, minds and story, narration, browser client, tests); each finding was checked before it was fixed, and each fix has a regression test (`test/audit.test.ts`).
+
+**Fixed:**
+- **A double click with the Remove tool froze the game and broke the save.** Two removes of one building in one tick threw out of the frame loop, and the saved command threw again on loading. A remove whose building is already gone (or is a home) is now dropped like an unplaceable build, and the frame loop asks for its next frame first.
+- **The hungriest residents could never finish foraging.** Hunger below 0.12 called them off after a minute. Foraging is now exempt; they come back fed.
+- **Dreams thanked you for buildings nobody built.** A step that is the steward's gift (Ada's orchard, Juniper's glasshouse, Wren's banner, a bench to remember a day by) could finish by days passing once its ask had lapsed or been withdrawn. Such steps (`grants`) never finish by time, and let go after eight days like a step that needs a building.
+- **Dreams waited forever on a place that was taken away** (Fen at "teach someone at the jetty" for five weeks). A step whose place is gone lets go after eight days.
+- **Ada's first step could crash** with no friend left; Marlow could never dream again after changing his mind if he was already thinking of leaving; departed friends counted for both.
+- **Sorry chips read "I'm sorry I told the steward about it".** Retelling a memory to you is no longer the latest note of a grievance, nor makes it "fresh".
+- **A forgiven grievance could be offered for a sorry again** through a recalled memory, and forgiven again for more standing. Every route now respects the week's quiet.
+- **Twenty replies in a row could push trust to 1.** Only three replies a day to one resident move trust or liking; the rest still answer.
+- **Giving up on you fired twice on the same lapses, and asks were still posted meanwhile** (the winter stores, dream asks) with the nightly "kept me waiting". It fires once per set of lapses, and someone who gave up asks nothing until it ends.
+- **A clone or restored state taken mid-day routed differently** from the original (the path grid read the wear of whenever it was rebuilt). The day's tracks are copied into state at midnight. Saves, which replay from the start, were not affected.
+- **A plain click on a desktop widget title lifted it out of its column**, hiding the widget below. A press becomes a drag only after the pointer moves.
+- **Opening someone's page completed "Talk to someone you haven't met yet"** and gave renown. Reading a page is not meeting.
+- **Smaller:** a cottage for kin is met by a cottage built for it, not by someone leaving; only the late shift someone proposed excuses its noise; newcomers no longer gain records of those who left; a rise in standing no longer lists the bad news as "also".
+- **Text:** "Just... Show me." (no capital after a trailing "..."), a tic like "right?" capitalised and never in the middle of an answer, "You winter came with the granary short" (now "you let winter come..."), "has decided The steward is...", capitals after semicolons in learned facts, "your" at the start of a sentence, "you aren't", "you always listened".
+
+**Not changed, and why:**
+- *Old saves made on the bakery town before scripted commands were dropped* replay into a different town. The save version was not bumped: every round already changes how a replay plays out, so a save is only exact within one release.
+- *The test narrowings from earlier rounds* are recorded in the spec (§9.3, "Audit of rounds 1 to 8") rather than rewritten, except where a test checked nothing at all.
+
+**Stopping the loop.** No ninth review was started, at the owner's request.
+
 ## 2026-10-10: Bar round 8: a second fortnight with something to decide, apologies that must be earned, minds that blame the right thing
 
 **The review** (`docs/reviews/2026-10-10-bar-review-8.md`) scored the game 6, 7, 7, 7, 7. It credits round 7 with losses that now cost standing for a week, low trust refusing apologies, Marlow's and Bram's stories agreeing with what happened, and talk that mostly lost its stock phrases. What holds it under now: after the first fortnight nothing asks anything of the player (the granary overflows, timber piles up, no newcomer comes because nothing says a cottage must stand empty, three residents share one dream); an apology still repairs almost anything and is never offered on the day of a loss; raw and mismatched lines in the talk panel; minds that blame the steward for noise they asked for; asks and the Build tray that do not explain each other; and repetition over a month.

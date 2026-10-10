@@ -593,6 +593,8 @@ export class Ui {
     handle.addEventListener('pointerdown', (e) => {
       if (this.phone || e.button !== 0 || (e.target as HTMLElement).closest('button, a, input, select')) return;
       pressed = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      // No text selection while dragging (this does not stop the click that folds the widget).
+      e.preventDefault();
     });
     const lift = (e: PointerEvent) => {
       const r = box.getBoundingClientRect();
@@ -613,21 +615,30 @@ export class Ui {
       handle.setPointerCapture(e.pointerId);
       handle.classList.add('grabbing');
     };
-    handle.addEventListener('pointermove', (e) => {
+    // While pressed, moves are watched on the window: the pointer can leave the header before it
+    // has moved far enough to count as a drag.
+    const move = (e: PointerEvent) => {
       if (!start && pressed && e.pointerId === pressed.id && Math.hypot(e.clientX - pressed.x, e.clientY - pressed.y) > 5) lift(e);
       if (!start) return;
       e.preventDefault();
       const root = this.root.getBoundingClientRect();
       box.style.left = `${Math.max(0, Math.min(root.width - 80, start.left + e.clientX - start.x))}px`;
       box.style.top = `${Math.max(0, Math.min(root.height - 40, start.top + e.clientY - start.y))}px`;
-    });
+    };
     const stop = () => {
       start = null;
       pressed = null;
       handle.classList.remove('grabbing');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
     };
-    handle.addEventListener('pointerup', stop);
-    handle.addEventListener('pointercancel', stop);
+    handle.addEventListener('pointerdown', (e) => {
+      if (!pressed) return;
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', stop);
+      window.addEventListener('pointercancel', stop);
+    });
     handle.addEventListener('dblclick', (e) => {
       if ((e.target as HTMLElement).closest('button, a')) return;
       this.dock(box);

@@ -146,3 +146,14 @@ test('panels drag by their header on desktop and dock back on a double-click', a
   const s1 = (await scroll.boundingBox())!;
   expect(s0.x - s1.x).toBeGreaterThan(300);
 });
+
+// Audit 2026-10-10: a plain click on a widget's title folds it; it does not lift the panel out of its column.
+test('a click on a widget title folds it and leaves it docked', async ({ page }) => {
+  await open(page, 'scenario=quiet&seed=1&speed=0', at(1, 9));
+  await putOff(page);
+  const widget = page.getByTestId('widget-goals');
+  await widget.locator('.widget-head h2').click();
+  await frames(page);
+  await expect(widget).not.toHaveClass(/dragged/);
+  await expect(widget).toHaveClass(/collapsed/);
+});

@@ -15,13 +15,28 @@ import { SEEDS } from './helpers.js';
 /** Has the resident seen their first, authored dream through? (Later dreams form after it, M3b.) */
 const firstDreamDone = (sim: Simulation, id: string) => {
   const a = sim.state.residents[id]?.aspiration;
-  return !!a && ((a.completed ?? 0) >= 1 || (!a.kind && a.done));
+  return !!a && ((a.completed ?? 0) >= 1 || (!a.kind && a.done && a.outcome !== 'let_go' && a.outcome !== 'gone'));
+};
+
+/**
+ * Audit 2026-10-10: the founders' own dreams seen through, from the steps that completed them. It
+ * used to count everyone in town (newcomers too) and any later dream, and dreams let go as done,
+ * which read 5.6 of 6 for a steward who does nothing; measured this way it is 2.0, as reported.
+ */
+const FOUNDERS = ['ada', 'bram', 'fen', 'juniper', 'marlow', 'wren'];
+const ownDreamsDone = (sim: Simulation) => {
+  const done = new Set<string>();
+  sim.on((e) => {
+    if (e.type === 'aspiration' && e.done && !e.kind && FOUNDERS.includes(e.who)) done.add(e.who);
+  });
+  return done;
 };
 
 const doneAfter28 = (steward: 'considerate' | 'none', seed: number) => {
   const sim = runScenario('quiet', seed, steward);
+  const done = ownDreamsDone(sim);
   sim.runUntil(at(29, 0));
-  return sim.state.order.filter((id) => firstDreamDone(sim, id)).length;
+  return done.size;
 };
 
 describe('criterion 1: aspirations', () => {
@@ -45,8 +60,9 @@ describe('criterion 1: aspirations', () => {
       sim.on((e) => {
         if (e.type === 'aspiration' && !e.kind) steps.push(e);
       });
+      const done = ownDreamsDone(sim);
       sim.runUntil(at(29, 0));
-      total += sim.state.order.filter((id) => firstDreamDone(sim, id)).length;
+      total += done.size;
       for (const s of steps) {
         const line = ASPIRATION_LINES[`${s.who}:${s.stage}${s.outcome ? `:${s.outcome}` : ''}`] as string;
         const opening = line.split(/[{"]/)[0]?.trim() as string;
@@ -57,8 +73,8 @@ describe('criterion 1: aspirations', () => {
   });
 
   // MISSED, reported in spec 9.3: Fen's and Marlow's plans need nothing from the steward, so a
-  // do-nothing steward still sees 2 of 6 through. Kept as an expected failure so it is visible
-  // and flips the day the bound is met.
+  // do-nothing steward still sees 2 of 6 through (2.0 on every seed, measured as above since the
+  // audit of 2026-10-10). Kept as an expected failure so it is visible and flips the day the bound is met.
   it.fails('a do-nothing steward sees at most 1.5 of 6 through (missed: 2.0)', { timeout: 300_000 }, () => {
     let total = 0;
     for (const seed of SEEDS) total += doneAfter28('none', seed);

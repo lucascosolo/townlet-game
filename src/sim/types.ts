@@ -552,6 +552,8 @@ export interface SimState {
    * state so a clone or a restored state taken mid-day routes exactly as the original does.
    */
   wornGrid?: { key: string; wear: Record<string, number> };
+  /** The wear as it stood at the last midnight, and the tick it was taken: what the day's walking follows. */
+  wornToday?: { tick: number; wear: Record<string, number> };
   /** The day the trader's cart last came (the rewarded bonus, 2026-10-08), or absent. */
   lastGiftDay?: number;
 }

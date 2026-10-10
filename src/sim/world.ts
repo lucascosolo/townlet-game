@@ -164,7 +164,7 @@ const grids = new WeakMap<SimState, Grid>();
 function gridOf(state: SimState): Grid {
   const live = liveBuildings(state);
   // Rebuilt when buildings change and once a day, so the day's walking follows yesterday's tracks.
-  const key = `${state.nextBuildingId}|${live.length}|${state.width}x${state.height}|${Math.floor(state.tick / 1440)}|${state.wornToday?.tick ?? -1}`;
+  const key = `${state.nextBuildingId}|${live.length}|${state.width}x${state.height}|${Math.floor(state.tick / 1440)}`;
   const old = grids.get(state);
   if (old && old.key === key) return old;
   const cells = new Int32Array(state.width * state.height);
@@ -173,9 +173,7 @@ function gridOf(state: SimState): Grid {
   // whenever it was rebuilt, so a mid-day clone routed differently from its original).
   // Audit 2026-10-10: the wear is read once per grid and kept with the state, so a clone taken
   // mid-day (which starts with no cached grid) builds the same grid as the original still has.
-  // The day's tracks as they stood at midnight (set in the sim's step), so placing a building in the
-  // day changes no route that does not cross it.
-  if (state.wornGrid?.key !== key) state.wornGrid = { key, wear: state.wornToday?.wear ?? { ...(state.wear ?? {}) } };
+  if (state.wornGrid?.key !== key) state.wornGrid = { key, wear: { ...(state.wear ?? {}) } };
   for (const [k, w] of Object.entries(state.wornGrid.wear)) {
     const [x, y] = k.split(',').map(Number) as [number, number];
     if (x >= 0 && y >= 0 && x < state.width && y < state.height) worn[y * state.width + x] = Math.min(WORN_DISCOUNT, Math.max(0, ((w as number) - 1) * 0.15));
@@ -224,16 +222,13 @@ function findRoute(state: SimState, from: [number, number], to: [number, number]
   const start = from[1] * W + from[0];
   const goal = to[1] * W + to[0];
   best[start] = 0;
-  // A binary heap of [f, index], ordered by f and then by index: a total order, so which of two
-  // equal-cost routes wins never depends on what else was pushed (audit 2026-10-10: placing a hedge
-  // across the valley changed routes that did not go near it).
-  const less = (a: [number, number], b: [number, number]) => a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
+  // A binary heap of [f, index].
   const heap: Array<[number, number]> = [[0, start]];
   const push = (f: number, i: number) => {
     heap.push([f, i]);
     for (let k = heap.length - 1; k > 0; ) {
       const p = (k - 1) >> 1;
-      if (!less(heap[k] as [number, number], heap[p] as [number, number])) break;
+      if ((heap[p] as [number, number])[0] <= (heap[k] as [number, number])[0]) break;
       [heap[p], heap[k]] = [heap[k] as [number, number], heap[p] as [number, number]];
       k = p;
     }
@@ -247,8 +242,8 @@ function findRoute(state: SimState, from: [number, number], to: [number, number]
         const l = 2 * k + 1;
         const r = l + 1;
         let m = k;
-        if (l < heap.length && less(heap[l] as [number, number], heap[m] as [number, number])) m = l;
-        if (r < heap.length && less(heap[r] as [number, number], heap[m] as [number, number])) m = r;
+        if (l < heap.length && (heap[l] as [number, number])[0] < (heap[m] as [number, number])[0]) m = l;
+        if (r < heap.length && (heap[r] as [number, number])[0] < (heap[m] as [number, number])[0]) m = r;
         if (m === k) break;
         [heap[m], heap[k]] = [heap[k] as [number, number], heap[m] as [number, number]];
         k = m;

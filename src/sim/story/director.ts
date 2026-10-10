@@ -552,6 +552,9 @@ function checkWishes(host: StoryHost): void {
       host.emitEvent({ t: state.tick, type: 'wish', phase: 'dropped', wish: { ...w } });
       continue;
     }
+    // Audit 2026-10-10: those who have left are no longer named among its supporters (the board said
+    // "0 of 1 who wished for it have it: Bram" about a Bram long gone).
+    if (people.length < w.supporters.length) w.supporters = people.map((r) => r.id);
     if (!people.every((r) => assess(state, r, w.kind, w.madeTick).met)) continue;
     w.status = 'granted';
     w.closedTick = state.tick;

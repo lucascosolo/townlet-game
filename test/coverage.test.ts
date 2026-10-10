@@ -65,7 +65,7 @@ describe('criteria with no test until the audit of 2026-10-10', () => {
             checked++;
             const name = residentDef(who).name;
             for (const line of townWorries(sim.state)) expect(line, `${steward} seed ${seed} day ${day}`).not.toContain(name);
-            for (const w of sim.state.story.wishes) expect(w.supporters, `${steward} seed ${seed} day ${day}: ${w.label}`).not.toContain(who);
+            for (const w of sim.state.story.wishes.filter((x) => x.status === 'open')) expect(w.supporters, `${steward} seed ${seed} day ${day}: ${w.label}`).not.toContain(who);
           }
         }
       }

@@ -403,10 +403,11 @@ addLines(MIND_LINES.larder, {
 });
 addLines(MIND_LINES['feel:gratitude'], {
   plain: ['{X} came through for me.', 'Good of {x}, that.', 'Owe {x}. Will remember.'],
-  formal: ['I am much obliged to {x}.', '{X} has been kinder than I deserved.', 'I shall find a way to repay {x}.'],
+  // Audit 2026-10-10: five each (round 2 criterion 7 declared it and never tested it).
+  formal: ['I am much obliged to {x}.', '{X} has been kinder than I deserved.', 'I shall find a way to repay {x}.', 'I shall not forget what {x} did.'],
   warm: ['{X} was so good to me.', "I don't know what I'd do without {x}.", 'I want to do something nice for {x}.'],
   chatty: ['{X}! A saint! A hero!', 'I could kiss {x}! I might!', 'Three cheers for {x}!'],
-  dreamy: ['{X} put a light in my window.', 'Kindness from {x}, and it is still warm.', 'I carry what {x} did like a stone in my pocket, a good one.'],
+  dreamy: ['{X} put a light in my window.', 'Kindness from {x}, and it is still warm.', 'I carry what {x} did like a stone in my pocket, a good one.', 'What {x} did keeps blooming, like a late rose.'],
 });
 addLines(MIND_LINES['feel:pride'], {
   plain: ['Did that well.', 'Good work, that.', 'Not bad, me.'],
@@ -420,7 +421,7 @@ addLines(MIND_LINES['feel:annoyance'], {
   formal: ['I confess I am vexed.', 'I am not best pleased.', 'Something has got under my skin.'],
   warm: ["I'm a bit cross, and I hate being cross.", 'Something got on my nerves today.', 'I need to shake this off.'],
   chatty: ['Grr! Honestly! Grr!', 'I am this close to stamping my foot!', 'Do not test me today!'],
-  dreamy: ['A wasp of a feeling, buzzing round my head.', 'The day has a splinter in it.', 'I am prickly as a hedge.'],
+  dreamy: ['A wasp of a feeling, buzzing round my head.', 'The day has a splinter in it.', 'I am prickly as a hedge.', 'There is thunder in me today, and no rain.'],
 });
 addLines(MIND_LINES['feel:worry'], {
   plain: ['Uneasy.', 'Something is not right.', 'Worried, and can\'t say why.'],

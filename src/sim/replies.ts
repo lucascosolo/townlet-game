@@ -169,8 +169,9 @@ export function offersFor(r: ResidentState, answer: TalkAnswer, now = 0): ReplyO
   const saysSomething = (answer.band !== undefined && answer.band !== 'neutral') || (answer.topics?.length ?? 0) > 0 || !!answer.memory || answer.question === 'hope';
   if (saysSomething) offers.push({ kind: 'disagree', ...named });
   let g = carriedGrievance(r, answer, now);
-  // Bar round 8: the day after a loss you caused, anything they say can be answered with a sorry for it.
-  if (!g && r.hurtAt !== undefined && now - r.hurtAt < HURT_SORRY && now >= r.hurtAt) g = { aspect: 'destroyed_place', note: lossNote(r) };
+  // Bar round 8: the day after a loss you caused, anything they say can be answered with a sorry for it,
+  // except praise (audit 2026-10-10: round 2 keeps a sorry from ever answering a kind word).
+  if (!g && t.tone !== 'praise' && r.hurtAt !== undefined && now - r.hurtAt < HURT_SORRY && now >= r.hurtAt) g = { aspect: 'destroyed_place', note: lossNote(r) };
   if (g) {
     offers.push({ kind: 'sorry', aspect: g.aspect, about: g.note });
     if (explainable(g.aspect, g.note)) offers.push({ kind: 'explain', aspect: g.aspect, about: g.note });

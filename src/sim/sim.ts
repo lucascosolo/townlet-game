@@ -433,7 +433,6 @@ export class Simulation implements AspirationHost {
 
   step(): void {
     const state = this.state;
-    if (state.tick % TICKS_PER_DAY === 0 || state.wornToday === undefined) state.wornToday = { tick: state.tick, wear: { ...(state.wear ?? {}) } };
     while (this.commands.length > 0 && (this.commands[0] as Command).at <= state.tick) {
       this.execute(this.commands.shift() as Command);
     }

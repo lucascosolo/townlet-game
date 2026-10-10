@@ -171,7 +171,10 @@ function gridOf(state: SimState): Grid {
   const worn = new Float32Array(state.width * state.height);
   // The day's tracks as they stood at midnight (audit 2026-10-10: the cache used to read the wear of
   // whenever it was rebuilt, so a mid-day clone routed differently from its original).
-  for (const [k, w] of Object.entries(state.wornToday ?? state.wear ?? {})) {
+  // Audit 2026-10-10: the wear is read once per grid and kept with the state, so a clone taken
+  // mid-day (which starts with no cached grid) builds the same grid as the original still has.
+  if (state.wornGrid?.key !== key) state.wornGrid = { key, wear: { ...(state.wear ?? {}) } };
+  for (const [k, w] of Object.entries(state.wornGrid.wear)) {
     const [x, y] = k.split(',').map(Number) as [number, number];
     if (x >= 0 && y >= 0 && x < state.width && y < state.height) worn[y * state.width + x] = Math.min(WORN_DISCOUNT, Math.max(0, ((w as number) - 1) * 0.15));
   }

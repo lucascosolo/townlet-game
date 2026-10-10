@@ -548,10 +548,10 @@ export interface SimState {
   /** How worn each tile is by feet off the laid paths, by "x,y": footsteps, fading each dawn (owner playtest 2026-10-05). */
   wear?: Record<string, number>;
   /**
-   * Audit 2026-10-10: the wear the day's walking follows, copied at midnight. Kept in state so a
-   * clone or a restored state taken mid-day routes exactly as the original does.
+   * Audit 2026-10-10: the wear the walking grid was last built from, and the grid's key. Kept in
+   * state so a clone or a restored state taken mid-day routes exactly as the original does.
    */
-  wornToday?: Record<string, number>;
+  wornGrid?: { key: string; wear: Record<string, number> };
   /** The day the trader's cart last came (the rewarded bonus, 2026-10-08), or absent. */
   lastGiftDay?: number;
 }

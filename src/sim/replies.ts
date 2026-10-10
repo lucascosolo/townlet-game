@@ -121,13 +121,11 @@ const DARK_BANDS = new Set(['low', 'bad', 'dislike', 'hate']);
  * A sorry or an explanation is offered only for that, so it answers the sentence before it.
  */
 export function carriedGrievance(r: ResidentState, answer: TalkAnswer, now = 0): { aspect: string; note: string } | null {
-  // Audit 2026-10-10: nothing they forgave you for in the last week, however it comes up (a recalled
-  // memory every three days re-offered the same sorry, and each one was forgiven again).
-  if (answer.memory && answer.memory.subject === STEWARD && answer.memory.valence < 0 && !recentlyForgiven(r, answer.memory.aspect, now)) return { aspect: answer.memory.aspect, note: answer.memory.note };
-  if (answer.but && !recentlyForgiven(r, answer.but.aspect, now)) return answer.but;
+  if (answer.memory && answer.memory.subject === STEWARD && answer.memory.valence < 0) return { aspect: answer.memory.aspect, note: answer.memory.note };
+  if (answer.but) return answer.but;
   const fresh = answer.topics?.find((t) => t.key === 'steward:fresh');
-  if (fresh && !recentlyForgiven(r, fresh.vars.aspect ?? '', now)) return { aspect: fresh.vars.aspect ?? '', note: fresh.vars.x ?? '' };
-  if (answer.question === 'me' && DARK_BANDS.has(answer.band ?? '') && answer.because && answer.because.subject === STEWARD && !recentlyForgiven(r, answer.because.aspect, now)) {
+  if (fresh) return { aspect: fresh.vars.aspect ?? '', note: fresh.vars.x ?? '' };
+  if (answer.question === 'me' && DARK_BANDS.has(answer.band ?? '') && answer.because && answer.because.subject === STEWARD) {
     return { aspect: answer.because.aspect, note: grievanceNote(r, answer.because.aspect) };
   }
   // Bar round 8: grief for a place you took away is something to say sorry for ("what's on your mind" about the jetty offered none).
@@ -194,7 +192,7 @@ export interface ReplyResult {
   aspect?: string;
 }
 
-/** Audit 2026-10-10: replies to one resident that move trust or liking in a day. */
+/** Audit 2026-10-10: replies to one resident that move trust or liking in a day (answering a complaint is not counted against it). */
 export const REPLY_MOVES_PER_DAY = 3;
 
 /** The most talk alone can add to someone's liking of you in seven days (bar round 5: everyone adored the steward). */
@@ -246,7 +244,8 @@ export function applyReply(
   // Audit 2026-10-10: only the first few replies in a day move how they see you; after that they
   // still answer, but asking and pushing back twenty times in a row no longer drove trust to 1.
   const recent = (r.replyMoves ?? []).filter((t) => tick - t < TICKS_PER_DAY);
-  const counts = recent.length < REPLY_MOVES_PER_DAY;
+  // Answering a complaint (owning it, saying sorry) always counts: that is what the reply is for.
+  const counts = recent.length < REPLY_MOVES_PER_DAY || offer.tone === 'complaint' || kind === 'sorry' || kind === 'explain';
   if (counts) recent.push(tick);
   r.replyMoves = recent;
   const move = (d: { affinity?: number; trust?: number; familiarity?: number }, t: number) =>
@@ -319,6 +318,9 @@ export function applyReply(
       const aspect = offer.aspect as string;
       const last = r.sorryFor?.[aspect];
       if (last !== undefined && tick - last < SORRY_GAP) return { stance: 'enough', aspect };
+      // Audit 2026-10-10: already forgiven this week, a sorry for it again is enough, not more standing
+      // (a recalled memory every three days re-offered it, and each sorry was forgiven again).
+      if (recentlyForgiven(r, aspect, tick)) return { stance: 'enough', aspect };
       // Bar round 5: someone who thinks ill of you hears a sorry for something old as words, not
       // amends ("You have lost my good opinion entirely" then "let us put it behind us").
       // Bar round 7: and below -0.5 that holds whatever the grievance's age (Juniper at -0.60,

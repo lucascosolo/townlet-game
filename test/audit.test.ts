@@ -5,7 +5,7 @@ import { Narrator } from '../src/narrate/narrator.js';
 import { runScenario, scenario } from '../src/scenarios/index.js';
 import { assess } from '../src/sim/asks.js';
 import { progressOf } from '../src/sim/progress.js';
-import { carriedGrievance } from '../src/sim/replies.js';
+import { applyReply } from '../src/sim/replies.js';
 import { Simulation } from '../src/sim/sim.js';
 import { currentStage } from '../src/sim/story/aspirations.js';
 import { at, dayOf, TICKS_PER_DAY } from '../src/sim/time.js';
@@ -101,14 +101,17 @@ describe('audit 2026-10-10', { timeout: 300_000 }, () => {
     expect(offered).toBeGreaterThan(0);
   });
 
-  it('a grievance forgiven in the last week is not offered for a sorry again, however it comes up', () => {
+  it('a sorry for a grievance forgiven in the last week is "enough", not more standing', () => {
     const sim = runScenario('quiet', 1, 'none');
     sim.runUntil(at(3, 10));
     const r = sim.resident('bram');
-    r.forgiven = { still_waiting: sim.state.tick };
-    const memory = { episodeId: 1, tick: sim.state.tick - 1440, subject: STEWARD, aspect: 'still_waiting', valence: -0.5, note: 'kept me waiting' };
-    expect(carriedGrievance(r, { question: 'how', band: 'fair', memory } as never, sim.state.tick)).toBeNull();
-    expect(carriedGrievance(r, { question: 'me', band: 'cool', but: { aspect: 'still_waiting', note: 'kept me waiting' } } as never, sim.state.tick)).toBeNull();
+    r.forgiven = { still_waiting: sim.state.tick - 4 * TICKS_PER_DAY };
+    r.sorryFor = { still_waiting: sim.state.tick - 4 * TICKS_PER_DAY };
+    r.rel[STEWARD]!.affinity = 0.3;
+    const before = r.rel[STEWARD]!.affinity;
+    const res = applyReply(sim.state, r, 'sorry', [{ kind: 'sorry', aspect: 'still_waiting', about: 'kept me waiting' }], () => {});
+    expect(res?.stance).toBe('enough');
+    expect(r.rel[STEWARD]!.affinity).toBe(before);
   });
 
   it('giving up on the steward happens once for the same lapses, and nothing is asked meanwhile', () => {

@@ -31,6 +31,9 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **The morning after a loss, "how are you" is fair at best and names the place** with a grief line that says its name.
 - **Three or more of a non-decor kind are named by the nearest home**: "by" when right beside it, "near" when a few steps off, an ordinal only when two would still share a name. Decor (benches, hedges, flower beds) is never numbered.
 - **Forming views of a place are not listed against a settled one, and of two forming views that pull apart only the stronger is listed.**
+- **A "we'll see" can still be earned:** if you then do something they asked for within a week, the sorry counts in full and the log says they saw you meant it. Without this, someone thinking of leaving could no longer be turned round in five days (0 of 5 seeds, was 3 or more), because a sorry had been most of that path.
+- **The cottage ask is a wish for someone else:** it does not rankle each night it waits, lapsing is a light disappointment, it is not asked again for a fortnight after a lapse, and it does not count towards giving up on you. As first built it was asked, lapsed and asked again every few days and held Bram at −1 standing in neglected towns.
+- **Juniper's "Keep the town fed through winter" waits for winter** like the other dated steps; before, the six-day fallback could finish it in summer.
 
 ## 2026-10-09: Bar round 7: losses that cost, an economy that keeps asking, a story that agrees with itself
 

@@ -162,12 +162,13 @@ export const SPEECH: Record<string, Lines> = {
     chatty: ['Slept like a log! You are a marvel, steward!'],
     dreamy: ['The night was quiet again. Thank you.'],
   },
+  // Bar round 8: several each; with the cottage ask more asks are granted in a month.
   thanks: {
-    plain: ['That helps. Thanks.'],
-    formal: ['Thank you, steward. It is just what was needed.'],
-    warm: ['Oh, thank you! That is exactly what I hoped for.'],
-    chatty: ['You did it! Marvellous!'],
-    dreamy: ['It came true. Thank you.'],
+    plain: ['That helps. Thanks.', 'Good. Thank you.', 'Just right. Ta.'],
+    formal: ['Thank you, steward. It is just what was needed.', 'I am obliged to you, steward.', 'That is very good of you. Thank you.'],
+    warm: ['Oh, thank you! That is exactly what I hoped for.', "You listened! Thank you, really.", "That's made my week. Thank you."],
+    chatty: ['You did it! Marvellous!', 'Yes! Yes! Thank you!', "Look at that! You're a wonder!"],
+    dreamy: ['It came true. Thank you.', 'A wish, and then a thing. Thank you.', 'You made it real. Thank you.'],
   },
   lapsed: {
     plain: ['Asked. Nothing happened.', 'No answer. Noted.', 'Asked the steward. Might as well not have.', 'Heard nothing back.', 'That ask went nowhere.'],
@@ -180,8 +181,9 @@ export const SPEECH: Record<string, Lines> = {
     plain: ['{statement}. Just saying.', '{statement}.'],
     formal: ['I have come to think {statement}.', 'If you ask me, {statement}.'],
     warm: ['Between us, {statement}.', 'You know, {statement}.', "Can I tell you something? {statement}."],
-    chatty: ['Have you noticed? {statement}!', 'Listen, listen: {statement}!'],
-    dreamy: ['I keep thinking {statement}.', 'Do you ever feel like {statement}?'],
+    // Bar round 8: more ways in, now the town has more talkers (one chatty line five times a month).
+    chatty: ['Have you noticed? {statement}!', 'Listen, listen: {statement}!', 'Guess what I think? {statement}!', 'Honestly? {statement}! Everyone says so!'],
+    dreamy: ['I keep thinking {statement}.', 'Do you ever feel like {statement}?', 'It seems to me {statement}.'],
   },
   // Bar round 5: five each; a hard week has more comforting in it, and one line came round six times.
   comfort: {
@@ -410,11 +412,19 @@ export const ASKS: Record<string, Lines> = {
     dreamy: ['My doorstep wants something growing.'],
   },
   place_to_gather: {
-    plain: ['Too crowded. We need another place to sit together.'],
-    formal: ['Our one gathering place is overrun. Another would help.'],
-    warm: ["It's always packed. Somewhere else to meet would be lovely."],
-    chatty: ['Elbow to elbow every evening! Another place to meet!'],
-    dreamy: ['We need more than one place to be together.'],
+    plain: ['Too crowded. We need another place to sit together.', 'Nowhere to sit of an evening. Another spot would do it.'],
+    formal: ['Our one gathering place is overrun. Another would help.', 'The town has outgrown its meeting places. Might we have another?'],
+    warm: ["It's always packed. Somewhere else to meet would be lovely.", "I'd love another spot where we can all get together."],
+    chatty: ['Elbow to elbow every evening! Another place to meet!', "Standing room only! Again! We need somewhere else!"],
+    dreamy: ['We need more than one place to be together.', 'Our evenings want a second hearth.'],
+  },
+  // Bar round 8: someone who would like to move here, once the town may grow.
+  home_for_kin: {
+    plain: ["My cousin wants to come and live here. Could we put up a cottage and keep it free?", "There's someone who'd move here if a cottage stood empty."],
+    formal: ['A relation of mine would settle here, given an empty cottage. Might we build one?', 'I know of someone who would make a good neighbour, were there a cottage free.'],
+    warm: ["My cousin's been asking about the valley. If we built a cottage, they'd come!", "Someone I love wants to live here. Could we have a cottage ready for them?"],
+    chatty: ['My cousin! Here! If there was a cottage! Could we? Could we?', "I know someone who'd love it here! They just need an empty cottage!"],
+    dreamy: ['Someone I know dreams of this valley. An empty cottage would call them here.', 'A cottage with no one in it yet is a door left open for a friend.'],
   },
   aspiration: {
     plain: ['I have a favour to ask. A {what}. It would mean a lot.'],
@@ -581,7 +591,7 @@ addLines(THOUGHTS['lost_place-'], {
  */
 export const STEWARD_REASONS: Record<string, string[]> = {
   listens_to_me: ['the steward listens', 'the steward hears me out', 'the steward takes the time to listen', 'when I ask, the steward answers'],
-  ignores_me: ["the steward doesn't listen", 'the steward lets things slide', 'asking the steward gets me nowhere', "the steward's ears are elsewhere"],
+  ignores_me: ["the steward doesn't listen", 'the steward lets things slide', 'the steward never gets round to what I ask', "the steward's ears are elsewhere"],
   improves_town: ['the steward is making the town better', 'the valley looks better for the steward', 'the steward builds what we need', 'things are coming on, thanks to the steward'],
   spoils_town: ["the steward doesn't think things through", 'the steward builds without thinking', 'the steward has made a muddle of the valley'],
   decided_well: ['the steward makes good decisions', 'the steward chooses well', 'the steward has a good head for a decision'],

@@ -25,6 +25,8 @@ const AUTUMN_DAY = 2 * DAYS_PER_SEASON + 1;
 export const STORES_PER_RESIDENT = 30;
 export const MIN_STORES_TARGET = 150;
 /** Bar round 6: the granary ask quotes the winter stores, not whatever its keeper dreams of. */
+/** Bar round 8: the share of a granary's surplus over the winter target that spoils each dawn. */
+export const SURPLUS_SPOILS = 0.08;
 export const STORES_WHY = 'put enough by for winter';
 /** The larder counts as overflowing at this share of its cap. */
 const OVERFLOWING = 0.9;
@@ -114,6 +116,10 @@ export function storesDawn(h: AspirationHost): void {
   if (!state.stores || state.stores.year !== year)
     state.stores = { year, target: storesTarget(state), asked: false };
   const q = state.stores;
+  // Bar round 8: what is put by beyond the winter target slowly spoils, so a full granary is not
+  // the end of food as a question (251 food at winter with nothing more to decide).
+  const over = (state.granary ?? 0) - q.target;
+  if (over > 0) state.granary = (state.granary ?? 0) - over * SURPLUS_SPOILS;
   const stored = () => Math.floor(state.granary ?? 0);
   const event = (phase: "asked" | "reminded" | "met" | "short", who: string) =>
     h.emitEvent({

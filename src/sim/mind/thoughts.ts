@@ -25,7 +25,7 @@ export interface MindTopic {
 
 const NAME = (id: string) => residentDef(id).name;
 
-function subjectWord(state: SimState, s: SubjectId): string {
+export function subjectWord(state: SimState, s: SubjectId): string {
   if (s === STEWARD) return 'the steward';
   if (s.startsWith('r:')) return NAME(s.slice(2));
   if (s.startsWith('m:')) return state.story.memories.find((m) => m.id === Number(s.slice(2)))?.label ?? 'that day';

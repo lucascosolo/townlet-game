@@ -231,7 +231,7 @@ export interface ResidentState {
   hurtAt?: number;
   /** The last tick they took in something against you (bar round 7: nobody with a fresh grievance thinks the world of you). */
   grievedAt?: number;
-  lostPlace?: { tick: number; weight: number };
+  lostPlace?: { tick: number; weight: number; building?: number };
   /** Warmth that talk added lately, [tick, amount] (bar round 5: capped weekly). */
   talkWarmth?: Array<[number, number]>;
   id: string;
@@ -274,6 +274,8 @@ export interface ResidentState {
   cited?: Record<string, number>;
   /** Grievance aspect -> tick the steward last said sorry for it. */
   sorryFor?: Record<string, number>;
+  /** Bar round 8: a sorry heard as "we'll see": aspect and tick. Doing something they asked for within a week makes it count. */
+  sorryOnTrial?: { aspect: string; tick: number };
   /** Day a meagre meal was last held against the steward (bar round 1). */
   lastHungryDay?: number;
   /** Consecutive days of meagre meals ending on lastHungryDay. */
@@ -386,7 +388,7 @@ export interface MindMention {
   rank: number;
 }
 
-export type RequestKind = 'quieter_home' | 'workplace' | 'more_food' | 'somewhere_to_sit' | 'more_green' | 'place_to_gather' | 'aspiration';
+export type RequestKind = 'quieter_home' | 'workplace' | 'more_food' | 'somewhere_to_sit' | 'more_green' | 'place_to_gather' | 'home_for_kin' | 'aspiration';
 
 export interface Request {
   id: number;
@@ -613,6 +615,7 @@ export type SimEvent =
   | { t: number; type: 'plot_cleared'; building: number; by: string[] }
   /** The steward talks with a resident (M3b). */
   | { t: number; type: 'talk'; who: string; answer: TalkAnswer; counted: boolean }
+  | { t: number; type: 'amends_shown'; who: string }
   | { t: number; type: 'reply'; who: string; reply: import('./replies.js').ReplyKind; stance: import('./replies.js').ReplyStance; aspect?: string }
   /** A resident's view of the steward moved overnight, and why. */
   /** Standing moved: `reasons` pulled the way it moved, `also` the other way (bar round 2: each side with its own sign). */

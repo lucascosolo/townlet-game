@@ -74,6 +74,10 @@ describe('paths', () => {
       // Calling round for a friend means walking to their door, in whatever they are at.
       const calling = new Map<string, number>();
       const arriving = new Map<string, number>();
+      // Bar round 8: a newcomer can arrive and set out from their new door inside one minute (newcomers come sooner now).
+      sim.on((e) => {
+        if (e.type === 'arrived') from.set(e.who, e.home);
+      });
       sim.on((e) => {
         if (e.type !== 'invite') return;
         const f = sim.resident(e.b);

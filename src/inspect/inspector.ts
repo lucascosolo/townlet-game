@@ -51,7 +51,7 @@ export interface ResidentReport {
   needs: Array<{ need: Need; level: number; setpoint: number }>;
   feelings: Array<{ kind: string; about: string | null; intensity: number }>;
   opinions: Array<{ subject: string; name: string; value: number; beliefs: ReportBelief[] }>;
-  forming: Array<{ statement: string; evidence: number; sources: ReportSource[] }>;
+  forming: Array<{ statement: string; subject: string; evidence: number; sources: ReportSource[] }>;
   relationships: Array<{ id: string; name: string; affinity: number; familiarity: number; trust: number; tags: string[] }>;
   requests: Array<{ id: number; about: string; status: string; posted: string }>;
   moments: Array<{ when: string; note: string; about: string; aspect: string; weight: number }>;
@@ -126,8 +126,14 @@ export function residentReport(sim: Simulation, id: string, names: Narrator = ne
     })),
     forming: Object.values(r.traces)
       .filter((t) => Math.abs(t.evidence) >= 0.2)
+      // Bar round 8: a view of a place still forming that pulls against a settled one is not listed
+      // ("Maybe the bench isn't her sort of place" beside "the bench is a lovely spot").
+      .filter((t) => !(t.subject.startsWith('b:') && Object.values(r.beliefs).some((b) => b.subject === t.subject && Math.sign(b.valence) !== Math.sign(t.evidence))))
+      // Nor two forming views of one place that pull apart: only the stronger is shown.
+      .filter((t, _i, all) => !(t.subject.startsWith('b:') && all.some((o) => o !== t && o.subject === t.subject && Math.sign(o.evidence) !== Math.sign(t.evidence) && Math.abs(o.evidence) >= 0.2 && Math.abs(o.evidence) > Math.abs(t.evidence))))
       .map((t) => ({
         statement: names.statement(id, t),
+        subject: t.subject,
         evidence: round(t.evidence),
         sources: t.sources.map((src) => ({
           when: when(src.tick),

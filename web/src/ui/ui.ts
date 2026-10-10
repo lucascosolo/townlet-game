@@ -155,6 +155,7 @@ const ASK_TITLES: Record<Request['kind'], string> = {
   somewhere_to_sit: 'asks for somewhere to sit',
   more_green: 'asks for more green',
   place_to_gather: 'asks for another place to gather',
+  home_for_kin: 'knows someone who would like to move here',
 };
 
 const ASK_HINTS: Record<Request['kind'], string> = {
@@ -164,7 +165,8 @@ const ASK_HINTS: Record<Request['kind'], string> = {
   more_food: 'Gardens and the fishing jetty fill the larder; gardens grow little in winter.',
   somewhere_to_sit: 'A bench within a few steps of their home.',
   more_green: 'A flower bed or hedge right beside their home counts in full; two tiles away, half.',
-  place_to_gather: 'Another place to sit together: a bench, or a teahouse.',
+  place_to_gather: 'Another place to sit together: a bench, a well, or a teahouse.',
+  home_for_kin: 'Build a cottage and leave it empty: a newcomer moves into an empty home after a little while.',
 };
 
 const INTRO = [
@@ -710,6 +712,8 @@ export class Ui {
 
   /** The phone's tab bar. */
   private nav(key: 'town' | 'goals' | 'folk' | 'build' | 'log'): void {
+    // Bar round 8: another tab puts the build tool away (a cottage stayed in hand on the Folk tab).
+    if (key !== 'build' && this.tool.kind !== 'select') this.setTool({ kind: 'select' });
     if (key === 'town' || key === 'build') {
       this.quick.hidden = true;
       if (!this.scroll.classList.contains('rolled')) this.toggleScroll();
@@ -1006,7 +1010,8 @@ export class Ui {
       confetti.appendChild(bit);
     }
     c.append(confetti, el('div', { class: 'eyebrow' }, 'The valley grows'), el('h2', {}, `A ${e.name} now!`));
-    c.appendChild(el('p', {}, `Word has got round. The neighbouring towns send ${TIER_GIFT} timber, and up to ${e.cap} can make their home here.`));
+    // Bar round 8: say how they come (no newcomer arrived in 30 days, and nothing said a cottage must stand empty).
+    c.appendChild(el('p', { 'data-testid': 'tier-how' }, `Word has got round. The neighbouring towns send ${TIER_GIFT} timber, and up to ${e.cap} can make their home here: a newcomer moves into an empty cottage.`));
     for (const t of e.unlocks) {
       const row = el('div', { class: 'unlock' });
       const img = el('img', { class: 'thumb', alt: '' });

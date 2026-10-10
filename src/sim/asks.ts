@@ -5,11 +5,12 @@
 import { buildingDef } from '../content/buildings.js';
 import { residentDef } from '../content/residents.js';
 import { sleepNoiseThreshold, urgency } from './needs.js';
+import { residentCap } from './progress.js';
 import { dayOf } from './time.js';
 import type { RequestKind, ResidentState, SimState, SubjectId } from './types.js';
 import { ambientAt, distanceTo, getBuilding, greenAroundHome, liveBuildings, placeTile } from './world.js';
 
-export const ASK_KINDS = ['quieter_home', 'workplace', 'more_food', 'somewhere_to_sit', 'more_green', 'place_to_gather'] as const;
+export const ASK_KINDS = ['quieter_home', 'workplace', 'more_food', 'somewhere_to_sit', 'more_green', 'place_to_gather', 'home_for_kin'] as const;
 export type AskKind = (typeof ASK_KINDS)[number];
 
 /** Days before an unanswered ask lapses. */
@@ -21,6 +22,7 @@ export const ASK_LAPSE_DAYS: Record<RequestKind, number> = {
   somewhere_to_sit: 7,
   more_green: 7,
   place_to_gather: 7,
+  home_for_kin: 10,
 };
 
 const NEAR_HOME = 6;
@@ -36,8 +38,9 @@ export interface AskAssessment {
   wants?: string;
 }
 
+// Bar round 8: a well is somewhere to stop and talk too (the tray said so; the ask did not count it).
 function isGatheringPlace(type: string): boolean {
-  return buildingDef(type).kind === 'social' || type === 'bench' || type === 'oak';
+  return buildingDef(type).kind === 'social' || type === 'bench' || type === 'oak' || type === 'well';
 }
 
 function homeTile(state: SimState, r: ResidentState): [number, number] {
@@ -93,6 +96,16 @@ export function assess(state: SimState, r: ResidentState, kind: RequestKind, sin
       const cares = def.values.nature >= 0.6 || def.values.beauty >= 0.6;
       return { want: cares && green < 0.2, met: green >= GREEN_ENOUGH - 1e-9, subject: self };
     }
+    case 'home_for_kin': {
+      // Bar round 8: once the town may grow and has no empty home, the most neighbourly resident
+      // has someone who would like to come ("no newcomer in 30 days, and nothing said why").
+      const lived = new Set(Object.values(state.residents).filter((x) => !x.departed).map((x) => x.homeId));
+      const empty = liveBuildings(state).some((b) => buildingDef(b.type).kind === 'home' && !lived.has(b.id));
+      const here = Object.values(state.residents).filter((x) => !x.departed);
+      const room = here.length < residentCap(state);
+      const asker = [...here].sort((a, b) => residentDef(b.id).values.community - residentDef(a.id).values.community || (a.id < b.id ? -1 : 1))[0];
+      return { want: room && !empty && asker?.id === r.id, met: empty, subject: self, wants: 'cottage' };
+    }
     case 'place_to_gather': {
       const crowded = [...Object.values(r.beliefs), ...Object.values(r.traces)].some(
         (b) => b.aspect === 'too_crowded' && ('strength' in b ? b.strength >= 0.3 : (b as { evidence: number }).evidence <= -0.3),
@@ -110,4 +123,5 @@ export const WISH_LABELS: Record<RequestKind, string> = {
   somewhere_to_sit: 'Somewhere to sit near home',
   more_green: 'More green about the place',
   place_to_gather: 'Another place to gather',
+  home_for_kin: 'A cottage for someone who wants to come',
 };

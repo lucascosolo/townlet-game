@@ -2,6 +2,39 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-10: Bar round 8: a second fortnight with something to decide, apologies that must be earned, minds that blame the right thing
+
+**The review** (`docs/reviews/2026-10-10-bar-review-8.md`) scored the game 6, 7, 7, 7, 7. It credits round 7 with losses that now cost standing for a week, low trust refusing apologies, Marlow's and Bram's stories agreeing with what happened, and talk that mostly lost its stock phrases. What holds it under now: after the first fortnight nothing asks anything of the player (the granary overflows, timber piles up, no newcomer comes because nothing says a cottage must stand empty, three residents share one dream); an apology still repairs almost anything and is never offered on the day of a loss; raw and mismatched lines in the talk panel; minds that blame the steward for noise they asked for; asks and the Build tray that do not explain each other; and repetition over a month.
+
+**Chosen:**
+- **A second fortnight with something to decide.** Food in the granary beyond the winter target slowly spoils, so a full granary is not the end of food. Once the town may grow, a resident asks for a cottage for someone who wants to come ("my cousin is looking for a home here"), and the tier card says a newcomer needs an empty cottage. No two residents hold the same dream at once.
+- **Apologies that must be earned.** Anyone hurt by a loss in the last day is offered a sorry for it on any answer, so "Not yet." can happen. A sorry from someone who thinks ill of you (below zero) is "We'll see": a little familiarity, not forgiveness. The You tab says "thinks well of you" at most while a loss from the last fortnight is open.
+- **The talk panel says what it means.** A favour clears the last answer's chips; "the best of it" is a real memory, never an activity label or a placeless "a lovely spot"; "As I told you" is for views and hopes, not for "I'm well"; partners take their own pronouns; names keep their capitals after a lead-in; no tic before "of course"; a grief in "what's on your mind" offers a sorry.
+- **Minds blame the right thing.** Nobody holds against you noise from their own workplace, from something they asked for, or from an event they wanted; the morning after losing their workplace, "how are you" says so; a view still forming that pulls against one already held is not listed; a dream is told only while it is current.
+- **Asks and the tray agree.** A well counts as a place to gather (it sits in Gathering); more than two of a kind are told apart by where they stand ("the well by Fen's tent"); leaving Build on the phone puts the build tool away.
+- **Less repetition.** "The whole valley turned out" has several wordings; a "best of it" is not the same kind of memory twice in a week.
+
+**Rejected:**
+- *Upkeep on every building.* It would make a cozy game a chore; spoilage of a surplus asks the same question of the food economy more gently.
+- *Making apologies for a decision cost you with those who liked it.* It is the right idea but needs the decision's supporters to be told of the apology, which is a larger piece of work than this round's.
+
+**Settled while building:**
+- **A granary loses 8% of what it holds over the winter target each dawn**, never anything below the target.
+- **The cottage ask comes from the most community-minded resident** when the town has room under its cap and no empty home; it is met as soon as an empty home stands, and lapses after ten days.
+- **No two residents hold the same template dream (kind and subject) at once.** A newcomer's own "settle in" is not a template dream and is everyone's first.
+- **Standing after a loss you caused is held at 0.5 for a fortnight** (was 0.6 for ten days), so the You tab, which says "thinks the world of you" only above 0.5, cannot say it of them.
+- **Any sorry within two days of such a loss is "not yet"**, whatever it is for (round 7 kept this to a sorry for the loss itself, so a sorry for something else was forgiven the same morning). For the first day every answer offers a sorry for the loss, worded from the day's own memory if it has not settled into a grievance yet.
+- **Between −0.5 and 0, a sorry is "we'll see"**: standing moves by 0.01 and that grievance softens a little; nothing is forgiven.
+- **A favour counts as moving the conversation on**: the last answer's replies are put away in the sim, so the chips and the tier card's wait agree.
+- **Social memories are told as what happened** ("Juniper and I had a good laugh", "Bram and I shared a meal"), a lovely spot is told with its place, and a "best of it" never repeats a kind of memory within a week; with nothing new, it is "the quiet, mostly".
+- **A repeated "how are you" or "what's on your mind" is "Much the same as on day 9."**; "As I told you" is kept for views and hopes.
+- **The morning after a loss, "how are you" is fair at best and names the place** with a grief line that says its name.
+- **Three or more of a non-decor kind are named by the nearest home**: "by" when right beside it, "near" when a few steps off, an ordinal only when two would still share a name. Decor (benches, hedges, flower beds) is never numbered.
+- **Forming views of a place are not listed against a settled one, and of two forming views that pull apart only the stronger is listed.**
+- **A "we'll see" can still be earned:** if you then do something they asked for within a week, the sorry counts in full and the log says they saw you meant it. Without this, someone thinking of leaving could no longer be turned round in five days (0 of 5 seeds, was 3 or more), because a sorry had been most of that path.
+- **The cottage ask is a wish for someone else:** it does not rankle each night it waits, lapsing is a light disappointment, it is not asked again for a fortnight after a lapse, and it does not count towards giving up on you. As first built it was asked, lapsed and asked again every few days and held Bram at −1 standing in neglected towns.
+- **Juniper's "Keep the town fed through winter" waits for winter** like the other dated steps; before, the six-day fallback could finish it in summer.
+
 ## 2026-10-09: Bar round 7: losses that cost, an economy that keeps asking, a story that agrees with itself
 
 **The review** (`docs/reviews/2026-10-09-bar-review-7.md`) scored the game 6, 7, 6, 7, 7, lower than review 6 on Fun, Thinking, Opinionated and Expressive. It pushed harder on consequences, and found that round 6's fixes hold but that what you take away barely costs you: tearing out the commons, five workplaces and a dream orchard ended in every founder thinking the world of you, and all 17 apologies landed. Food stops being a decision once the granary is full, timber piles up with nothing to buy, the story tells you Marlow has left and Bram has fed the valley when neither happened, raw lines remain in the most-read places, a month of talk leans on stock clauses, and middle dream steps stall for a week. Round 7 takes all six in rank order.

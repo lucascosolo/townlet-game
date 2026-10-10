@@ -139,7 +139,7 @@ Object.assign(REPLY_LINES, {
   // that comes too late to someone who has given up on you.
   // Bar round 7: the best of their week, in their words. {x} is a memory clause from the last week.
   best_of: {
-    plain: ['{X}. That was the best of it.', 'Best of it? {X}.', '{X}. Good, that.', 'Easy. {X}.', '{X}. Can\'t beat it.'],
+    plain: ['{X}. That was the best of it.', 'Best of it? {X}.', '{X}. Fine thing, that.', 'Easy. {X}.', '{X}. Can\'t beat it.'],
     formal: ['I should say: {x}.', 'If I must choose: {x}.', 'The best of it was this: {x}.', 'Without question, {x}.', 'I would name this: {x}.'],
     warm: ['Oh, {x}. That was lovely.', 'Honestly? {X}.', '{X}. I keep thinking about it.', 'The best bit? {X}.', '{X}. It made my week.'],
     chatty: ['Ooh! {X}! Easily!', 'The best? {X}! Obviously!', '{X}! Did you hear?', 'Ha! {X}! Best thing all week!', '{X}! I could talk about it all day!'],

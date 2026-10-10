@@ -854,6 +854,8 @@ export class Ui {
     this.lastGoalsKey = key;
     const pane = this.goalsEl;
     pane.replaceChildren();
+    // Bar round 7: the winter stores lead, so their numbers show when Goals is short (cut to its title at 1440x900).
+    if (state.stores?.asked) pane.appendChild(this.storesCard());
     pane.appendChild(el('h3', {}, `Today · day ${dayOf(state.tick)}`));
     if (goals.length === 0) pane.appendChild(el('p', { class: 'quiet' }, 'New goals arrive each morning.'));
     for (const g of goals) {
@@ -883,7 +885,6 @@ export class Ui {
     tier.appendChild(el('p', { class: 'quiet small renown-how' }, renownHow));
     tier.title = renownHow;
     pane.appendChild(tier);
-    if (state.stores?.asked) pane.appendChild(this.storesCard());
     const trader = this.traderCard();
     if (trader) pane.appendChild(trader);
     const you = el('button', { class: 'link', 'data-testid': 'open-you' }, 'How the town sees you →');

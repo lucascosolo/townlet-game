@@ -175,31 +175,11 @@ describe('round 4, criterion 2: everyday play moves mood', () => {
       }
       b.runUntil(at(19, 12));
       const drop = meanMood(b) - meanMood(a);
-      // Bar round 6: the steward's new bakery now answers the food asks while the larder is held low,
-      // so the week weighs less (0.030 to 0.081 by seed, the twins differing in proposals too). The 0.06 is kept as the expected failure below.
-      expect(drop, `seed ${seed}`).toBeGreaterThanOrEqual(0.025);
+      // Bar round 6 moved this to 0.025 (the steward's new bakery answered the food asks); met again at 0.06 in bar round 7.
+      expect(drop, `seed ${seed}`).toBeGreaterThanOrEqual(0.06);
       expect(named, `seed ${seed}: the board names the low larder`).toBe(true);
       a.runUntil(at(20, 8));
       for (const r of here(a)) expect(r.rel[STEWARD]?.affinity ?? 0, `seed ${seed} ${r.id}`).toBeLessThanOrEqual(0.9);
-    }
-  });
-
-  it.fails('a larder held below a day\'s meals for a week lowers mean mood by 0.06 on every seed (missed on seeds 2 and 4 in round 6; see the note)', { timeout: 900_000 }, () => {
-    for (const seed of SEEDS) {
-      const make = () => {
-        const sim = runScenario('bakery', seed, 'considerate', { scripted: false });
-        sim.runUntil(at(12, 23));
-        return sim;
-      };
-      const a = make();
-      const b = make();
-      for (let t = at(13, 0); t <= at(19, 12); t++) {
-        a.state.stock.food = Math.min(a.state.stock.food, Math.max(1, dayOfMeals(a.state) / 4));
-        a.state.granary = 0;
-        a.runUntil(t);
-      }
-      b.runUntil(at(19, 12));
-      expect(meanMood(b) - meanMood(a), `seed ${seed}`).toBeGreaterThanOrEqual(0.06);
     }
   });
 

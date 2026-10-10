@@ -56,12 +56,13 @@ describe('round 5, criterion 1: standing earned', () => {
 });
 
 describe('round 5, criterion 2: replies land by what was said', () => {
-  it('"You don\'t seem it" is denied by someone well; doubting a pause has its own pool; leaving offers no other subject; no tic on a response', { timeout: 900_000 }, () => {
+  it('"You don\'t seem it" is no longer asked of someone well (round 7); doubting a pause has its own pool; leaving offers no other subject; no tic on a response', { timeout: 900_000 }, () => {
     const sim = runScenario('quiet', 1, 'none');
     sim.runUntil(at(3, 12));
     const r = sim.resident('ada');
     r.mood = 0.85;
-    expect(applyReply(sim.state, r, 'disagree', [{ kind: 'disagree', tone: 'mood', well: true }], () => {})?.stance).toBe('fine');
+    // Bar round 7 moved this: to someone who is well the challenge is "What's been the best of it?" ("You don't seem it" was denied 18 of 18 and led nowhere).
+    expect(applyReply(sim.state, r, 'disagree', [{ kind: 'disagree', tone: 'mood', well: true }], () => {})?.stance).toBe('best_of');
     r.mood = 0.5;
     expect(applyReply(sim.state, r, 'disagree', [{ kind: 'disagree', tone: 'mood', well: false }], () => {})?.stance).toBe('seen');
     expect(applyReply(sim.state, r, 'disagree', [{ kind: 'disagree', tone: 'hope', rest: true }], () => {})?.stance).toBe('nudged');

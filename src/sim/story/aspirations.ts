@@ -442,7 +442,8 @@ export function aspirationMorning(h: AspirationHost): void {
   for (const r of active(h.state)) {
     // A dream about someone who has left is put away (bar round 4: "make something for Rufus" after he left).
     const subj = r.aspiration.subject;
-    if (!r.aspiration.done && subj?.startsWith('r:') && h.state.residents[subj.slice(2)]?.departed) {
+    // Not a dream to remember them by, which is about someone gone by design (bar round 7: it was put away the morning after it formed).
+    if (!r.aspiration.done && r.aspiration.kind !== 'remember_gone' && subj?.startsWith('r:') && h.state.residents[subj.slice(2)]?.departed) {
       r.aspiration.done = true;
       r.aspiration.outcome = 'gone';
       r.aspiration.doneTick = h.state.tick;

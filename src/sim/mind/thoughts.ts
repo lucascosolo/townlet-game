@@ -158,7 +158,8 @@ export function freshGrievance(r: ResidentState, tick: number): { aspect: string
     if (valence >= 0) return;
     for (const src of sources) {
       // Telling you about it is not something you did (bar round 3: "you told you about it").
-      if (tick - src.tick >= 2 * TICKS_PER_DAY || (src as { kind?: string }).kind === 'recalled') continue;
+      // Bar round 7: three days, so it is still raised once a sorry is no longer "not yet" (two days).
+      if (tick - src.tick >= 3 * TICKS_PER_DAY || (src as { kind?: string }).kind === 'recalled') continue;
       // The one that weighs most, not merely the latest: a felled oak outweighs this morning's small pang.
       // A source's weight is signed (feeling times intensity); its size is what counts here.
       const weight = Math.min(1, size * Math.abs(src.weight));

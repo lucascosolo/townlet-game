@@ -18,6 +18,20 @@ These are decisions that change what gets built. Each entry says what was chosen
 - *Upkeep on every building.* It would make a cozy game a chore; spoilage of a surplus asks the same question of the food economy more gently.
 - *Making apologies for a decision cost you with those who liked it.* It is the right idea but needs the decision's supporters to be told of the apology, which is a larger piece of work than this round's.
 
+**Settled while building:**
+- **A granary loses 8% of what it holds over the winter target each dawn**, never anything below the target.
+- **The cottage ask comes from the most community-minded resident** when the town has room under its cap and no empty home; it is met as soon as an empty home stands, and lapses after ten days.
+- **No two residents hold the same template dream (kind and subject) at once.** A newcomer's own "settle in" is not a template dream and is everyone's first.
+- **Standing after a loss you caused is held at 0.5 for a fortnight** (was 0.6 for ten days), so the You tab, which says "thinks the world of you" only above 0.5, cannot say it of them.
+- **Any sorry within two days of such a loss is "not yet"**, whatever it is for (round 7 kept this to a sorry for the loss itself, so a sorry for something else was forgiven the same morning). For the first day every answer offers a sorry for the loss, worded from the day's own memory if it has not settled into a grievance yet.
+- **Between −0.5 and 0, a sorry is "we'll see"**: standing moves by 0.01 and that grievance softens a little; nothing is forgiven.
+- **A favour counts as moving the conversation on**: the last answer's replies are put away in the sim, so the chips and the tier card's wait agree.
+- **Social memories are told as what happened** ("Juniper and I had a good laugh", "Bram and I shared a meal"), a lovely spot is told with its place, and a "best of it" never repeats a kind of memory within a week; with nothing new, it is "the quiet, mostly".
+- **A repeated "how are you" or "what's on your mind" is "Much the same as on day 9."**; "As I told you" is kept for views and hopes.
+- **The morning after a loss, "how are you" is fair at best and names the place** with a grief line that says its name.
+- **Three or more of a non-decor kind are named by the nearest home**: "by" when right beside it, "near" when a few steps off, an ordinal only when two would still share a name. Decor (benches, hedges, flower beds) is never numbered.
+- **Forming views of a place are not listed against a settled one, and of two forming views that pull apart only the stronger is listed.**
+
 ## 2026-10-09: Bar round 7: losses that cost, an economy that keeps asking, a story that agrees with itself
 
 **The review** (`docs/reviews/2026-10-09-bar-review-7.md`) scored the game 6, 7, 6, 7, 7, lower than review 6 on Fun, Thinking, Opinionated and Expressive. It pushed harder on consequences, and found that round 6's fixes hold but that what you take away barely costs you: tearing out the commons, five workplaces and a dream orchard ended in every founder thinking the world of you, and all 17 apologies landed. Food stops being a decision once the granary is full, timber piles up with nothing to buy, the story tells you Marlow has left and Bram has fed the valley when neither happened, raw lines remain in the most-read places, a month of talk leans on stock clauses, and middle dream steps stall for a week. Round 7 takes all six in rank order.

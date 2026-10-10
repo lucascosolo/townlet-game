@@ -55,6 +55,7 @@ const ASK_TOO: Record<string, string> = {
   quieter_home: 'asks for quieter nights too',
   workplace: 'asks for work too',
   aspiration: 'asks for help with a dream too',
+  home_for_kin: 'knows someone who would move here too',
 };
 export const GESTURES_COOL = ['shrugs', 'frowns', 'looks away', 'sniffs', 'says nothing', 'folds {poss} arms', 'purses {poss} lips'];
 /** Neither warm nor cold (bar round 4): what someone who thinks ill of you does when you say something kind, or a friend when you push back. */

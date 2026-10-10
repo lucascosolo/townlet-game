@@ -416,6 +416,14 @@ export const ASKS: Record<string, Lines> = {
     chatty: ['Elbow to elbow every evening! Another place to meet!'],
     dreamy: ['We need more than one place to be together.'],
   },
+  // Bar round 8: someone who would like to move here, once the town may grow.
+  home_for_kin: {
+    plain: ["My cousin wants to come and live here. Could we put up a cottage and keep it free?", "There's someone who'd move here if a cottage stood empty."],
+    formal: ['A relation of mine would settle here, given an empty cottage. Might we build one?', 'I know of someone who would make a good neighbour, were there a cottage free.'],
+    warm: ["My cousin's been asking about the valley. If we built a cottage, they'd come!", "Someone I love wants to live here. Could we have a cottage ready for them?"],
+    chatty: ['My cousin! Here! If there was a cottage! Could we? Could we?', "I know someone who'd love it here! They just need an empty cottage!"],
+    dreamy: ['Someone I know dreams of this valley. An empty cottage would call them here.', 'A cottage with no one in it yet is a door left open for a friend.'],
+  },
   aspiration: {
     plain: ['I have a favour to ask. A {what}. It would mean a lot.'],
     formal: ['I have thought long about this. Might the town have a {what}?'],

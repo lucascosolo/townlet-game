@@ -1324,6 +1324,16 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
     - Fixed along the way: residents raise a fresh grievance for three days (so a sorry can land once it is no longer too soon); bubbles fit three lines as drawn, dropping a leading "Did you hear?" first; a "best of it" is not retold within a week.
     - Determinism holds; 10× stepping is checked by the browser test (1.09 ms).
 
+**Bar round 8 criteria (predeclared 2026-10-10, before code).** Quiet town, seeds 1–5, unless stated. A failure is reported as a failure, not redefined.
+
+1. **A second fortnight with something to decide.** Direct check: a granary over its winter target loses some of the surplus each day, never what is below the target. Considerate steward, 30 days: a resident asks for a cottage once the town may grow and has no empty home, and at least one newcomer arrives by day 30 on at least three seeds; the tier card says a newcomer needs an empty cottage (browser); no two residents hold the same dream (kind and subject) at any morning.
+2. **Apologies must be earned.** Direct checks: the day after a loss, anyone it hurt is offered a sorry for it on any answer, and taking it is "not yet"; below zero standing a sorry is "we'll see" and raises standing by at most 0.01; the You tab never says "thinks the world of you" of someone who lost a place, a workplace or a dream's building in the last fortnight.
+3. **The talk panel says what it means.** Direct checks: after a favour the last answer offers no chips; "the best of it" never names an activity ("Chat with", "Tease with", "Reminisce with") or a placeless "a lovely spot"; "As I told you" never prefixes a "how are you" or "what's on your mind" answer. In 30-day considerate, favours and none runs (quiet and bakery): no "they" for a named partner who is "she" or "he" in Fen's lessons; no resident's or Pip's name lowercased after a lead-in; no tic before "of course"; a "what's on your mind" answer about a lost place offers a sorry.
+4. **Minds blame the right thing.** Direct checks: noise from someone's own workplace, or from an approved night of baking they proposed, raises no grievance against you; the morning after losing their workplace, "how are you" is fair or lower and names the loss. In the same runs: no About page lists a forming view of a place pulling against a settled one; no dream fact is told for a dream that is done.
+5. **Asks and the tray agree.** Direct checks: a well answers "another place to gather"; a third building of a kind is named by where it stands; (browser) on the phone, choosing another tab puts the build tool away.
+6. **Less repetition.** Asking "What's been the best of it?" daily for 30 days: "the whole valley turned out" in at most a fifth of answers, and no resident gives the same kind of memory twice in a week.
+7. **No regressions.** Earlier tests pass or their moved measures are re-measured and reported; determinism holds; 10× stepping stays under 2 ms a frame; the year soak is flagged on no seed.
+
 ### 9.4 The bar (set 2026-10-08)
 
 Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:

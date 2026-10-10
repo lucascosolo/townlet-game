@@ -1466,6 +1466,31 @@ export class Ui {
     b.major = mood === 'major' || mood === 'up' || mood === 'down';
   }
 
+  /**
+   * Three lines at most as drawn, not only as counted (bar round 7: "Did you hear? The steward kept
+   * me waiting 4 days for proper places to work!" ran to four lines in a wider fallback font): a
+   * leading sentence goes first, then the line is cut at a clause.
+   */
+  private fitBubble(el: HTMLElement): void {
+    if (el.dataset.fitted === el.textContent) return;
+    const cs = getComputedStyle(el);
+    const px = (v: string) => parseFloat(v) || 0;
+    const line = px(cs.lineHeight) || px(cs.fontSize) * 1.3;
+    const max = 3 * line + px(cs.paddingTop) + px(cs.paddingBottom) + px(cs.borderTopWidth) + px(cs.borderBottomWidth) + 1;
+    const node = [...el.childNodes].find((n) => n.nodeType === Node.TEXT_NODE) as Text | undefined;
+    for (let i = 0; node && i < 4 && el.getBoundingClientRect().height > max; i++) {
+      const text = node.data;
+      const sentences = text.match(/[^.!?]+[.!?]+["”]?\s*|[^.!?]+$/g) ?? [text];
+      if (sentences.length > 1) node.data = sentences.slice(1).join('').trim();
+      else {
+        const at = Math.max(text.lastIndexOf(', ', text.length - 2), text.lastIndexOf('; ', text.length - 2), text.lastIndexOf(': ', text.length - 2));
+        if (at <= 20) break;
+        node.data = `${text.slice(0, at)}.`;
+      }
+    }
+    el.dataset.fitted = el.textContent ?? '';
+  }
+
   // ---------------------------------------------------------------- the notice board
 
   private renderBoard(): void {
@@ -2291,6 +2316,7 @@ export class Ui {
         b.el.hidden = false;
         b.el.style.left = `${pos.x}px`;
         b.el.style.top = `${pos.y}px`;
+        this.fitBubble(b.el);
         // Keep it on screen, 16px from the edges.
         let r = b.el.getBoundingClientRect();
         const dx = r.left < 16 ? 16 - r.left : r.right > vw - 16 ? vw - 16 - r.right : 0;

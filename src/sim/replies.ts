@@ -105,6 +105,12 @@ function grievanceNote(r: ResidentState, aspect: string): string {
   return sources[0]?.note ?? '';
 }
 
+/** Bar round 8: what they would say you took, even before it has settled into a grievance (still in the day's memories). */
+function lossNote(r: ResidentState): string {
+  const fresh = [...r.buffer, ...r.episodes].filter((e) => e.subject === STEWARD && e.aspect === 'destroyed_place').sort((a, b) => b.tick - a.tick)[0];
+  return grievanceNote(r, 'destroyed_place') || fresh?.note || '';
+}
+
 const DARK_BANDS = new Set(['low', 'bad', 'dislike', 'hate']);
 
 /**
@@ -122,9 +128,9 @@ export function carriedGrievance(r: ResidentState, answer: TalkAnswer, now = 0):
   }
   // Bar round 8: grief for a place you took away is something to say sorry for ("what's on your mind" about the jetty offered none).
   const mourns = answer.topics?.some((t) => (t.about?.startsWith('b:') ?? false) && (t.key === 'feel:grief' || t.key === 'feel:sadness' || t.vars.aspect === 'lost_place'));
-  if (mourns) {
-    const g = grievances(r, now).find((x) => x.aspect === 'destroyed_place');
-    if (g) return { aspect: g.aspect, note: grievanceNote(r, g.aspect) };
+  if (mourns && !recentlyForgiven(r, 'destroyed_place', now)) {
+    const note = lossNote(r);
+    if (note) return { aspect: 'destroyed_place', note };
   }
   const letDown = answer.topics?.some((t) => t.key === 'leaving' || t.key === 'steward:-' || (t.about === STEWARD && /^feel:(annoyance|grief|worry)/.test(t.key)));
   if (letDown) {
@@ -162,7 +168,7 @@ export function offersFor(r: ResidentState, answer: TalkAnswer, now = 0): ReplyO
   if (saysSomething) offers.push({ kind: 'disagree', ...named });
   let g = carriedGrievance(r, answer, now);
   // Bar round 8: the day after a loss you caused, anything they say can be answered with a sorry for it.
-  if (!g && r.hurtAt !== undefined && now - r.hurtAt < HURT_SORRY && now >= r.hurtAt) g = { aspect: 'destroyed_place', note: grievanceNote(r, 'destroyed_place') };
+  if (!g && r.hurtAt !== undefined && now - r.hurtAt < HURT_SORRY && now >= r.hurtAt) g = { aspect: 'destroyed_place', note: lossNote(r) };
   if (g) {
     offers.push({ kind: 'sorry', aspect: g.aspect, about: g.note });
     if (explainable(g.aspect, g.note)) offers.push({ kind: 'explain', aspect: g.aspect, about: g.note });
@@ -308,7 +314,8 @@ export function applyReply(
         return { stance: 'cheap', aspect };
       }
       // Bar round 7: too soon after taking away what was theirs ("Not yet. You took my jetty.").
-      if (aspect === 'destroyed_place' && r.hurtAt !== undefined && tick - r.hurtAt < TOO_SOON) {
+      // Bar round 8: any sorry, for whatever it is, while that loss is fresh.
+      if (r.hurtAt !== undefined && tick - r.hurtAt < TOO_SOON && tick >= r.hurtAt) {
         adjust(r, STEWARD, { familiarity: 0.02 }, tick);
         return { stance: 'too_soon', aspect };
       }

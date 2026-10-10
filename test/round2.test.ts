@@ -4,7 +4,7 @@ import { Narrator } from '../src/narrate/narrator.js';
 import { runScenario } from '../src/scenarios/index.js';
 import { attachment, beliefKey } from '../src/sim/mind/memory.js';
 import { buildingDef } from '../src/content/buildings.js';
-import { ownNote } from '../src/sim/replies.js';
+import { TOO_SOON, ownNote } from '../src/sim/replies.js';
 import { topicSign } from '../src/sim/talk.js';
 import { residentDef } from '../src/content/residents.js';
 import { at } from '../src/sim/time.js';
@@ -122,7 +122,8 @@ describe('round 2, criterion 1: replies that fit', () => {
         const r = sim.resident(id);
         if (!(r.beliefs[k] || r.traces[k])) continue;
         // Bar round 7: below -0.5 any sorry is words, so only those who do not think ill of you.
-        if ((r.rel[STEWARD]?.affinity ?? 0) < -0.5) continue;
+        // Bar round 8: below zero it is "we'll see", so only those who still think well of you.
+        if ((r.rel[STEWARD]?.affinity ?? 0) < 0) continue;
         // Whoever minded brings it up in one of the three questions; a sorry then is for the oak.
         let sorry: { aspect?: string; about?: string } | undefined;
         for (const q of ['me', 'mind', 'how'] as const) {
@@ -133,7 +134,9 @@ describe('round 2, criterion 1: replies that fit', () => {
         }
         if (sorry?.aspect !== 'destroyed_place') continue;
         expect(sorry.about).toContain(name);
-        expect(sim.reply(id, 'sorry')?.stance).toBe('forgiven');
+        // Bar round 8: within two days of taking it in, any sorry is "not yet".
+        const fresh = r.hurtAt !== undefined && sim.state.tick - r.hurtAt < TOO_SOON;
+        expect(sim.reply(id, 'sorry')?.stance).toBe(fresh ? 'too_soon' : 'forgiven');
         checked++;
       }
     }

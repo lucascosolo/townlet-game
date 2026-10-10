@@ -295,7 +295,7 @@ export class Narrator {
         // by an ordinal only where two would share a name.
         const by = (x: { id: number }) => {
           const w = this.where(x.id);
-          return / (right beside|near) /.test(w) ? w.replace(/^ (right beside|near) /, ' by ') : '';
+          return / (right beside|near) /.test(w) ? w.replace(/^ right beside /, ' by ') : '';
         };
         const mine = by(b);
         if (mine && kin.every((x) => x.id === id || by(x) !== mine)) return `the ${def.name.toLowerCase()}${mine}`;
@@ -1120,7 +1120,7 @@ export class Narrator {
     // Something not already told you as the best of it this week, where there is one.
     // Bar round 8: and not the same kind of thing twice in a week (a festival three times running).
     const told = (this.bestTold.get(who) ?? []).filter((y) => this.state.tick - y.t < 7 * 1440);
-    const best = ranked.find((x) => !told.some((y) => y.id === x.id || y.aspect === x.aspect)) ?? ranked.find((x) => !told.some((y) => y.id === x.id));
+    const best = ranked.find((x) => !told.some((y) => y.id === x.id || y.aspect === x.aspect));
     if (!best) return 'the quiet, mostly';
     this.bestTold.set(who, [...told, { id: best.id, aspect: best.aspect, t: this.state.tick }]);
     return this.memoryClause(who, best, this.you);
@@ -1168,7 +1168,14 @@ export class Narrator {
     switch (a.question) {
       case 'how': {
         const top = a.topics?.[0];
-        return [this.utter(who, TALK_HOW[a.band ?? 'fair']), top ? mind(top) : ''].filter(Boolean).join(' ');
+        // Bar round 8: a loss behind "how are you" is named ("One does not get over such things" named nothing).
+        const named = (m: Pick<MindMention, 'key' | 'vars' | 'about'>) => {
+          const lines = MIND_LINES[m.key];
+          if (m.key !== 'feel:grief' || !lines) return mind(m);
+          const naming = Object.fromEntries(Object.entries(lines).map(([k, v]) => [k, (v as string[]).filter((l) => /\{[xX]\}/.test(l))]).filter(([, v]) => (v as string[]).length > 0));
+          return this.utter(who, naming as typeof lines, topicVars(m));
+        };
+        return [this.utter(who, TALK_HOW[a.band ?? 'fair']), top ? named(top) : ''].filter(Boolean).join(' ');
       }
       case 'mind':
         return a.topics && a.topics.length > 0 ? a.topics.map(mind).join(' ') : 'Nothing much, honestly.';

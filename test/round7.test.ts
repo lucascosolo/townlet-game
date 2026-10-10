@@ -154,7 +154,8 @@ describe('round 7, criteria 3 and 4: the story agrees with itself, and raw lines
     sim.state.story.memories.push(few, most);
     const clause = (id: number) => n.memoryClause('ada', { subject: `m:${id}`, aspect: 'wonderful_time', note: '' }, true);
     expect(clause(900)).not.toMatch(/whole valley/);
-    expect(clause(901)).toMatch(/whole valley/);
+    // Bar round 8: "the whole valley" is said in several ways now, fixed by the memory.
+    expect(clause(901)).toMatch(/whole valley|everyone came out|all together|whole town/);
     const q = (by: string, wants: string): Request => ({ id: 1, by, kind: 'workplace', subject: `r:${by}`, postedTick: 0, status: 'open', wants });
     const groups = groupAsks([q('bram', 'bakery'), q('fen', 'jetty'), q('ada', 'garden'), q('wren', 'garden')]);
     expect(groups.length).toBe(3);

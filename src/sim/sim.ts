@@ -190,7 +190,10 @@ function detailFor(q: Quality, change: number): string {
 /** Every ask of theirs lapsed in the last fortnight. */
 function allLapses(state: SimState, who: string, tick: number): number {
   // Bar round 8: a cottage for someone else's kin does not count towards giving up on you.
-  return state.requests.filter((q) => q.by === who && q.kind !== 'home_for_kin' && q.status === 'lapsed' && (q.closedTick ?? 0) > tick - 14 * TICKS_PER_DAY).length;
+  // Audit 2026-10-10: nor do lapses from before the last time they gave up (the same three lapses
+  // made them give up a second week running).
+  const since = Math.max(tick - 14 * TICKS_PER_DAY, (state.residents[who]?.gaveUpUntil ?? -Infinity) - 7 * TICKS_PER_DAY);
+  return state.requests.filter((q) => q.by === who && q.kind !== 'home_for_kin' && q.status === 'lapsed' && (q.closedTick ?? 0) > since).length;
 }
 
 function lapsesOf(state: SimState, who: string, kind: Request['kind'], tick: number): number {
@@ -430,6 +433,7 @@ export class Simulation implements AspirationHost {
 
   step(): void {
     const state = this.state;
+    if (state.tick % TICKS_PER_DAY === 0 || state.wornToday === undefined) state.wornToday = { ...(state.wear ?? {}) };
     while (this.commands.length > 0 && (this.commands[0] as Command).at <= state.tick) {
       this.execute(this.commands.shift() as Command);
     }
@@ -758,7 +762,8 @@ export class Simulation implements AspirationHost {
     state.residents[def.id] = r;
     state.order.push(def.id);
     for (const other of state.order) {
-      if (other === def.id) continue;
+      // Not with those who have left (audit 2026-10-10: their records grew with every newcomer).
+      if (other === def.id || state.residents[other]?.departed) continue;
       r.rel[other] = { ...newRelationship(), familiarity: 0.1 };
       (state.residents[other] as ResidentState).rel[def.id] = { ...newRelationship(), familiarity: 0.1 };
     }
@@ -892,7 +897,7 @@ export class Simulation implements AspirationHost {
       if (op > 0.15) {
         this.mind.perceive(ctx, r, { subject: `b:${b.id}`, aspect: 'lost_place', valence: -0.8, base: (0.7 + 0.8 * op) * heard, source, note: dreamt ? `my dream's ${name} is gone` : work ? `my ${name} is gone` : `the ${name} is gone` });
         this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'destroyed_place', valence: -0.7, base: (0.3 + 0.6 * op) * heard, source, note: dreamt ? `took away my dream's ${name}` : work ? `took away my ${name}` : `took away the ${name}` });
-        // A loss you caused holds their standing down for ten days, not only their mood for four.
+        // A loss you caused holds their standing down for HURT_DAYS (a fortnight), not only their mood for four.
         r.hurtUntil = state.tick + HURT_DAYS * TICKS_PER_DAY;
         r.hurtAt = state.tick;
         this.emit({ t: state.tick, type: 'grief', who: r.id, building: b.id, btype: b.type, how });
@@ -1091,7 +1096,8 @@ export class Simulation implements AspirationHost {
           }
           // Bar round 8: not your fault when it is their own workplace, a late shift they proposed, or what they asked for.
           const own = src.id === r.jobId || !!src.dreamOf?.includes(r.id);
-          const theirIdea = state.story.extraShifts.some(([id]) => id === src.id) && state.story.dilemmas.some((d) => d.proposer === r.id && d.status === 'approved');
+          // The late shift they proposed themselves (audit 2026-10-10: any approved idea of theirs excused any late shift).
+          const theirIdea = state.story.extraShifts.some(([id]) => id === src.id) && state.story.dilemmas.some((d) => d.proposer === r.id && d.status === 'approved' && d.type === 'night_baking');
           const asked = state.requests.some((q) => q.by === r.id && q.status === 'fulfilled' && q.wants === src.type);
           if (src.placedBy === 'steward' && !own && !theirIdea && !asked) {
             this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'spoils_town', valence: -0.5, base: base * 0.55, source: 'witnessed', note: `put the ${name} there` });
@@ -1311,6 +1317,8 @@ export class Simulation implements AspirationHost {
       if (this.closeIfMet(ctx, r, q)) continue;
       // An ask left open weighs on them a little each morning it stays open (bar round 1): being
       // kept waiting used to cost nothing until the day it lapsed.
+      // Audit 2026-10-10: and stops counting the days (the nightly "kept me waiting" went on).
+      if (stoppedAsking) continue;
       const waited = (tick - q.postedTick) / TICKS_PER_DAY;
       // Bar round 8: a cottage for someone else's cousin is a wish, not a need: it does not rankle nightly.
       const forOthers = q.kind === 'home_for_kin';
@@ -1407,8 +1415,11 @@ export class Simulation implements AspirationHost {
   }
 
   /** A resident asks the steward for something outside the usual asks (a dream, for now). */
-  ask(r: ResidentState, kind: Request['kind'], wants?: string, why?: string): Request {
+  ask(r: ResidentState, kind: Request['kind'], wants?: string, why?: string): Request | null {
     const state = this.state;
+    // Audit 2026-10-10: someone who has given up on you asks nothing, whoever's plan it is (the
+    // winter stores and dream asks were still posted, lapsed, and fed the giving up again).
+    if ((r.gaveUpUntil ?? -1) > state.tick) return null;
     // A dream ask carries the dream that asked, so its card quotes that dream, not a later one (bar
     // round 4); an ask with a reason of its own (the winter stores) carries that (bar round 6).
     const dream = why ?? (kind === 'aspiration' ? dreamTitle(state, r) : null);
@@ -1421,7 +1432,7 @@ export class Simulation implements AspirationHost {
   /**
    * Caps on standing, checked at dawn and every minute (bar round 6: a granted ask at 07:00 slipped
    * past the dawn check): while a low larder is remembered nobody stands above LOW_LARDER_TOP;
-   * bar round 7: after a loss you caused, HURT_TOP for ten days; with anything held against you
+   * bar round 7: after a loss you caused, HURT_TOP for HURT_DAYS (round 8: 0.5 for a fortnight); with anything held against you
    * from the last week, FRESH_GRIEVANCE_TOP.
    */
   private capAfterLowLarder(): void {

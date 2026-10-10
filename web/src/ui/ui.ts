@@ -586,9 +586,15 @@ export class Ui {
    */
   private draggable(box: HTMLElement, handle: HTMLElement): void {
     let start: { x: number; y: number; left: number; top: number } | null = null;
+    // Audit 2026-10-10: a press only becomes a drag once the pointer moves a few pixels, so a plain
+    // click on a title still folds the widget (it used to lift the panel out of its column).
+    let pressed: { x: number; y: number; id: number } | null = null;
     handle.classList.add('grab');
     handle.addEventListener('pointerdown', (e) => {
       if (this.phone || e.button !== 0 || (e.target as HTMLElement).closest('button, a, input, select')) return;
+      pressed = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    });
+    const lift = (e: PointerEvent) => {
       const r = box.getBoundingClientRect();
       const root = this.root.getBoundingClientRect();
       if (!box.classList.contains('dragged')) {
@@ -603,19 +609,21 @@ export class Ui {
       box.style.top = `${r.top - root.top}px`;
       box.style.right = 'auto';
       box.style.bottom = 'auto';
-      start = { x: e.clientX, y: e.clientY, left: r.left - root.left, top: r.top - root.top };
+      start = { x: pressed?.x ?? e.clientX, y: pressed?.y ?? e.clientY, left: r.left - root.left, top: r.top - root.top };
       handle.setPointerCapture(e.pointerId);
       handle.classList.add('grabbing');
-      e.preventDefault();
-    });
+    };
     handle.addEventListener('pointermove', (e) => {
+      if (!start && pressed && e.pointerId === pressed.id && Math.hypot(e.clientX - pressed.x, e.clientY - pressed.y) > 5) lift(e);
       if (!start) return;
+      e.preventDefault();
       const root = this.root.getBoundingClientRect();
       box.style.left = `${Math.max(0, Math.min(root.width - 80, start.left + e.clientX - start.x))}px`;
       box.style.top = `${Math.max(0, Math.min(root.height - 40, start.top + e.clientY - start.y))}px`;
     });
     const stop = () => {
       start = null;
+      pressed = null;
       handle.classList.remove('grabbing');
     };
     handle.addEventListener('pointerup', stop);

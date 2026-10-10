@@ -90,7 +90,8 @@ export function recentlyForgiven(r: ResidentState, aspect: string, now: number):
 /** Everything they hold against the steward, strongest first: settled beliefs and feelings still forming. */
 export function grievances(r: ResidentState, now = 0): Array<{ aspect: string; weight: number; settled: boolean; last: number }> {
   const out: Array<{ aspect: string; weight: number; settled: boolean; last: number }> = [];
-  const lastOf = (sources: Array<{ tick: number }>) => sources.reduce((m, x) => Math.max(m, x.tick), -1);
+  // Audit 2026-10-10: telling you about it again is not something new you did.
+  const lastOf = (sources: Array<{ tick: number; kind?: string }>) => sources.filter((x) => x.kind !== 'recalled').reduce((m, x) => Math.max(m, x.tick), -1);
   for (const b of Object.values(r.beliefs)) if (b.subject === STEWARD && b.valence < -0.1 && !recentlyForgiven(r, b.aspect, now)) out.push({ aspect: b.aspect, weight: b.strength * -b.valence, settled: true, last: Math.max(b.reinforcedTick, lastOf(b.sources)) });
   for (const t of Object.values(r.traces)) if (t.subject === STEWARD && t.evidence < -0.1 && !recentlyForgiven(r, t.aspect, now)) out.push({ aspect: t.aspect, weight: -t.evidence * 0.5, settled: false, last: lastOf(t.sources) });
   // Something that happened in the last three days comes first: a sorry is for what is fresh.
@@ -101,7 +102,8 @@ export function grievances(r: ResidentState, now = 0): Array<{ aspect: string; w
 /** The latest note behind a grievance about the steward: what they would say it was. */
 function grievanceNote(r: ResidentState, aspect: string): string {
   const k = beliefKey(STEWARD, aspect);
-  const sources = [...(r.beliefs[k]?.sources ?? []), ...(r.traces[k]?.sources ?? [])].sort((a, b) => b.tick - a.tick);
+  // Audit 2026-10-10: not the note of telling you about it ("I'm sorry I told the steward about it").
+  const sources = [...(r.beliefs[k]?.sources ?? []), ...(r.traces[k]?.sources ?? [])].filter((x) => x.kind !== 'recalled').sort((a, b) => b.tick - a.tick);
   return sources[0]?.note ?? '';
 }
 
@@ -119,11 +121,13 @@ const DARK_BANDS = new Set(['low', 'bad', 'dislike', 'hate']);
  * A sorry or an explanation is offered only for that, so it answers the sentence before it.
  */
 export function carriedGrievance(r: ResidentState, answer: TalkAnswer, now = 0): { aspect: string; note: string } | null {
-  if (answer.memory && answer.memory.subject === STEWARD && answer.memory.valence < 0) return { aspect: answer.memory.aspect, note: answer.memory.note };
-  if (answer.but) return answer.but;
+  // Audit 2026-10-10: nothing they forgave you for in the last week, however it comes up (a recalled
+  // memory every three days re-offered the same sorry, and each one was forgiven again).
+  if (answer.memory && answer.memory.subject === STEWARD && answer.memory.valence < 0 && !recentlyForgiven(r, answer.memory.aspect, now)) return { aspect: answer.memory.aspect, note: answer.memory.note };
+  if (answer.but && !recentlyForgiven(r, answer.but.aspect, now)) return answer.but;
   const fresh = answer.topics?.find((t) => t.key === 'steward:fresh');
-  if (fresh) return { aspect: fresh.vars.aspect ?? '', note: fresh.vars.x ?? '' };
-  if (answer.question === 'me' && DARK_BANDS.has(answer.band ?? '') && answer.because && answer.because.subject === STEWARD) {
+  if (fresh && !recentlyForgiven(r, fresh.vars.aspect ?? '', now)) return { aspect: fresh.vars.aspect ?? '', note: fresh.vars.x ?? '' };
+  if (answer.question === 'me' && DARK_BANDS.has(answer.band ?? '') && answer.because && answer.because.subject === STEWARD && !recentlyForgiven(r, answer.because.aspect, now)) {
     return { aspect: answer.because.aspect, note: grievanceNote(r, answer.because.aspect) };
   }
   // Bar round 8: grief for a place you took away is something to say sorry for ("what's on your mind" about the jetty offered none).

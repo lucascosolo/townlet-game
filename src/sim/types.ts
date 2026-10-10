@@ -222,15 +222,15 @@ export interface Unseen {
 }
 
 export interface ResidentState {
-  /** A place they held dear that was taken away (bar round 4): weighs on mood for a few days. */
-  /** Bar round 7: a loss you caused (their workplace, their dream's building, a place they held dear): standing is held at HURT_TOP until this tick. */
   /** Bar round 7: grievances you said sorry for and were forgiven: aspect -> tick. Not raised again for a week. */
   forgiven?: Record<string, number>;
+  /** Bar round 7: a loss you caused (their workplace, their dream's building, a place they held dear): standing is held at HURT_TOP until this tick (HURT_DAYS). */
   hurtUntil?: number;
   /** When that loss was taken in (a sorry in the next two days is "not yet"). */
   hurtAt?: number;
   /** The last tick they took in something against you (bar round 7: nobody with a fresh grievance thinks the world of you). */
   grievedAt?: number;
+  /** A place they held dear that was taken away (bar round 4): weighs on mood for a few days; `building` is which (bar round 8). */
   lostPlace?: { tick: number; weight: number; building?: number };
   /** Warmth that talk added lately, [tick, amount] (bar round 5: capped weekly). */
   talkWarmth?: Array<[number, number]>;
@@ -545,6 +545,11 @@ export interface SimState {
   clearing?: Record<string, number>;
   /** How worn each tile is by feet off the laid paths, by "x,y": footsteps, fading each dawn (owner playtest 2026-10-05). */
   wear?: Record<string, number>;
+  /**
+   * Audit 2026-10-10: the wear the day's walking follows, copied at midnight. Kept in state so a
+   * clone or a restored state taken mid-day routes exactly as the original does.
+   */
+  wornToday?: Record<string, number>;
   /** The day the trader's cart last came (the rewarded bonus, 2026-10-08), or absent. */
   lastGiftDay?: number;
 }

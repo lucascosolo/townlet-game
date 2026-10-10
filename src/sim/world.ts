@@ -169,7 +169,9 @@ function gridOf(state: SimState): Grid {
   if (old && old.key === key) return old;
   const cells = new Int32Array(state.width * state.height);
   const worn = new Float32Array(state.width * state.height);
-  for (const [k, w] of Object.entries(state.wear ?? {})) {
+  // The day's tracks as they stood at midnight (audit 2026-10-10: the cache used to read the wear of
+  // whenever it was rebuilt, so a mid-day clone routed differently from its original).
+  for (const [k, w] of Object.entries(state.wornToday ?? state.wear ?? {})) {
     const [x, y] = k.split(',').map(Number) as [number, number];
     if (x >= 0 && y >= 0 && x < state.width && y < state.height) worn[y * state.width + x] = Math.min(WORN_DISCOUNT, Math.max(0, ((w as number) - 1) * 0.15));
   }

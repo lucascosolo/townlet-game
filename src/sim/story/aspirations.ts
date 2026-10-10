@@ -17,7 +17,7 @@ import { chooseDream, templateDream } from './dreams.js';
 
 /** What the aspiration engine needs beyond the storyteller's host. */
 export interface AspirationHost extends StoryHost {
-  ask(r: ResidentState, kind: Request['kind'], wants?: string, why?: string): Request;
+  ask(r: ResidentState, kind: Request['kind'], wants?: string, why?: string): Request | null;
   depart(r: ResidentState): void;
 }
 

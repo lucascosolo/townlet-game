@@ -31,7 +31,8 @@ const INDENT = '       ';
 
 /** Capitalise the start of the text and of each sentence. */
 function sentenceCase(s: string): string {
-  return cap(s).replace(/([.?!] )([a-z])/g, (_, p: string, c: string) => p + c.toUpperCase());
+  // Not after a trailing-off "..." (audit 2026-10-10: "Just... Show me.").
+  return cap(s).replace(/((?<!\.\.)[.?!] )([a-z])/g, (_, p: string, c: string) => p + c.toUpperCase());
 }
 
 type Person = { subj: string; obj: string; poss: string };
@@ -401,7 +402,7 @@ export class Narrator {
       const tic = pick(this.rng, tics);
       // Once a day each (bar round 1: "Honestly?" opened 15 answers).
       this.ticUsed.set(`${who}|${tic}`, today);
-      if (/[.!?]$/.test(tic)) text = `${tic} ${text}`;
+      if (/[.!?]$/.test(tic)) text = `${cap(tic)} ${text}`;
       // A shouted word keeps its capitals (bar round 5: "bONFIRE!").
       else text = `${cap(tic)}, ${this.keepsCapital(text) || /^[A-Z]{2,}\b/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1)}`;
     }
@@ -734,7 +735,7 @@ export class Narrator {
         if (e.key === 'background' && this.pageReadDay !== dayOf(e.t)) {
           this.pageReadDay = dayOf(e.t);
           this.aside(e.t, `${e.first ? `${this.you ? "You've" : 'The steward has'} met ${this.name(e.who)}. ` : ''}${this.you ? 'You read' : 'The steward reads'} ${this.name(e.who)}'s story on ${residentDef(e.who).pronouns.poss} page.`);
-        } else if (e.key !== 'background') this.aside(e.t, `${e.first ? `${this.you ? "You've" : 'The steward has'} met ${this.name(e.who)}. ` : ''}${this.you ? 'You learn' : 'The steward learns'} something about ${this.name(e.who)}: ${lowerFirst(factValue(this.state, this.state.residents[e.who]!, e.key)).replace(/[.!?]+$/, '')}.`);
+        } else if (e.key !== 'background') this.aside(e.t, `${e.first ? `${this.you ? "You've" : 'The steward has'} met ${this.name(e.who)}. ` : ''}${this.you ? 'You learn' : 'The steward learns'} something about ${this.name(e.who)}: ${lowerFirst(factValue(this.state, this.state.residents[e.who]!, e.key)).replace(/[.!?]+$/, '').replace(/; ([A-Z])/g, (_m, c: string) => `; ${c.toLowerCase()}`)}.`);
         break;
       case 'renown':
         break;
@@ -1220,7 +1221,8 @@ export class Narrator {
         // The lead-in is the reason's own: no tic on top of it (bar round 7: "I must say, I would say ...").
         const why = statement ? this.utter(who, TALK_REASON, { statement }, 3, true) : '';
         if (why) this.lastReason = { who, t: this.state.tick, text: this.toSteward(why) };
-        const but = a.but ? this.utter(who, TALK_BUT, { x: deedClause(a.but.note) }) : '';
+        // No tic in the middle of an answer ("Still sizing you up! right? Except...").
+        const but = a.but ? this.utter(who, TALK_BUT, { x: deedClause(a.but.note) }, 3, true) : '';
         return [head, why, but].filter(Boolean).join(' ');
       }
     }
@@ -1335,6 +1337,11 @@ export class Narrator {
     const verbs: Array<[RegExp, string | ((m: string, ...groups: string[]) => string)]> = [
       [/\bwhoever the steward is, they care\b/gi, 'you care'],
       [/\b(the )?steward doesn't\b/gi, "you don't"],
+      // Audit 2026-10-10: contractions and adverbs ("You isn't kind", "You alway listened").
+      [/\bthe steward isn't\b/gi, "you aren't"],
+      [/\bthe steward wasn't\b/gi, "you weren't"],
+      [/\bthe steward hasn't\b/gi, "you haven't"],
+      [/\bthe steward (always|perhaps|sometimes|seldom|rarely|never|once) (\w+ed)\b/gi, (_m: string, adv?: string, v?: string) => `you ${adv} ${v}`],
       [/\b(the )?steward does\b/gi, 'you do'],
       [/\bthe steward is\b/gi, 'you are'],
       [/\bthe steward has\b/gi, 'you have'],
@@ -1347,7 +1354,7 @@ export class Narrator {
     ];
     let out = text;
     for (const [re, to] of verbs) out = typeof to === 'string' ? out.replace(re, to) : out.replace(re, to as (m: string, ...g: string[]) => string);
-    return out.replace(/(^|[.!?] )you\b/g, (_m, p: string) => `${p}You`);
+    return out.replace(/(^|[.!?] )you(r?)\b/g, (_m, p: string, r: string) => `${p}You${r}`);
   }
 
   private favourWhat(kind: FavourKind, other?: string): string {

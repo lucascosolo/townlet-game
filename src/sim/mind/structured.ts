@@ -365,9 +365,12 @@ export const StructuredMind: Mind = {
     nightlyRelationships(ctx, r, stewardEvidence);
     // Tell the steward when someone's view of them has moved, and why.
     const delta = (r.rel.steward?.affinity ?? 0) - before;
-    const reasons = (delta > 0 ? good : bad).length > 0 ? (delta > 0 ? good : bad) : [...good, ...bad];
-    const also = delta > 0 ? bad : good;
-    if (Math.abs(delta) >= 0.04 && reasons.length > 0) ctx.emit({ t: ctx.tick, type: 'standing', who: r.id, delta, reasons: reasons.slice(0, 3), ...(also.length > 0 && reasons !== also ? { also: also.slice(0, 2) } : {}) });
+    const side = delta > 0 ? good : bad;
+    const reasons = side.length > 0 ? side : [...good, ...bad];
+    // Audit 2026-10-10: "also" only beside the side that moved it; with no reasons on that side the
+    // mixed list already holds everything, and "also" repeated the bad news under a rise.
+    const also = side.length > 0 ? (delta > 0 ? bad : good) : [];
+    if (Math.abs(delta) >= 0.04 && reasons.length > 0) ctx.emit({ t: ctx.tick, type: 'standing', who: r.id, delta, reasons: reasons.slice(0, 3), ...(also.length > 0 ? { also: also.slice(0, 2) } : {}) });
   },
 };
 

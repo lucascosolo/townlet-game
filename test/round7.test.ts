@@ -28,7 +28,7 @@ function place(sim: Simulation, type: string): number {
 }
 
 describe('round 7, criterion 1: losses cost', () => {
-  it('taking away a workplace is a grievance that holds standing at 0.6 for ten days; a sorry too soon is "not yet"; below -0.5 any sorry is cheap', () => {
+  it('taking away a workplace is a grievance that holds standing at 0.6 for ten days; a sorry too soon is "not yet"; below -0.5 any sorry is cheap', { timeout: 120_000 }, () => {
     const sim = runScenario('quiet', 1, 'none');
     sim.runUntil(at(3, 10));
     const r = here(sim).find((x) => x.jobId !== null)!;

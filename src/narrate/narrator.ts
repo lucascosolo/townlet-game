@@ -402,7 +402,11 @@ export class Narrator {
       const tic = pick(this.rng, tics);
       // Once a day each (bar round 1: "Honestly?" opened 15 answers).
       this.ticUsed.set(`${who}|${tic}`, today);
-      if (/[.!?]$/.test(tic)) text = `${cap(tic)} ${text}`;
+      // A tic that is a sentence of its own ("Right?") only before a short line, so it never pushes
+      // an answer past its sentence cap (audit 2026-10-10: capitalised, it counted as one).
+      if (/[.!?]$/.test(tic)) {
+        if ((text.match(/[.!?](\s|$)/g) ?? []).length <= 2) text = `${cap(tic)} ${text}`;
+      }
       // A shouted word keeps its capitals (bar round 5: "bONFIRE!").
       else text = `${cap(tic)}, ${this.keepsCapital(text) || /^[A-Z]{2,}\b/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1)}`;
     }

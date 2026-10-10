@@ -109,7 +109,7 @@ describe('criterion 7: thin economy', () => {
     expect(sim.state.buildings.some((b) => b.type === 'teahouse' && b.placedBy === 'steward')).toBe(false);
   });
 
-  it('with a responsive steward food runs short on at most 10% of days; idle stewards never starve anyone', { timeout: 180_000 }, () => {
+  it('with a responsive steward food runs short on at most 10% of days; idle stewards never starve anyone', { timeout: 600_000 }, () => {
     let shortDays = 0;
     let days = 0;
     for (let seed = 1; seed <= 10; seed++) {

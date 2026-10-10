@@ -629,10 +629,12 @@ function endGathering(host: StoryHost, g: Gathering): void {
     const success = g.kind === 'festival' || chance(state.story, 0.6);
     const memory = addMemory(host, { tick: state.tick, kind: g.kind, label: g.label, placeId: g.placeId, attendees: attendees.map((r) => r.id) });
     g.memoryId = memory.id;
+    // "With everyone" only when most of the town came (bar round 7: two people at the old oak).
+    const most = attendees.length * 2 >= active(state).length;
     for (const r of attendees) {
       const def = residentDef(r.id);
       if (success) {
-        host.mind.perceive(ctx, r, { subject: `m:${memory.id}`, aspect: 'wonderful_time', valence: 0.8, base: 0.45 + 0.3 * def.values.community, source: 'witnessed', placeId: g.placeId, note: `${g.label} with everyone` });
+        host.mind.perceive(ctx, r, { subject: `m:${memory.id}`, aspect: 'wonderful_time', valence: 0.8, base: 0.45 + 0.3 * def.values.community, source: 'witnessed', placeId: g.placeId, note: most ? `${g.label} with everyone` : g.label });
         r.needs.delight = clamp(r.needs.delight + 0.2);
       } else {
         const v = def.values.craft > 0.6 || def.traits.curious > 0.5 ? 0.4 : -0.4;

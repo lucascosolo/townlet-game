@@ -212,8 +212,10 @@ describe('round 1, criterion 3: talking back', () => {
         if (holders > most) [loved, most] = [b, holders];
       }
       sim.remove(loved.x, loved.y);
-      sim.runUntil(at(10, 12));
-      const id = sim.state.order.find((x) => awake(sim, x) && (sim.resident(x).beliefs[beliefKey(STEWARD, 'destroyed_place')] || sim.resident(x).traces[beliefKey(STEWARD, 'destroyed_place')]));
+      // Bar round 7: a sorry in the first two days after a loss is "not yet", and below -0.5 any
+      // sorry is words; so two and a half days on, to someone who does not think ill of you.
+      sim.runUntil(at(10, 21));
+      const id = sim.state.order.find((x) => awake(sim, x) && (sim.resident(x).rel[STEWARD]?.affinity ?? 0) >= -0.5 && (sim.resident(x).beliefs[beliefKey(STEWARD, 'destroyed_place')] || sim.resident(x).traces[beliefKey(STEWARD, 'destroyed_place')]));
       if (!id) continue;
       const r = sim.resident(id);
       const k = beliefKey(STEWARD, 'destroyed_place');
@@ -225,11 +227,11 @@ describe('round 1, criterion 3: talking back', () => {
       const after = r.beliefs[k]?.strength ?? Math.abs(r.traces[k]?.evidence ?? 0);
       expect(after).toBeLessThanOrEqual(before * (2 / 3) + 1e-9);
       // Retold later.
-      sim.runUntil(at(12, 12));
-      if (!awake(sim, id)) sim.runUntil(at(12, 15));
+      sim.runUntil(at(13, 12));
+      if (!awake(sim, id)) sim.runUntil(at(13, 15));
       const later = sim.talk(id, 'me') as TalkAnswer;
       const mem = later.memory;
-      if (mem?.aspect === 'made_amends') expect(n.memoryLine(id, mem)).toMatch(/you and I made it up/);
+      if (mem?.aspect === 'made_amends') expect(n.memoryLine(id, mem)).toMatch(/you and I made it up/i);
       checked++;
     }
     expect(checked).toBeGreaterThanOrEqual(3);

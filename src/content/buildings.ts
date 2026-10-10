@@ -289,15 +289,16 @@ Object.assign(BUILDINGS, {
   fountain: {
     type: 'fountain',
     name: 'Fountain',
-    tier: 3,
+    tier: 1,
     kind: 'social',
     size: [2, 2],
     emits: { water: 0.6, bustle: 0.2, green: 0.1 },
     radius: 2,
     activities: ['socialize', 'stroll'],
     comfortable: 6,
-    cost: 15,
-    blurb: 'The heart of a proper town. Somewhere to meet that is not the teahouse. Opens at Townlet.',
+    // Bar round 7: a real mid-game project for the timber that piles up (was 15, at Townlet).
+    cost: 30,
+    blurb: 'The heart of a proper town. Somewhere to meet that is not the teahouse. Opens at Hamlet.',
   },
   banner: {
     type: 'banner',

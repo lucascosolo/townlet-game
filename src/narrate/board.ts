@@ -2,13 +2,15 @@
 // same rule the page uses (bar round 3: ten identical "asks for more food" cards; five
 // "kept me waiting N days" lines in a row).
 import { dayOfMeals } from '../sim/hunger.js';
+import { seasonOf } from '../sim/time.js';
 import type { Request, SimState } from '../sim/types.js';
 
 /** Open asks grouped into cards: one per kind, a dream ask per building wanted. */
 export function groupAsks(requests: readonly Request[]): Request[][] {
   const groups = new Map<string, Request[]>();
   for (const q of requests) {
-    const key = q.kind === 'aspiration' ? `${q.kind}|${q.wants ?? q.by}` : q.kind;
+    // A work ask is grouped by the building wanted (bar round 7: "Bram, Fen and 3 more ask for a place to work: a bakery").
+    const key = q.kind === 'aspiration' ? `${q.kind}|${q.wants ?? q.by}` : q.kind === 'workplace' ? `${q.kind}|${q.wants ?? ''}` : q.kind;
     const g = groups.get(key);
     if (g) g.push(q);
     else groups.set(key, [q]);
@@ -54,7 +56,9 @@ export function townWorries(state: SimState): string[] {
   const have = larder + granary;
   if (need > 0 && have < need) out.push(have <= 0 ? `The larder is empty, and everyone knows it.` : `The larder holds ${have} food: less than a day's meals for ${Math.round(need)}. People are starting to worry.`);
   // Bar round 5: the granary feeding the town is a worry too (a week of near-empty larder went unremarked).
-  else if (need > 0 && larder < need && granary > 0) out.push(`The larder is nearly bare, and the granary is feeding the town: ${granary} food left in it.`);
+  else if (need > 0 && larder < need && granary > 0)
+    // Bar round 7: before winter that is eating the winter stores, and people mind.
+    out.push(seasonOf(state.tick) === 'winter' ? `The larder is nearly bare, and the granary is feeding the town: ${granary} food left in it.` : `The larder is bare, so the town is eating the winter stores early: ${granary} food left in the granary.`);
   return out;
 }
 

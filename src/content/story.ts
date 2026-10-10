@@ -140,7 +140,8 @@ export const ASPIRATION_LINES: Record<string, string> = {
   'marlow:asking': 'Marlow has been asking everyone where the trade cart goes after the valley. Nobody quite knows, which seems to please him.',
   'marlow:restless': 'Marlow watches the trade cart leave again. He stands there a long time after it has gone.',
   'marlow:decide:stay': 'Marlow lets the trade cart go without him. "Turns out I live here."',
-  'marlow:decide:leave': 'Marlow climbs onto the trade cart with his bag. He waves until the bend in the road.',
+  // Bar round 7: packing, not going: he goes only if the week's notice runs out (he climbed onto the cart and stayed).
+  'marlow:decide:leave': 'Marlow has packed a bag and left it by his door. "When the cart comes back through, I think I go with it."',
 };
 
 /** When a template dream (M3b) comes true. {name}, {x} (its subject), {partner}, {you}, {poss}. */

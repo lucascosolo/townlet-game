@@ -217,10 +217,20 @@ export interface Unseen {
   building: number;
   kind: 'built' | 'removed';
   tick: number;
+  /** Bar round 7: the building removed was where they worked. */
+  work?: boolean;
 }
 
 export interface ResidentState {
   /** A place they held dear that was taken away (bar round 4): weighs on mood for a few days. */
+  /** Bar round 7: a loss you caused (their workplace, their dream's building, a place they held dear): standing is held at HURT_TOP until this tick. */
+  /** Bar round 7: grievances you said sorry for and were forgiven: aspect -> tick. Not raised again for a week. */
+  forgiven?: Record<string, number>;
+  hurtUntil?: number;
+  /** When that loss was taken in (a sorry in the next two days is "not yet"). */
+  hurtAt?: number;
+  /** The last tick they took in something against you (bar round 7: nobody with a fresh grievance thinks the world of you). */
+  grievedAt?: number;
   lostPlace?: { tick: number; weight: number };
   /** Warmth that talk added lately, [tick, amount] (bar round 5: capped weekly). */
   talkWarmth?: Array<[number, number]>;
@@ -611,7 +621,7 @@ export type SimEvent =
   /** Ignored once too often, they stop asking the steward for anything for a while (bar round 3). */
   | { t: number; type: 'gave_up'; who: string }
   /** A dream stage waited on the steward for over a week and the dreamer let it go (bar round 2). */
-  | { t: number; type: 'dream_let_go'; who: string; wants: string }
+  | { t: number; type: 'dream_let_go'; who: string; wants: string; missed?: string }
   /** A dream about someone who has since left the valley is put away (bar round 4). */
   | { t: number; type: 'dream_gone'; who: string; other: string }
   /** A hungry resident went looking for food along the brook or the wild edge (bar round 2). */

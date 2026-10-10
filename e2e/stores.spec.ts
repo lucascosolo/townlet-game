@@ -40,11 +40,12 @@ test('criterion 6: the board shows the winter stores, the HUD the granary, and t
   await runTo(page, at(21, 9));
   await page.getByTestId('tab-board').click();
   const card = page.getByTestId('stores-card');
-  await expect(card).toContainText("Winter stores · Juniper's worry");
   const { put, target } = await page.evaluate(() => {
     const state = (window as unknown as { __townlet: Handle }).__townlet.game.sim.state as { granary?: number; stores?: { target: number } };
     return { put: Math.floor(state.granary ?? 0), target: state.stores?.target ?? 0 };
   });
+  // Bar round 7: the numbers are in the card's title, so they show when Goals is short.
+  await expect(card.getByTestId('stores-title')).toContainText(`Winter stores · ${put}/${target} · 1 day to go`);
   expect(target).toBeGreaterThanOrEqual(150);
   await expect(card.getByTestId('stores-progress')).toContainText(`${put} of ${target} food put by in the granary · 1 day to winter`);
   await expect(page.getByTestId('granary-stock')).toBeVisible();

@@ -76,8 +76,9 @@ describe('round 2, criterion 1: replies that fit', () => {
           if (oak) sim.remove(oak.x, oak.y);
           sim.runUntil(at(6, 14));
         }
-        // The oak falls at noon on day 6; they notice it over the day, and bring it up on day 7.
-        oakDay = day === 7;
+        // The oak falls at noon on day 6; they notice it over the day. Bar round 7: a sorry is "not
+        // yet" for two days, so the sorry that must be forgiven is on day 9.
+        oakDay = day === 9;
         for (const id of sim.state.order) {
           if (!awake(sim, id)) continue;
           for (const q of questions) {
@@ -100,7 +101,8 @@ describe('round 2, criterion 1: replies that fit', () => {
     expect(ownNote('let the larder run bare')).toBe('I let the larder run bare');
   });
 
-  it('the day after the oak falls, everyone who minded is offered a sorry for the oak and forgives', { timeout: 120_000 }, () => {
+  // Bar round 7: two days after, not the next day (a sorry in the first two days after a loss is "not yet").
+  it('two days after the oak falls, everyone who minded is offered a sorry for the oak and forgives', { timeout: 120_000 }, () => {
     let checked = 0;
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'none');
@@ -113,12 +115,14 @@ describe('round 2, criterion 1: replies that fit', () => {
         .sort((a, b) => holders(b) - holders(a) || a.id - b.id)[0]!;
       const name = oak.type === 'oak' ? 'old oak' : buildingDef(oak.type).name.toLowerCase();
       sim.remove(oak.x, oak.y);
-      sim.runUntil(at(9, 12));
+      sim.runUntil(at(10, 21));
       const k = beliefKey(STEWARD, 'destroyed_place');
       for (const id of sim.state.order) {
         if (!awake(sim, id)) continue;
         const r = sim.resident(id);
         if (!(r.beliefs[k] || r.traces[k])) continue;
+        // Bar round 7: below -0.5 any sorry is words, so only those who do not think ill of you.
+        if ((r.rel[STEWARD]?.affinity ?? 0) < -0.5) continue;
         // Whoever minded brings it up in one of the three questions; a sorry then is for the oak.
         let sorry: { aspect?: string; about?: string } | undefined;
         for (const q of ['me', 'mind', 'how'] as const) {

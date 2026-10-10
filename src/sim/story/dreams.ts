@@ -170,6 +170,9 @@ export const DREAM_TEMPLATES: DreamTemplate[] = [
         {
           id: 'peace',
           next: 'Make things right with {x}',
+          // Waits on the other person, so it keeps the slower fallback (bar round 7: at six days
+          // rivalries made up before they formed: 16 rival-hours a month against 674).
+          waitsOnOther: true,
           check: (h, rr) => {
             const o = h.state.residents[idOf(subject)] as ResidentState | undefined;
             if (!o || o.departed) return true;

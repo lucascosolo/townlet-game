@@ -2,6 +2,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { currentStage } from '../src/sim/story/aspirations.js';
 import { BELIEF_STATEMENTS } from '../src/content/voice.js';
 import { Narrator, sentenceCount } from '../src/narrate/narrator.js';
 import { residentDef } from '../src/content/residents.js';
@@ -304,7 +305,8 @@ describe('round 3, criterion 6: a board that does not repeat', () => {
       });
       for (let day = 1; day <= 30; day++) {
         sim.runUntil(at(day, 9));
-        const kinds = groupAsks(sim.state.requests.filter((q) => q.status === 'open')).map((g) => (g[0]!.kind === 'aspiration' ? `${g[0]!.kind}|${g[0]!.wants ?? g[0]!.by}` : g[0]!.kind));
+        // Bar round 7: a work ask is a card per building wanted.
+        const kinds = groupAsks(sim.state.requests.filter((q) => q.status === 'open')).map((g) => (g[0]!.kind === 'aspiration' ? `${g[0]!.kind}|${g[0]!.wants ?? g[0]!.by}` : g[0]!.kind === 'workplace' ? `${g[0]!.kind}|${g[0]!.wants ?? ''}` : g[0]!.kind));
         expect(new Set(kinds).size).toBe(kinds.length);
       }
     }
@@ -363,6 +365,8 @@ describe('round 3, criteria 8 to 10: dreams, worn ground, places', () => {
         for (const r of rs) {
           if (r.aspiration.done) continue;
           const waiting = sim.state.requests.some((q) => q.by === r.id && q.kind === 'aspiration' && q.status === 'open');
+          // Bar round 7: a step that waits on a date (Marlow's choice before the cart's last visit) waits for it.
+          if (currentStage(sim.state, r)?.dated) continue;
           if (!waiting) expect((sim.state.tick - r.aspiration.since) / 1440, `seed ${seed} day ${day} ${r.id}`).toBeLessThanOrEqual(10);
         }
       }

@@ -322,8 +322,10 @@ export function applyReply(
       // Bar round 8: below zero, a sorry is heard but not yet believed ("we'll see").
       if ((r.rel[STEWARD]?.affinity ?? 0) < 0) {
         (r.sorryFor ??= {})[aspect] = tick;
-        soften(r, aspect, 0.9);
+        // The air clears a little (what is fresh eases), but they wait to see what you do.
+        for (const g of grievances(r, tick)) soften(r, g.aspect, tick - g.last < 3 * TICKS_PER_DAY ? 0.8 : 0.92);
         adjust(r, STEWARD, { affinity: WE_LL_SEE_GAIN, familiarity: 0.02 }, tick);
+        r.sorryOnTrial = { aspect, tick };
         return { stance: 'we_ll_see', aspect };
       }
       (r.sorryFor ??= {})[aspect] = tick;
@@ -347,4 +349,22 @@ export function applyReply(
       return { stance: 'convinced', aspect };
     }
   }
+}
+
+/** Bar round 8: how long a "we'll see" waits for you to show it. */
+export const SHOW_IT_WITHIN = 7 * TICKS_PER_DAY;
+
+/**
+ * A sorry heard as "we'll see", followed within a week by doing what they asked: now it counts,
+ * as a sorry to someone who thought well of you would have. True if it did.
+ */
+export function showAmends(r: ResidentState, tick: number, perceive: (p: { aspect: string; valence: number; base: number; note: string }) => void): boolean {
+  const trial = r.sorryOnTrial;
+  if (!trial || tick - trial.tick > SHOW_IT_WITHIN || tick < trial.tick) return false;
+  delete r.sorryOnTrial;
+  for (const g of grievances(r, tick)) soften(r, g.aspect, tick - g.last < 3 * TICKS_PER_DAY ? 0.6 : 0.85);
+  adjust(r, STEWARD, { affinity: 0.06, trust: 0.03 }, tick);
+  perceive({ aspect: 'made_amends', valence: 0.6, base: 0.5, note: 'said sorry, and showed it' });
+  (r.forgiven ??= {})[trial.aspect] = tick;
+  return true;
 }

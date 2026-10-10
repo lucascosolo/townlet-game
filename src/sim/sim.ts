@@ -1,7 +1,7 @@
 // The simulation loop. Owns the body and the world; delegates cognition to a Mind.
 
 import { recallFor, storyKey } from './recall.js';
-import { applyReply, offersFor, offersForCut, type AnswerCut, type ReplyKind, type ReplyResult } from './replies.js';
+import { applyReply, offersFor, offersForCut, showAmends, type AnswerCut, type ReplyKind, type ReplyResult } from './replies.js';
 import { buildingDef } from '../content/buildings.js';
 import { generateNewcomer } from '../content/newcomers.js';
 import { registerResident, residentDef } from '../content/residents.js';
@@ -189,7 +189,8 @@ function detailFor(q: Quality, change: number): string {
 /** How often a resident's asks of this kind went ignored in the last fortnight. */
 /** Every ask of theirs lapsed in the last fortnight. */
 function allLapses(state: SimState, who: string, tick: number): number {
-  return state.requests.filter((q) => q.by === who && q.status === 'lapsed' && (q.closedTick ?? 0) > tick - 14 * TICKS_PER_DAY).length;
+  // Bar round 8: a cottage for someone else's kin does not count towards giving up on you.
+  return state.requests.filter((q) => q.by === who && q.kind !== 'home_for_kin' && q.status === 'lapsed' && (q.closedTick ?? 0) > tick - 14 * TICKS_PER_DAY).length;
 }
 
 function lapsesOf(state: SimState, who: string, kind: Request['kind'], tick: number): number {
@@ -698,6 +699,7 @@ export class Simulation implements AspirationHost {
     // full plates (a hungry week weighed nothing once everyone felt listened to).
     const stillBare = q.kind === 'more_food' && bareLarder(state);
     if (stewardActed) this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'listens_to_me', valence: 1, base: stillBare ? 0.3 : 0.9, source: 'witnessed', note: stillBare ? 'built food for us' : ASK_THANKS[q.kind] });
+    if (stewardActed && showAmends(r, state.tick, (p) => this.mind.perceive(ctx, r, { subject: STEWARD, source: 'witnessed', ...p }))) this.emit({ t: state.tick, type: 'amends_shown', who: r.id });
     this.emit({ t: state.tick, type: 'request_closed', request: { ...q } });
     return true;
   }
@@ -1299,7 +1301,9 @@ export class Simulation implements AspirationHost {
       // An ask left open weighs on them a little each morning it stays open (bar round 1): being
       // kept waiting used to cost nothing until the day it lapsed.
       const waited = (tick - q.postedTick) / TICKS_PER_DAY;
-      if (waited > 1) {
+      // Bar round 8: a cottage for someone else's cousin is a wish, not a need: it does not rankle nightly.
+      const forOthers = q.kind === 'home_for_kin';
+      if (waited > 1 && !forOthers) {
         // The longer it sits, the more it rankles.
         const days = Math.floor(waited);
         const forWhat = q.kind === 'aspiration' && q.wants ? `${/^[aeiou]/i.test(buildingDef(q.wants).name) ? 'an' : 'a'} ${buildingDef(q.wants).name.toLowerCase()}` : WISH_LABELS[q.kind].toLowerCase();
@@ -1312,7 +1316,7 @@ export class Simulation implements AspirationHost {
         q.closedTick = tick;
         // Bar round 5: name what was not done ("(what the steward did: nothing was done)").
         const forWhat = q.kind === 'aspiration' && q.wants ? `${/^[aeiou]/i.test(buildingDef(q.wants).name) ? 'an' : 'a'} ${buildingDef(q.wants).name.toLowerCase()}` : WISH_LABELS[q.kind].toLowerCase();
-        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'ignores_me', valence: -0.7, base: before === 0 ? 0.6 : 0.3, source: 'witnessed', note: `never got me ${forWhat}` });
+        this.mind.perceive(ctx, r, { subject: STEWARD, aspect: 'ignores_me', valence: -0.7, base: forOthers ? 0.15 : before === 0 ? 0.6 : 0.3, source: 'witnessed', note: `never got me ${forWhat}` });
         this.emit({ t: tick, type: 'request_closed', request: { ...q } });
       }
     }
@@ -1322,7 +1326,7 @@ export class Simulation implements AspirationHost {
       if (stoppedAsking) break;
       if (state.requests.some((q) => q.by === r.id && q.kind === kind && (q.status === 'open' || (q.closedTick ?? 0) > tick - 3 * TICKS_PER_DAY))) continue;
       // Ignored twice lately, they stop asking for a while.
-      if (lapsesOf(state, r.id, kind, tick) >= 2) continue;
+      if (lapsesOf(state, r.id, kind, tick) >= (kind === 'home_for_kin' ? 1 : 2)) continue;
       const a = assess(state, r, kind);
       if (!a.want) continue;
       const q: Request = { id: state.nextRequestId++, by: r.id, kind, subject: a.subject, postedTick: tick, status: 'open', ...(a.wants ? { wants: a.wants } : {}) };

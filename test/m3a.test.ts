@@ -8,7 +8,7 @@ import { runScenario } from '../src/scenarios/index.js';
 import { mindTopics, topOfMind } from '../src/sim/mind/thoughts.js';
 import type { Simulation } from '../src/sim/sim.js';
 import { ASPIRATIONS } from '../src/sim/story/aspirations.js';
-import { at } from '../src/sim/time.js';
+import { at, dayOf } from '../src/sim/time.js';
 import type { SimEvent } from '../src/sim/types.js';
 import { SEEDS } from './helpers.js';
 
@@ -75,8 +75,7 @@ describe("criterion 2: Marlow's choice", () => {
         // made the morning that step begins rather than on day 22.
         const m = sim.resident('marlow');
         while (sim.tick < at(26, 0) && currentStage(sim.state, m)?.id !== 'decide' && !m.aspiration.done) sim.runUntil(sim.tick + 60);
-        if (isolate) {
-          // The twin: same town, same day, but nobody close and nothing holding him.
+        const isolateNow = () => {
           for (const [id, x] of Object.entries(m.rel)) {
             if (id === 'steward') {
               x.affinity = 0;
@@ -91,6 +90,14 @@ describe("criterion 2: Marlow's choice", () => {
             }
           }
           m.disposition = 0.5;
+        };
+        // The twin: same town, same day, but nobody close and nothing holding him.
+        if (isolate) isolateNow();
+        // Bar round 8: newcomers come sooner now, and on seed 3 one befriended the isolated twin in the
+        // fortnight before he decides, so the twin is made isolated again on the morning he decides.
+        if (isolate && dayOf(sim.tick) < 23 && !m.aspiration.done) {
+          sim.runUntil(at(22, 23));
+          isolateNow();
         }
         // Bar round 2: deciding to go gives the week's notice anyone else gets, and a good week can turn it round.
         let stayed = false;

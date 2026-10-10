@@ -307,7 +307,7 @@ export function factSaid(state: SimState, r: ResidentState, key: string): string
   switch (key) {
     case 'job': {
       const job = r.jobId !== null ? state.buildings.find((b) => b.id === r.jobId) : undefined;
-      if (job) return said(state, r, [`I work at the ${buildingDef(job.type).name.toLowerCase()}.`, `You'll find me at the ${buildingDef(job.type).name.toLowerCase()} most days.`, `My days go to the ${buildingDef(job.type).name.toLowerCase()}.`, `I'm at the ${buildingDef(job.type).name.toLowerCase()} most of the day.`]);
+      if (job) return said(state, r, [`I work at the ${buildingDef(job.type).name.toLowerCase()}.`, `You'll find me at the ${buildingDef(job.type).name.toLowerCase()} most days.`, `My days go to the ${buildingDef(job.type).name.toLowerCase()}.`, `I'm at the ${buildingDef(job.type).name.toLowerCase()} most of the day.`, `The ${buildingDef(job.type).name.toLowerCase()} is where I earn my keep.`, `Mornings, I'm off to the ${buildingDef(job.type).name.toLowerCase()}.`]);
       if (def.job) {
         const one = singularName(def.job);
         return `I'd love to work at ${/^[aeiou]/i.test(one) ? 'an' : 'a'} ${one}.`;
@@ -315,20 +315,20 @@ export function factSaid(state: SimState, r: ResidentState, key: string): string
       return 'I keep house and help where I can.';
     }
     case 'lifts':
-      return said(state, r, [`Nothing lifts me like ${lowerFirst(value.replace(/^Loves /, ''))}.`, `Give me ${lowerFirst(value.replace(/^Loves /, ''))} and I'm happy.`, `I'm never better than with ${lowerFirst(value.replace(/^Loves /, ''))}.`, `${value.replace(/^Loves /, '').replace(/^./, (c) => c.toUpperCase())} always cheers me.`]);
+      return said(state, r, [`Nothing lifts me like ${lowerFirst(value.replace(/^Loves /, ''))}.`, `Give me ${lowerFirst(value.replace(/^Loves /, ''))} and I'm happy.`, `I'm never better than with ${lowerFirst(value.replace(/^Loves /, ''))}.`, `${value.replace(/^Loves /, '').replace(/^./, (c) => c.toUpperCase())} always cheers me.`, `If I'm low, ${lowerFirst(value.replace(/^Loves /, ''))} sets me right.`, `There's no better tonic for me than ${lowerFirst(value.replace(/^Loves /, ''))}.`]);
     case 'dislikes':
       return value.startsWith("Can't abide") ? `I can't abide ${value.replace(/^Can't abide /, '')}.` : 'Not much bothers me, truly.';
     case 'quirk':
       return def.quirks.length ? def.quirks.map((q) => QUIRK_SAID[q] ?? '').filter(Boolean).join(' ') || 'I have my habits, like anyone.' : 'I have no odd habits to speak of.';
     case 'needs': {
       const need = value.match(/^Needs more (\w+) than most$/)?.[1];
-      return need ? said(state, r, [`I need ${NEED_SAID[need] ?? need}, more than most.`, `Without ${NEED_SAID[need] ?? need} I'm no good to anyone.`, `More than most, I need ${NEED_SAID[need] ?? need}.`, `I go to pieces without ${NEED_SAID[need] ?? need}.`]) : 'I am easy to please.';
+      return need ? said(state, r, [`I need ${NEED_SAID[need] ?? need}, more than most.`, `Without ${NEED_SAID[need] ?? need} I'm no good to anyone.`, `More than most, I need ${NEED_SAID[need] ?? need}.`, `I go to pieces without ${NEED_SAID[need] ?? need}.`, `Give me ${NEED_SAID[need] ?? need} and I'm no trouble.`, `${(NEED_SAID[need] ?? need).replace(/^./, (c) => c.toUpperCase())}: I can't do without it.`]) : 'I am easy to please.';
     }
     case 'dream':
       // The dream is the answer to "what are you hoping for" itself; it is learned, not said twice (bar round 1).
       return '';
     case 'values':
-      return said(state, r, [`What matters to me is ${value.replace(/^Cares about /, '')}.`, `I care about ${value.replace(/^Cares about /, '')}, above most things.`, `If you want to know me, I set great store by ${value.replace(/^Cares about /, '')}.`, `${value.replace(/^Cares about /, '').replace(/^./, (c) => c.toUpperCase())}: that's what I care about.`]);
+      return said(state, r, [`What matters to me is ${value.replace(/^Cares about /, '')}.`, `I care about ${value.replace(/^Cares about /, '')}, above most things.`, `If you want to know me, I set great store by ${value.replace(/^Cares about /, '')}.`, `${value.replace(/^Cares about /, '').replace(/^./, (c) => c.toUpperCase())}: that's what I care about.`, `For me it all comes down to ${value.replace(/^Cares about /, '')}.`, `I hold ${value.replace(/^Cares about /, '')} dear, and always have.`]);
     case 'background':
       // In their own words (bar round 1: a bare lead-in with nothing after it).
       return def.bio ?? `I came to the valley for my own reasons. Ask me again some time.`;

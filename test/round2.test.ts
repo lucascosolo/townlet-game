@@ -140,7 +140,8 @@ describe('round 2, criterion 1: replies that fit', () => {
         checked++;
       }
     }
-    expect(checked).toBeGreaterThanOrEqual(3);
+    // Moved measure (bar round 8): those below zero now answer "we'll see", so the count of forgivers is lower (was three).
+    expect(checked).toBeGreaterThanOrEqual(2);
   });
 });
 

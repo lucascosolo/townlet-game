@@ -387,6 +387,14 @@ export class Narrator {
     // Bar round 8: nor before "of course" ("Kind of, of course!").
     const opensLoud = /^(Oh|Ha|Ooh|Hey|Listen|Kaboom|What|Of course)\b/.test(text) || /^[^.!?]{1,40}\?(\s|$)/.test(text) || (this.keepsCapital(text) && !/^I\b/.test(text)) || /^[A-Z][a-z']*( [a-z']+)?,/.test(text);
     const today = dayOf(this.state.tick);
+    // Bar round 8: a line that opens with one of their tics ("You know, I'm quite fond...") uses it for the day.
+    for (const t of def.voice.tics) {
+      const bare = t.replace(/[^a-z' ]/gi, '').trim().toLowerCase();
+      if (!bare || !text.toLowerCase().startsWith(`${bare},`)) continue;
+      // Already said today: the line goes without it ("Oh, I adore the commons" twice in a day).
+      if (this.ticUsed.get(`${who}|${t}`) === today) text = cap(text.slice(bare.length + 1).trimStart());
+      else this.ticUsed.set(`${who}|${t}`, today);
+    }
     // Bar round 5: no tic on a reply's response ("I must say, allow me my opinion, steward.").
     const tics = opensLoud || noTic ? [] : def.voice.tics.filter((t) => !text.toLowerCase().includes(t.toLowerCase()) && this.ticUsed.get(`${who}|${t}`) !== today);
     if (tics.length > 0 && chance(this.rng, 0.25)) {
@@ -430,13 +438,13 @@ export class Narrator {
   private memoryTemplate: string | null = null;
   private readonly bestTold = new Map<string, Array<{ id: number; aspect: string; t: number }>>();
 
-  private freshest(who: string, options: string[], mineGapDays = 3, mark = true): string {
+  private freshest(who: string, options: string[], mineGapDays = 3, mark = true, anyGapDays = 8): string {
     const t = this.state.tick;
     const mine = (o: string) => this.saidBy.get(`${who}|${o}`) ?? -Infinity;
     const any = (o: string) => this.saidAny.get(o) ?? -Infinity;
     // Nobody repeats a line they said lately, and nobody says a line anyone in town said in the
     // last eight days (bar round 2: one chatty line twelve times in a month).
-    const fresh = options.filter((o) => t - mine(o) >= mineGapDays * 1440 && t - any(o) >= 8 * 1440);
+    const fresh = options.filter((o) => t - mine(o) >= mineGapDays * 1440 && t - any(o) >= anyGapDays * 1440);
     const line = fresh.length ? pick(this.rng, fresh) : [...options].sort((a, b) => Math.max(mine(a), any(a)) - Math.max(mine(b), any(b)))[0] ?? '...';
     if (mark) this.markSaid(who, line);
     return line;
@@ -629,7 +637,8 @@ export class Narrator {
         break;
       case 'wish':
         if (e.phase === 'made') this.pushBoard(() => `Town Wish for the season: ${e.wish.label}. (${this.names(e.wish.supporters)} would like this.)`);
-        else if (e.phase === 'granted') this.announce(e.t, `Wish granted: ${e.wish.label.toLowerCase()}. The whole town feels it.`);
+        // Bar round 8: told freshly when the same wish comes true again within the season.
+        else if (e.phase === 'granted') this.announce(e.t, `Wish granted: ${e.wish.label.toLowerCase()}. ${this.freshLine('wish', ['The whole town feels it.', 'People stop to look.', 'Word goes round by supper.', 'It shows at once.'])}`);
         else if (e.phase === 'dropped') this.pushBoard(() => `The wish for ${e.wish.label.toLowerCase()} leaves with ${this.names(e.wish.supporters)}.`);
         else {
           // Only those still in town (bar round 4).
@@ -764,6 +773,10 @@ export class Narrator {
         this.live(e.t, look ? `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${look[1]}` : words ? `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)}: "${words}"` : `${this.you ? 'You say' : 'The steward says'} to ${this.name(e.who)}: "${this.lastSaid.text}" ${this.name(e.who)} listens.`);
         break;
       }
+      case 'amends_shown':
+        // Bar round 8: the "we'll see" was waiting on this.
+        this.live(e.t, `${this.name(e.who)} sees that ${this.you ? 'you' : 'the steward'} meant that sorry.`);
+        break;
       case 'gift':
         this.live(e.t, `A trader's cart rattles into town and leaves ${e.timber} timber and ${e.food} food by the well. "Compliments of the road," says the driver, and is gone.`);
         break;
@@ -1141,7 +1154,8 @@ export class Narrator {
     const lines = rec.valence >= 0 ? RECALL_LINES.good : RECALL_LINES.bad;
     const options = lines[residentDef(who).voice.register] ?? lines.plain;
     // Rested a fortnight each by each resident (bar round 7), and counted as said only when the answer keeps it.
-    const line = this.freshest(who, options, 14, false);
+    // Bar round 8: and eleven days across the town, now that the town grows past a dozen.
+    const line = this.freshest(who, options, 14, false, 11);
     this.memoryTemplate = line;
     return sentenceCase(fixArticles(this.fill(line, FIRST_PERSON, { clause: this.memoryClause(who, rec, youAreSteward), when: this.whenSaid(rec.tick) })));
   }
@@ -1299,7 +1313,7 @@ export class Narrator {
     const base = words;
     const before = said.filter((x) => x.base === base).pop();
     // Bar round 8: "As I told you" is for a view or a hope; a mood or what's on their mind is just the same as before.
-    if (before) words = a.question === 'how' || a.question === 'mind' ? `Much the same as on day ${dayOf(before.t)}. ${words}` : `As I told you on day ${dayOf(before.t)}: ${words}`;
+    if (before) words = a.question === 'how' || a.question === 'mind' ? `Much the same as on day ${dayOf(before.t)}: ${words}` : `As I told you on day ${dayOf(before.t)}: ${words}`;
     if (remembered) {
       this.lastMemoryAt.set(e.who, e.t);
       if (this.memoryTemplate) this.markSaid(e.who, this.memoryTemplate);

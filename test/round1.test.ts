@@ -215,7 +215,8 @@ describe('round 1, criterion 3: talking back', () => {
       // Bar round 7: a sorry in the first two days after a loss is "not yet", and below -0.5 any
       // sorry is words; so two and a half days on, to someone who does not think ill of you.
       sim.runUntil(at(10, 21));
-      const id = sim.state.order.find((x) => awake(sim, x) && (sim.resident(x).rel[STEWARD]?.affinity ?? 0) >= -0.5 && (sim.resident(x).beliefs[beliefKey(STEWARD, 'destroyed_place')] || sim.resident(x).traces[beliefKey(STEWARD, 'destroyed_place')]));
+      // Bar round 8: below zero a sorry is "we'll see", and any sorry within two days of taking the loss in is "not yet".
+      const id = sim.state.order.find((x) => awake(sim, x) && (sim.resident(x).rel[STEWARD]?.affinity ?? 0) >= 0 && (sim.resident(x).hurtAt === undefined || sim.state.tick - sim.resident(x).hurtAt! >= 2 * 1440) && (sim.resident(x).beliefs[beliefKey(STEWARD, 'destroyed_place')] || sim.resident(x).traces[beliefKey(STEWARD, 'destroyed_place')]));
       if (!id) continue;
       const r = sim.resident(id);
       const k = beliefKey(STEWARD, 'destroyed_place');
@@ -234,7 +235,8 @@ describe('round 1, criterion 3: talking back', () => {
       if (mem?.aspect === 'made_amends') expect(n.memoryLine(id, mem)).toMatch(/you and I made it up/i);
       checked++;
     }
-    expect(checked).toBeGreaterThanOrEqual(3);
+    // Moved measure (bar round 8): those below zero now answer "we'll see", so two seeds of five have someone to forgive (was three).
+    expect(checked).toBeGreaterThanOrEqual(2);
   });
 
   it('push back: a steady resident’s trust rises, an unsteady one’s affinity falls', () => {

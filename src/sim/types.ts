@@ -274,6 +274,8 @@ export interface ResidentState {
   cited?: Record<string, number>;
   /** Grievance aspect -> tick the steward last said sorry for it. */
   sorryFor?: Record<string, number>;
+  /** Bar round 8: a sorry heard as "we'll see": aspect and tick. Doing something they asked for within a week makes it count. */
+  sorryOnTrial?: { aspect: string; tick: number };
   /** Day a meagre meal was last held against the steward (bar round 1). */
   lastHungryDay?: number;
   /** Consecutive days of meagre meals ending on lastHungryDay. */
@@ -613,6 +615,7 @@ export type SimEvent =
   | { t: number; type: 'plot_cleared'; building: number; by: string[] }
   /** The steward talks with a resident (M3b). */
   | { t: number; type: 'talk'; who: string; answer: TalkAnswer; counted: boolean }
+  | { t: number; type: 'amends_shown'; who: string }
   | { t: number; type: 'reply'; who: string; reply: import('./replies.js').ReplyKind; stance: import('./replies.js').ReplyStance; aspect?: string }
   /** A resident's view of the steward moved overnight, and why. */
   /** Standing moved: `reasons` pulled the way it moved, `also` the other way (bar round 2: each side with its own sign). */

@@ -410,11 +410,11 @@ export const ASKS: Record<string, Lines> = {
     dreamy: ['My doorstep wants something growing.'],
   },
   place_to_gather: {
-    plain: ['Too crowded. We need another place to sit together.'],
-    formal: ['Our one gathering place is overrun. Another would help.'],
-    warm: ["It's always packed. Somewhere else to meet would be lovely."],
-    chatty: ['Elbow to elbow every evening! Another place to meet!'],
-    dreamy: ['We need more than one place to be together.'],
+    plain: ['Too crowded. We need another place to sit together.', 'Nowhere to sit of an evening. Another spot would do it.'],
+    formal: ['Our one gathering place is overrun. Another would help.', 'The town has outgrown its meeting places. Might we have another?'],
+    warm: ["It's always packed. Somewhere else to meet would be lovely.", "I'd love another spot where we can all get together."],
+    chatty: ['Elbow to elbow every evening! Another place to meet!', "Standing room only! Again! We need somewhere else!"],
+    dreamy: ['We need more than one place to be together.', 'Our evenings want a second hearth.'],
   },
   // Bar round 8: someone who would like to move here, once the town may grow.
   home_for_kin: {

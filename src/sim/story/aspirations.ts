@@ -281,6 +281,8 @@ export const ASPIRATIONS: Record<string, AspirationDef> = {
         id: 'winter',
         next: 'Keep the town fed through winter',
         place: 'glasshouse',
+        // Bar round 8: winter is a date, not something days of effort bring sooner.
+        dated: true,
         check: (h) => seasonOf(h.state.tick) === 'winter',
         enter: (h) => {
           for (const x of active(h.state)) feel(h, x, { subject: 'r:juniper', aspect: 'kind_to_me', valence: 0.6, base: 0.35, note: 'greens from the glasshouse in winter' });

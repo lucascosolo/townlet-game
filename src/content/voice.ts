@@ -162,12 +162,13 @@ export const SPEECH: Record<string, Lines> = {
     chatty: ['Slept like a log! You are a marvel, steward!'],
     dreamy: ['The night was quiet again. Thank you.'],
   },
+  // Bar round 8: several each; with the cottage ask more asks are granted in a month.
   thanks: {
-    plain: ['That helps. Thanks.'],
-    formal: ['Thank you, steward. It is just what was needed.'],
-    warm: ['Oh, thank you! That is exactly what I hoped for.'],
-    chatty: ['You did it! Marvellous!'],
-    dreamy: ['It came true. Thank you.'],
+    plain: ['That helps. Thanks.', 'Good. Thank you.', 'Just right. Ta.'],
+    formal: ['Thank you, steward. It is just what was needed.', 'I am obliged to you, steward.', 'That is very good of you. Thank you.'],
+    warm: ['Oh, thank you! That is exactly what I hoped for.', "You listened! Thank you, really.", "That's made my week. Thank you."],
+    chatty: ['You did it! Marvellous!', 'Yes! Yes! Thank you!', "Look at that! You're a wonder!"],
+    dreamy: ['It came true. Thank you.', 'A wish, and then a thing. Thank you.', 'You made it real. Thank you.'],
   },
   lapsed: {
     plain: ['Asked. Nothing happened.', 'No answer. Noted.', 'Asked the steward. Might as well not have.', 'Heard nothing back.', 'That ask went nowhere.'],
@@ -180,8 +181,9 @@ export const SPEECH: Record<string, Lines> = {
     plain: ['{statement}. Just saying.', '{statement}.'],
     formal: ['I have come to think {statement}.', 'If you ask me, {statement}.'],
     warm: ['Between us, {statement}.', 'You know, {statement}.', "Can I tell you something? {statement}."],
-    chatty: ['Have you noticed? {statement}!', 'Listen, listen: {statement}!'],
-    dreamy: ['I keep thinking {statement}.', 'Do you ever feel like {statement}?'],
+    // Bar round 8: more ways in, now the town has more talkers (one chatty line five times a month).
+    chatty: ['Have you noticed? {statement}!', 'Listen, listen: {statement}!', 'Guess what I think? {statement}!', 'Honestly? {statement}! Everyone says so!'],
+    dreamy: ['I keep thinking {statement}.', 'Do you ever feel like {statement}?', 'It seems to me {statement}.'],
   },
   // Bar round 5: five each; a hard week has more comforting in it, and one line came round six times.
   comfort: {

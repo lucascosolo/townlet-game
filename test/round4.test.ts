@@ -185,7 +185,8 @@ describe('round 4, criterion 2: everyday play moves mood', () => {
     }
   });
 
-  it.fails('a larder held below a day\'s meals for a week lowers mean mood by 0.06 on every seed (missed on seed 1 in round 7: 0.028; see the note)', { timeout: 900_000 }, () => {
+  // Bar round 8: met on every seed now (it was an expected failure from round 7), so it is a plain test again.
+  it('a larder held below a day\'s meals for a week lowers mean mood by 0.06 on every seed', { timeout: 900_000 }, () => {
     for (const seed of SEEDS) {
       const make = () => {
         const sim = runScenario('bakery', seed, 'considerate', { scripted: false });

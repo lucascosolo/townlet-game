@@ -307,7 +307,7 @@ export function factSaid(state: SimState, r: ResidentState, key: string): string
   switch (key) {
     case 'job': {
       const job = r.jobId !== null ? state.buildings.find((b) => b.id === r.jobId) : undefined;
-      if (job) return said(state, r, [`I work at the ${buildingDef(job.type).name.toLowerCase()}.`, `You'll find me at the ${buildingDef(job.type).name.toLowerCase()} most days.`, `My days go to the ${buildingDef(job.type).name.toLowerCase()}.`, `I'm at the ${buildingDef(job.type).name.toLowerCase()} most of the day.`, `The ${buildingDef(job.type).name.toLowerCase()} is where I earn my keep.`, `Mornings, I'm off to the ${buildingDef(job.type).name.toLowerCase()}.`]);
+      if (job) return said(state, r, [`I work at the ${buildingDef(job.type).name.toLowerCase()}.`, `You'll find me at the ${buildingDef(job.type).name.toLowerCase()} most days.`, `My days go to the ${buildingDef(job.type).name.toLowerCase()}.`, `I'm at the ${buildingDef(job.type).name.toLowerCase()} most of the day.`, `I earn my keep at the ${buildingDef(job.type).name.toLowerCase()}.`, `Mornings, I'm off to the ${buildingDef(job.type).name.toLowerCase()}.`]);
       if (def.job) {
         const one = singularName(def.job);
         return `I'd love to work at ${/^[aeiou]/i.test(one) ? 'an' : 'a'} ${one}.`;

@@ -14,6 +14,18 @@ These are decisions that change what gets built. Each entry says what was chosen
 - **Talk that does not lean on stock clauses.** Facts are told in several wordings; memory openers rest a week; "How are you?" to someone who is well offers a question that gets an answer ("What's been the best of it?"); a neutral view of you gets neutral chips; a lapsed proposal is held by the proposer and its keenest backers, not the whole town; a grievance you have apologised for and been forgiven is not raised again for a week.
 - **Middle dream steps move.** Every step that needs nothing from you or the calendar is done within six days; a step's line never repeats its dream's title.
 
+**Settled while building:**
+- **A loss you caused holds standing at 0.6 or below for ten days**; your workplace counts as yours to lose ("took away my jetty"). Anyone who took in something against you in the last week stands at 0.85 at most, and good news lifts high regard by half as much at the top (with no damping four of six founders stood above 0.8 in a considerate town; at 0.8 damping hardly anyone did; 0.4 left one town's spread under 0.4).
+- **A sorry is "not yet" for two days after such a loss, and a fresh grievance is now raised for three days, not two**, so there is a day when a sorry can land; below −0.5 any sorry is words.
+- **Eating the winter stores early worries at half the weight of a low larder**; the standing cap and the smaller thanks still key on a larder bare of granary too.
+- **The fountain opens at Hamlet and costs 30 timber** (was 15, at Townlet).
+- **Marlow packs a bag rather than climbing onto the cart**; his choice waits for its date (day 23). **Bram's feast is told the morning after a supper with an oven standing**, or missed with its own line. Steps that wait on a date never finish by days passing; making peace waits on the other person and keeps the nine-day fallback; every other later step finishes within six days.
+- **Two places of a kind are told apart** ("the old teahouse", "the new teahouse"): no resident held opposite tastes of one building in 210 checks, so review 7's contradiction was two teahouses with one name.
+- **A dream to remember someone who left is no longer put away the morning after it forms** (its subject has left by design); this was the "puts away what she had in mind for Wren" line.
+- **A memory is brought up at most once in three days by each resident**, its wording rests a fortnight and counts as said only when the answer keeps it; eight wordings per voice.
+- **Facts have four wordings each**, fixed per resident. **The winter stores card leads the Goals widget.**
+- **Rivalries now barely form under a considerate steward** (steps finishing within six days warm the town): round 1's "rivals keep apart" measure moves to a town with no steward, where they do form.
+
 **Rejected:**
 - *Upkeep on buildings as a timber sink.* It would turn a cozy town into a maintenance chore; a bigger thing to build is the gentler answer.
 - *Removing the granary's ability to feed the town.* Stores are meant to be eaten; the point is that eating them early is noticed.

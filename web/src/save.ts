@@ -16,6 +16,21 @@ export interface SaveData {
   tick: number;
   commands: Command[];
   savedAt: string;
+  /**
+   * Audit 2026-10-10: whether the scenario's scripted commands ran. A save without it ran them
+   * if it was made before bar round 1 went live (see scriptedFor).
+   */
+  scripted?: boolean;
+}
+
+/** When bar round 1, which turned the scenarios' scripted commands off in the browser, went live. */
+const SCRIPTS_OFF_SINCE = Date.parse('2026-10-08T21:29:48Z');
+
+/** Whether a save's town ran its scenario's scripted commands (older saves did not say). */
+export function scriptedFor(data: SaveData): boolean {
+  if (data.scripted !== undefined) return data.scripted;
+  const at = Date.parse(data.savedAt);
+  return Number.isFinite(at) && at < SCRIPTS_OFF_SINCE;
 }
 
 /** Browser storage can be missing or refuse (private windows, blocked site data): saving then quietly does nothing. */
@@ -36,6 +51,7 @@ export function saveGame(game: Game): void {
     tick: game.sim.tick,
     commands: game.commandLog,
     savedAt: new Date().toISOString(),
+    scripted: game.options.scripted ?? false,
   };
   try {
     storage()?.setItem(KEY, JSON.stringify(data));

@@ -6,7 +6,7 @@ import { buildingDef } from '../../src/content/buildings.js';
 import { STEWARD_POLICIES, type StewardPolicy } from '../../src/scenarios/steward.js';
 import { canPlace, footprint } from '../../src/sim/world.js';
 import { Game } from './game.js';
-import { clearSave, loadSave, restore, saveGame } from './save.js';
+import { clearSave, loadSave, restore, saveGame, scriptedFor } from './save.js';
 import { Ui } from './ui/ui.js';
 import { TIMBER_FROM } from '../../src/narrate/board.js';
 import { TownView, seatingOrder } from './view/scene.js';
@@ -27,7 +27,7 @@ const named = params.has('scenario') || params.has('seed');
 const saved = found && (!named || (found.scenario === (params.get('scenario') ?? 'quiet') && found.seed === (Number(params.get('seed') ?? 1) || 1))) ? found : null;
 const game = new Game(
   saved
-    ? { scenario: saved.scenario, seed: saved.seed, steward: saved.steward }
+    ? { scenario: saved.scenario, seed: saved.seed, steward: saved.steward, scripted: scriptedFor(saved) }
     : {
         scenario: params.get('scenario') ?? 'quiet',
         // Bar round 6: ?new=1 with a named seed starts that seed afresh; without one, a random town.

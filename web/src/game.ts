@@ -20,6 +20,8 @@ export interface GameOptions {
   scenario: string;
   seed: number;
   steward: StewardPolicy;
+  /** The scenario's own scripted commands: off in the browser since bar round 1, on for a save made before then. */
+  scripted?: boolean;
 }
 
 /** FNV-1a over a string, continuing from a previous hash. */
@@ -48,7 +50,7 @@ export class Game {
 
   constructor(options: GameOptions) {
     this.options = options;
-    this.sim = runScenario(options.scenario, options.seed, options.steward, { scripted: false });
+    this.sim = runScenario(options.scenario, options.seed, options.steward, { scripted: options.scripted ?? false });
     // In the browser the player is the steward: narrate their actions as "you".
     this.narrator = new Narrator(this.sim, { stewardIsYou: true });
     this.sim.on((e) => {

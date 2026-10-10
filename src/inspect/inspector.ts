@@ -53,7 +53,7 @@ export interface ResidentReport {
   opinions: Array<{ subject: string; name: string; value: number; beliefs: ReportBelief[] }>;
   forming: Array<{ statement: string; subject: string; evidence: number; sources: ReportSource[] }>;
   relationships: Array<{ id: string; name: string; affinity: number; familiarity: number; trust: number; tags: string[] }>;
-  requests: Array<{ id: number; about: string; status: string; posted: string }>;
+  requests: Array<{ id: number; kind: string; about: string; status: string; posted: string }>;
   moments: Array<{ when: string; note: string; about: string; aspect: string; weight: number }>;
 }
 
@@ -154,7 +154,7 @@ export function residentReport(sim: Simulation, id: string, names: Narrator = ne
       })),
     requests: sim.state.requests
       .filter((q) => q.by === id)
-      .map((q) => ({ id: q.id, about: names.subjectName(q.subject), status: q.status, posted: when(q.postedTick) })),
+      .map((q) => ({ id: q.id, kind: q.kind, about: names.subjectName(q.subject), status: q.status, posted: when(q.postedTick) })),
     moments: r.episodes.slice(-8).map((ep) => ({
       when: when(ep.tick),
       note: ep.note,
@@ -218,7 +218,7 @@ export function inspectResident(sim: Simulation, id: string): string {
   if (rep.requests.length > 0) {
     out.push('');
     out.push('Requests to the steward:');
-    for (const q of rep.requests) out.push(`  #${q.id} quieter_home about ${q.about}: ${q.status} (posted ${q.posted})`);
+    for (const q of rep.requests) out.push(`  #${q.id} ${q.kind} about ${q.about}: ${q.status} (posted ${q.posted})`);
   }
   out.push('');
   out.push('Memorable moments (most recent last):');

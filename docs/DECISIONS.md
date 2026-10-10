@@ -2,6 +2,25 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-10: Fixing what the audit left open
+
+**Why.** The owner asked to fix any remaining issues after the audit.
+
+**Fixed:**
+- **Old saves.** A save now records whether the scenario's scripted commands ran; one without the field ran them if it was saved before bar round 1 went live (2026-10-08 21:29 UTC), so a pre-round-1 bakery save replays into the town it was played in.
+- **Favour refusals were never measured.** The favours steward asks whoever is likeliest to say yes and is never refused; the "6% to 7.5%" reported since round 2 was the test's own forced refusals. A player who asks someone different each morning is refused 30% of the time in the same town, and a neglected town refuses for standing on every seed. The tests now ask like a player.
+- **Untested criteria, now tested** (`test/coverage.test.ts`), and what they found: three thought line sets had four lines where five were declared (a fifth written for each), and an open Town Wish kept naming a supporter who had left (they are now dropped).
+- **A sorry under praise.** Round 8's "the day after a loss, every answer offers a sorry" put a sorry under a kind word, which round 2 rules out; praise is now the exception.
+- **Smaller:** the three.js shadow setting that logged a warning on every load; the debug printout's request kinds; misplaced comments.
+
+**Tried and reverted.** *Routes that do not cross a new building stay the same.* Two causes were found: equal-cost ties broken by heap history, and a rebuilt grid re-reading the day's wear. Fixing both (a total order in the A* heap, and the day's tracks taken at midnight) made the test pass, but moved five tuned measures just past their bars (larder mood on seed 1: 0.024 against 0.025; a neglected town 0.071 against 0.08; three days at the larder cap against two), as the two earlier attempts did. It was reverted; the change is in commit fbbfbeb if the measures are ever re-tuned.
+
+**Kept as they are, and why:**
+- *A do-nothing steward sees 2 of 6 founders' dreams through* (the test now measures the founders' own dreams; it read 5.6 by counting newcomers and let-go dreams). Fen's and Marlow's plans need nothing from the steward by design.
+- *M4's "four questions reveal 80%"* is retired: round 1 decided each fact comes from the question it fits.
+- *The Goals widget at 1280×800* keeps round 6's scroll and fade so Folk keeps a row; fitting it would mean taking the tier card out of the widget.
+- *A neglected town 0.10 glummer, "a lovely spot" at most 30%, 60% of steps near a path on it* stay visible misses: each is a tuning target, and the last attempts to move them broke older measures.
+
 ## 2026-10-10: Audit of rounds 1 to 8, and stopping the review loop
 
 **Why.** The owner asked to stop after round 8's deploy and go back over the last two days of work for anything broken. Five reviewers read the code since 2026-10-08 by area (sim core, minds and story, narration, browser client, tests); each finding was checked before it was fixed, and each fix has a regression test (`test/audit.test.ts`).

@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { residentDef } from '../src/content/residents.js';
 import { MIND_LINES } from '../src/content/thoughts.js';
+import { replySaid } from '../src/content/replies.js';
 import { ledgerLine, townWorries } from '../src/narrate/board.js';
 import { importanceOf, Narrator } from '../src/narrate/narrator.js';
 import { runScenario } from '../src/scenarios/index.js';
@@ -107,5 +108,27 @@ describe('criteria with no test until the audit of 2026-10-10', () => {
       }
     }
     expect(lines).toBeGreaterThan(50);
+  });
+  it('round 3, criterion 4: agree and disagree name the subject of a "what\'s on your mind" answer too', { timeout: 1_800_000 }, () => {
+    let named = 0;
+    for (const seed of [1, 2, 3]) {
+      const sim = runScenario('quiet', seed, 'considerate');
+      const n = new Narrator(sim, { stewardIsYou: true });
+      for (let day = 2; day <= 20; day++) {
+        sim.runUntil(at(day, 12));
+        for (const id of sim.state.order) {
+          const r = sim.resident(id);
+          if (r.departed || r.activity?.id === 'sleep') continue;
+          if (!sim.talk(id, 'mind')) continue;
+          for (const o of r.lastAnswer?.offers ?? []) {
+            if ((o.kind !== 'agree' && o.kind !== 'disagree') || o.tone !== 'view' || !o.about || o.about === STEWARD) continue;
+            named++;
+            expect(replySaid(o, (sid) => n.subjectName(sid)), `seed ${seed} day ${day} ${id}`).toContain(n.subjectName(o.about));
+          }
+          sim.reply(id, 'agree');
+        }
+      }
+    }
+    expect(named).toBeGreaterThan(20);
   });
 });

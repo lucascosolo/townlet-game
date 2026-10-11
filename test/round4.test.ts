@@ -338,12 +338,15 @@ describe('round 4, criterion 4: opinions with an edge', () => {
 describe('round 4, criterion 4: "a lovely spot"', () => {
   // Met in round 4 (20% to 27%); in round 5 seed 1 has 4 of 9 settled place views "a lovely spot"
   // (the bar for "lovely" went to 0.75 and came back to 0.7, which kept five older measures). Kept visible.
-  it.fails('"a lovely spot" is at most 30% of settled place views on day 20 (missed on seed 1; see the note)', { timeout: 900_000 }, () => {
+  // Plan of 2026-10-11 (Phase D, criterion 1): a place is liked for what it has before it is "a lovely
+  // spot", and "a lovely spot" is held about two places at most; met on every seed, so plain again.
+  it('"a lovely spot" is at most 30% of settled place views on day 20', { timeout: 900_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'considerate');
       sim.runUntil(at(20, 12));
       const placeViews = here(sim).flatMap((r) => Object.values(r.beliefs).filter((b) => b.subject.startsWith('b:')));
       const lovely = placeViews.filter((b) => b.aspect === 'peaceful_spot').length;
+      console.log(`seed ${seed}: "a lovely spot" ${lovely} of ${placeViews.length} settled place views (${((100 * lovely) / Math.max(1, placeViews.length)).toFixed(0)}%)`);
       expect(lovely / Math.max(1, placeViews.length), `seed ${seed}: ${lovely} of ${placeViews.length}`).toBeLessThanOrEqual(0.3);
     }
   });

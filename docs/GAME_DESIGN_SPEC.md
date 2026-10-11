@@ -1381,6 +1381,14 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 
 *By hand, on a real phone (iPhone and Android), upright and sideways:* the intro's buttons can be pressed; the clock, stock and renown are visible and not under the notch or the home bar; each tab opens with one tap and the sheet can be rolled away; a building can be placed, turned and cancelled from the place bar; a resident can be tapped, asked and answered; pinch zooms and two fingers turn the town; the page does not scroll or bounce sideways; after the phone is turned, nothing is cut off; after the app is put away and brought back, the town is where it was.
 
+**Phase A status (2026-10-11): criteria 1 to 7 met; 8 missed and kept visible; 9 is the owner's.** The tests are in `e2e/devices.spec.ts` (the matrix, on both engines) and `test/usability.test.ts`.
+
+- Criteria 1 to 6: all ten devices pass on Chromium and on WebKit (20 of 20). The fixes behind them: the phone layout is taken by a touch screen 500 px or shorter whatever its width; the dashboard's widgets and menu start below the HUD's measured bottom edge; the tier card is a folding line on the desktop; every control is 44 px in the phone layout and 40 px on a touch tablet (six kinds of button were 18 to 29 px); the renown pill keeps its number on phones and drops its bar, and at 320 px its tier word too; the sheet rolls fully away on a sideways phone so the town can be tapped.
+- Criterion 7: met on quiet and bakery towns, seeds 1–5, day 30 (over 60 residents): nobody loves a quality under 0.15 unless it is their strongest, and bustle is said in more than one way.
+- Criterion 8: missed. With the tier card folded, Goals at 1280×800 is 100 px taller than its box (it was about 185 px); it still scrolls with its fade, so the round 2 test stays an expected failure with the new number in its name.
+- Criterion 9: the hand list is in the spec above for the owner; nothing here claims it.
+- The unit files that read the "loves" wording (m4, round 1, round 4, round 7) were run while the device matrix ran: six tests timed out under that load (two at a 5-second default they had no reason to keep) and none failed an assertion; they were given the timeouts their neighbours have and rerun alone (the rerun's result is in the PR).
+
 **Phase B criteria: saves that survive a new build (predeclared 2026-10-11, before code).**
 
 1. A save holds a snapshot of the town and the version of the sim that made it (a hash of src/sim, src/content and src/scenarios, put in by the build), as well as the commands it always held.
@@ -1389,6 +1397,13 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 4. Replaying a fixture's commands under the sim that made it lands exactly on its snapshot (the command log's determinism, M2 criterion 2, checked on a real save).
 5. A town loaded from a save goes on exactly as the town that was saved would have, over three days.
 6. Fixtures: test/fixtures/saves holds one save per release that changed the sim, and every one loads and runs on for a week; the test is skipped for none. A month's save is under 300 KB; a year's size is measured and reported.
+
+**Phase B status (2026-10-11): all six met.** The tests are in `test/saves.test.ts` (7 tests, with the fixture in `test/fixtures/saves/`) and `e2e/saves.spec.ts` (3 tests).
+
+- Criteria 1 to 3 in the browser: the stored save is version 2 with a snapshot and a ten-character sim hash; a plain reload comes back from the snapshot at the same minute with the same residents and buildings and carries on; a save stripped to commands only, and one whose snapshot is marked unreadable, both come back by replay at the same minute.
+- Criterion 3's last fall-back and criteria 4 and 5 headless: a save whose commands are not commands starts the same town over at tick 0; replaying the fixture's commands lands exactly on its snapshot; a town loaded from a save made in the very minute of a build command goes on exactly as the unsaved one for three days.
+- Criterion 6: one fixture (a bakery town, seed 2, played for a month with three buildings, nine talks and a favour): 140 KB. Sizes measured in the bakery town with the considerate steward: day 30, 238 KB; day 120, 683 KB; day 240, 765 KB; a year, 810 KB. The save is written every 15 seconds and when the page is put away, as before.
+- A change from the plan as written: the snapshot is used whenever there is one, not only when the sim version differs (DECISIONS.md says why: a town once restored from a snapshot cannot be replayed again).
 
 **Phase C criteria: routes that stay put, without moving the balance (predeclared 2026-10-11, before code).** Quiet town unless stated.
 

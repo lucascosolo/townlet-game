@@ -119,7 +119,7 @@ describe('round 1, criterion 1: consequence', () => {
 });
 
 describe('round 1, criterion 2: the fan club', () => {
-  it('one flower bed on day 1 leaves everyone below "thinks the world of you" on day 2', () => {
+  it('one flower bed on day 1 leaves everyone below "thinks the world of you" on day 2', { timeout: 120_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'none');
       sim.runUntil(at(1, 9));
@@ -306,7 +306,7 @@ describe('round 1, criterion 3: talking back', () => {
     expect(convinced + unconvinced).toBeGreaterThanOrEqual(3);
   });
 
-  it('sorry is offered only with a grievance, explain only after a minded decision; one reply per answer; replays the same', () => {
+  it('sorry is offered only with a grievance, explain only after a minded decision; one reply per answer; replays the same', { timeout: 120_000 }, () => {
     const sim = runScenario('quiet', 1, 'none');
     sim.runUntil(at(1, 10));
     const r = sim.resident('ada');

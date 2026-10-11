@@ -243,29 +243,28 @@ button.primary:hover { background: #a3572f; }
 .scroll.rolled .tabs button:not(.on) { display: none; }
 .scroll.rolled .tabs button.on { background: transparent; border-color: transparent; color: #f6efdf; }
 
-/* Phones: the scroll is a bottom sheet, touch targets are 44px, the top bar is compact. */
-@media (max-width: 600px) {
-  .hud { left: 8px; right: 8px; top: 8px; min-height: 0; padding: 6px 8px; display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'clock stock' 'speeds rot'; gap: 6px 8px; overflow: hidden; }
-  .hud .title { display: none; }
-  .hud .clock { grid-area: clock; }
-  .hud .stock { grid-area: stock; justify-self: end; }
-  .hud .speeds { grid-area: speeds; }
-  .hud .speeds.rot { grid-area: rot; justify-self: end; }
-  .hud .clock { white-space: nowrap; font-size: 13px; gap: 4px; }
-  .hud .clock .season { display: none; }
-  .hud .speeds button[data-testid="speed-3"] { display: none; }
-  .stock { gap: 8px; }
-  .hud .speeds button[data-testid="speed-4"], .hud [data-testid="help"] { display: none; }
-  button.icon { min-width: 40px; height: 40px; }
-  .dock button, .tabs button, .talk-row button, .chip { min-height: 44px; }
-  .scroll { left: 0; right: 0; bottom: 0; top: auto; width: auto; border-radius: 14px 14px 0 0; }
-  .scroll .rod.top { border-radius: 14px 14px 0 0; }
-  .scroll .scroll-body { height: 46vh; margin: -4px 0 0; }
-  .scroll .rod.bottom { display: none; }
-  .dock { bottom: calc(46vh + 70px); left: 8px; right: auto; padding: 6px; }
-  .scroll.rolled ~ .dock { bottom: 70px; }
-  .dock .status { display: none; }
-  .bubble { max-width: 200px; min-width: 120px; font-size: 13px; }
+/* Phones (any phone layout, portrait or sideways): the HUD is a grid, touch targets are 44px, the top bar is compact. */
+body.phone .hud { left: 8px; right: 8px; top: 8px; min-height: 0; padding: 6px 8px; display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'clock stock' 'speeds rot'; gap: 6px 8px; overflow: hidden; }
+body.phone .hud .title { display: none; }
+body.phone .hud .clock { grid-area: clock; }
+body.phone .hud .stock { grid-area: stock; justify-self: end; }
+body.phone .hud .speeds { grid-area: speeds; }
+body.phone .hud .speeds.rot { grid-area: rot; justify-self: end; }
+body.phone .hud .clock { white-space: nowrap; font-size: 13px; gap: 4px; }
+body.phone .hud .clock .season { display: none; }
+body.phone .hud .speeds button[data-testid="speed-3"] { display: none; }
+body.phone .stock { gap: 8px; }
+body.phone .hud .speeds button[data-testid="speed-4"], body.phone .hud [data-testid="help"] { display: none; }
+body.phone button.icon { min-width: 40px; height: 40px; }
+body.phone .dock button, body.phone .tabs button, body.phone .talk-row button, body.phone .chip { min-height: 44px; }
+body.phone .scroll { left: 0; right: 0; bottom: 0; top: auto; width: auto; border-radius: 14px 14px 0 0; }
+body.phone .scroll .rod.top { border-radius: 14px 14px 0 0; }
+body.phone .scroll .scroll-body { height: 46vh; margin: -4px 0 0; }
+body.phone .scroll .rod.bottom { display: none; }
+body.phone .dock { bottom: calc(46vh + 70px); left: 8px; right: auto; padding: 6px; }
+body.phone .scroll.rolled ~ .dock { bottom: 70px; }
+body.phone .dock .status { display: none; }
+body.phone .bubble { max-width: 200px; min-width: 120px; font-size: 13px;
 }
 
 /* Build menu cards with pictures; unaffordable shows a red cost, not a greyed card. */
@@ -283,11 +282,7 @@ button.primary:hover { background: #a3572f; }
 .place-bar { position: absolute; left: 50%; transform: translateX(-50%); bottom: 84px; display: flex; gap: 8px; align-items: center; padding: 8px 10px; z-index: 5; }
 .place-bar button { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; font-size: 15px; padding: 0 14px; }
 .place-bar .quiet { font-size: 13px; margin-right: 4px; }
-@media (max-width: 600px) {
-  .place-bar { bottom: calc(46vh + 128px); left: 8px; right: 8px; transform: none; justify-content: space-between; }
-  .scroll.rolled ~ .place-bar { bottom: 128px; }
-  .place-bar .quiet { display: none; }
-}
+body.phone .place-bar .quiet { display: none; }
 
 .intro-faces { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 4px; }
 .intro-faces figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; }
@@ -365,9 +360,9 @@ body.phone .desk-only, body.phone .dash-left, body.phone .widget-menu { display:
 .floater.renown-up { color: #c48a1f; left: auto; right: -6px; top: -10px; }
 
 /* Desktop: a dashboard of docked widgets around the town. */
-.dash-left { position: absolute; left: 12px; top: 74px; bottom: 64px; width: 300px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.dash-left { position: absolute; left: 12px; top: calc(var(--hud-bottom, 62px) + 12px); bottom: 64px; width: 300px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
 .dash-left > * { pointer-events: auto; }
-.widget { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.widget { position: relative; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 /* Goals shows all of itself (bar round 2: its tier card was cut in half); the Folk album takes what is left. */
 /* Bar round 3: Goals shows all of itself and the Folk album keeps a usable height; when both do not fit, the column scrolls. */
 .dash-left { overflow-y: auto; }
@@ -376,7 +371,9 @@ body.phone .desk-only, body.phone .dash-left, body.phone .widget-menu { display:
 /* Bar round 4: the Folk album takes the rest of the column and shows whole rows, scrolling row by row. */
 .widget[data-widget='folk'] { flex: 1 1 0; min-height: 260px; }
 /* Bar round 5: on a desktop the Goals pane drops its long hints (they stay as hover titles), so Folk keeps a row beside the winter stores. */
-body:not(.phone) .dash-left .stores-hint, body:not(.phone) .dash-left .renown-how { display: none; }
+body:not(.phone) .dash-left .stores-hint { display: none; }
+/* A widget with more below says so (plan 2026-10-11: a fade alone was not a scroll cue on a touch screen). */
+.widget:has(.widget-body.more-below)::after { content: 'more ▾'; position: absolute; right: 10px; bottom: 6px; z-index: 1; font-size: 11.5px; font-weight: 700; color: var(--accent); background: #fffaf0; border: 1px solid var(--paper-edge); border-radius: 999px; padding: 2px 8px; pointer-events: none; }
 .widget[data-widget='folk'] .widget-body { overflow: hidden; }
 body:not(.phone) .album.fit { overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: thin; padding-right: 2px; }
 body:not(.phone) .album.fit > .folk-card { scroll-snap-align: start; }
@@ -392,7 +389,7 @@ body:not(.phone) .album.fit > .folk-card { scroll-snap-align: start; }
 .widget-body > .pane { overflow: visible; }
 .widget.flash { animation: flash 0.8s ease; }
 @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(214, 140, 60, 0.7), var(--shadow); } 100% { box-shadow: 0 0 0 14px rgba(214, 140, 60, 0), var(--shadow); } }
-.widget-menu { position: absolute; top: 72px; left: 324px; z-index: 6; display: flex; flex-direction: column; gap: 4px; padding: 8px; }
+.widget-menu { position: absolute; top: calc(var(--hud-bottom, 62px) + 10px); left: 324px; z-index: 6; display: flex; flex-direction: column; gap: 4px; padding: 8px; }
 .widget-menu button { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-start; }
 .widget-menu button:not(.on) svg { opacity: 0; }
 body:not(.phone) .dock { left: 324px; max-width: calc(100vw - 324px - 400px); }
@@ -429,6 +426,18 @@ body:not(.phone) .scroll .rod.top .roll.desk-only { order: 3; display: inline-fl
 .goal.bonus.done { color: var(--good); }
 .tier-card { margin: 10px 0; padding: 10px 12px; border-radius: 10px; background: radial-gradient(circle at 90% 0%, #fff4cf, #fbefd2 60%); border: 1px solid #e8cf8f; }
 .tier-card .tier-name { font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1.1; }
+.tier-card summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.tier-card summary > span { flex: none; }
+.tier-card summary .tier-next { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.tier-card summary::-webkit-details-marker { display: none; }
+.tier-card summary::after { content: '▸'; margin-left: auto; color: var(--ink-soft); }
+.tier-card[open] summary::after { content: '▾'; }
+.tier-card .tier-next { font-size: 13px; }
+body:not(.phone) .tier-card { margin: 8px 0 6px; padding: 6px 10px; }
+body:not(.phone) .tier-card .tier-name { font-size: 18px; }
+body.phone .tier-card summary { flex-wrap: wrap; }
+body.phone .tier-card summary::after { display: none; }
+body.phone .tier-card .tier-name { flex-basis: 100%; }
 .tier-card .tier-renown { font-weight: 800; color: #a8761e; font-size: 13px; }
 .tier-card .track { position: relative; height: 10px; border-radius: 5px; background: rgba(160, 110, 30, 0.18); margin: 8px 0 4px; overflow: hidden; }
 .tier-card .track .fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #e0a33a, #d0812c); border-radius: 5px; }
@@ -547,7 +556,8 @@ body.phone .hud .stock .of { display: none; }
 body.phone .hud .speeds { grid-area: speeds; }
 body.phone .hud .speeds.rot { grid-area: rot; justify-self: end; }
 body.phone .hud .renown { grid-area: renown; justify-self: stretch; justify-content: center; min-width: 0; overflow: hidden; }
-body.phone .hud .renown b, body.phone .hud .renown .bar { display: none; }
+/* The number stays on a phone (plan 2026-10-11: the phone HUD showed the tier with no renown); only the bar goes. */
+body.phone .hud .renown .bar { display: none; }
 body.phone .hud .renown .tier { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.phone .hud button.icon { min-width: 40px; width: 40px; padding: 0; }
 .stock .of { font-size: 0.75em; font-weight: 600; color: var(--ink-soft); }
@@ -589,7 +599,7 @@ body.phone .tray-jumps { display: none; }
 .replies .chip.reply { padding: 4px 12px; font-size: 13px; background: #fffaf0; border: 1px solid var(--paper-edge); }
 .replies .chip.reply:hover { background: #fff; }
 body.phone .replies { margin-left: 0; }
-body.phone .replies .chip.reply { min-height: 40px; }
+body.phone .replies .chip.reply { min-height: 44px; }
 
 /* Widgets with more below fade at the foot (bar round 1). */
 .widget-body { scrollbar-width: thin; }
@@ -607,3 +617,37 @@ body.phone .replies .chip.reply { min-height: 40px; }
 .convo-history .said { font-size: 13px; }
 .convo-history .said.them { padding: 4px 10px; background: rgba(255, 255, 255, 0.5); border-radius: 10px; }
 .convo-history .exchange { display: flex; flex-direction: column; gap: 3px; }
+
+/* Small phones: the renown pill keeps its number and drops the tier word (plan 2026-10-11: "Cl" at 320px). */
+@media (max-width: 360px) {
+  body.phone .hud .renown .tier { display: none; }
+  body.phone .hud .clock { font-size: 12px; }
+}
+/* A phone turned sideways: the phone layout with a one-row HUD and a shorter sheet. */
+body.phone.landscape .hud { grid-template-columns: auto auto auto 1fr auto; grid-template-areas: 'clock stock renown speeds rot'; }
+body.phone.landscape .hud .renown { justify-self: start; }
+body.phone.landscape .hud .speeds { justify-self: end; }
+body.phone.landscape .tabbar button { min-height: 44px; flex-direction: row; gap: 6px; }
+body.phone.landscape .scroll { bottom: calc(52px + env(safe-area-inset-bottom)); }
+body.phone.landscape .scroll .scroll-body { height: calc(100vh - 160px); }
+body.phone.landscape .scroll.rolled .scroll-body { height: 0; }
+body.phone.landscape .menu { bottom: calc(98px + env(safe-area-inset-bottom)); max-height: 60vh; overflow-y: auto; }
+body.phone.landscape .quick-card { bottom: calc(100px + env(safe-area-inset-bottom)); }
+body.phone.landscape .place-bar { bottom: calc(104px + env(safe-area-inset-bottom)); }
+body.phone.landscape .bubbles { bottom: 96px; }
+body.phone.landscape .toasts { top: 58px; }
+/* A touch screen with the desktop layout (tablets): controls big enough for a finger. */
+@media (pointer: coarse) {
+  body:not(.phone) .widget-head button.icon, body:not(.phone) .scroll .rod.top button.icon { min-width: 40px; height: 40px; }
+  body:not(.phone) button { min-height: 40px; }
+  body:not(.phone) button.link, body:not(.phone) .log-group .more { display: inline-flex; align-items: center; }
+}
+/* A small phone turned sideways: the HUD's one row drops the tier word and the season. */
+@media (max-width: 700px) {
+  body.phone.landscape .hud .renown .tier { display: none; }
+  body.phone.landscape .hud .clock .season { display: none; }
+}
+/* A short dashboard (a tablet sideways, a small laptop): Folk gives Goals a little more room. */
+@media (max-height: 820px) {
+  .widget[data-widget='folk'] { min-height: 200px; }
+}

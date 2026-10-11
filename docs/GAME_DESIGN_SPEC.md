@@ -1365,6 +1365,46 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
   - *The Goals widget shows all of itself at 1280×800 (round 2).* Round 6's trade-off stands: Goals scrolls with a fade so Folk keeps a row; the overflow (about 185 px) is more than the tier card and link together.
   - *Unchanged and still visible:* a neglected town 0.10 glummer (0.080 on seed 1), "a lovely spot" at most 30% (42% on seed 1; raising the bar broke five older measures in round 5), 60% of steps near a path on it (54%).
 
+**Usability, saves, routing and balance: the plan of 2026-10-11.** After the audit, the owner asked why residents talk so much about "a busy lane" and, with an outside assessment in hand, for a focused, risk-ranked plan before any further change: phone and desktop usability first, save reliability second, routing and balance third; tests not loosened; design decisions told apart from misses; a synthetic refusal rate not presented as player behaviour; the second fortnight's improvements verified. The plan has four phases, each with its criteria below, predeclared in the plan the owner approved before its code was written and copied here with each phase's commit. A failure is reported as a failure, not redefined. Nothing merges until the owner has seen the numbers.
+
+**Phase A criteria: phones and desktops (predeclared 2026-10-11, before code).** Measured by emulation on Chromium and WebKit over this matrix: phones 320×568, 360×780, 390×844 and 430×932; phones turned sideways 844×390 and 932×430; tablets 768×1024 and 1024×768 with touch; desktops 1280×800 and 1440×900. Each device opens a new bakery town through its intro and runs to day 5.
+
+1. The phone layout (tab bar and sheet) is used on every phone, upright or sideways, and the dashboard on every tablet and desktop. (A sideways phone used to get the dashboard, which did not fit.)
+2. After the intro and after opening each tab, the clock, the stock, the renown pill and the speed buttons are in view and nothing covers them; the page never scrolls sideways.
+3. Every visible control is at least 44 px tall in the phone layout and at least 40 px on a touch tablet; none hangs off an edge.
+4. The renown pill shows its number on every phone (the bar is what is dropped at 320 px, not the number).
+5. A day's work can be done on every device. Phone: Goals shows a goal and the tier card with its track; a building card opens the place bar with its place, rotate and cancel buttons reachable; a resident can be tapped in the town, asked how they are, and answered with a chip at least 44 px tall; turned the other way, the layout is still the phone's with the HUD uncovered. Dashboard: Goals sits above Folk and Folk is within the window; the first goal and the tier line are in view, and the tier line opens the renown track; a building card opens the ghost, and Escape (or the place bar's cancel on touch) puts it away; a talk can be had from the journal.
+6. Criteria 1 to 5 hold on WebKit (Safari's engine) as well as Chromium.
+7. "A busy lane": no resident says they love a quality they feel below 0.15 unless it is their strongest, and the quality most of the cast loves is said in at least two different ways across a town (test/usability.test.ts). This was a wording miss, not a design decision: most of the cast likes company, and "a busy lane" was the one phrase for it.
+8. Round 2's expected failure, the Goals widget showing all of itself at 1280×800, is tried again with a compact tier line; if it passes, the test becomes plain and the round 6 note is updated; if not, it stays an expected failure.
+9. On a real iPhone and a real Android phone, by hand: the list under "By hand" below, checked by the owner; a miss there is a bug for the next commit, not a reason to change the list.
+
+*By hand, on a real phone (iPhone and Android), upright and sideways:* the intro's buttons can be pressed; the clock, stock and renown are visible and not under the notch or the home bar; each tab opens with one tap and the sheet can be rolled away; a building can be placed, turned and cancelled from the place bar; a resident can be tapped, asked and answered; pinch zooms and two fingers turn the town; the page does not scroll or bounce sideways; after the phone is turned, nothing is cut off; after the app is put away and brought back, the town is where it was.
+
+**Phase B criteria: saves that survive a new build (predeclared 2026-10-11, before code).**
+
+1. A save holds a snapshot of the town and the version of the sim that made it (a hash of src/sim, src/content and src/scenarios, put in by the build), as well as the commands it always held.
+2. A plain reload comes back from the snapshot at the same minute, with the same residents and buildings, and the town carries on with no page error (browser test).
+3. A save from before this change, commands only, still comes back, by replay, at the same minute; a snapshot this code cannot read falls back to replay; a replay that fails falls back to the first morning of the same town rather than to nothing.
+4. Replaying a fixture's commands under the sim that made it lands exactly on its snapshot (the command log's determinism, M2 criterion 2, checked on a real save).
+5. A town loaded from a save goes on exactly as the town that was saved would have, over three days.
+6. Fixtures: test/fixtures/saves holds one save per release that changed the sim, and every one loads and runs on for a week; the test is skipped for none. A month's save is under 300 KB; a year's size is measured and reported.
+
+**Phase C criteria: routes that stay put, without moving the balance (predeclared 2026-10-11, before code).** Quiet town unless stated.
+
+1. Routes that do not cross a new building stay the same (playtest round 2, criterion 2) passes plainly on seeds 1–5, with the fix of 2026-10-10 (a total order in the A* heap; the day's tracks fixed at midnight).
+2. The determinism tests hold and the year soak flags no seed of ten.
+3. The five measures the fix moved last time (larder mood, neglected-town mood, days at the larder cap, what the granary keeps, the story bands) are measured on seeds 1–10 before and after. Each either stays within its criterion's band, or its criterion is restated as a mean over ten seeds with a stated margin and recorded as a moved measure with both numbers; a constant is retuned only where the measure has genuinely moved, and each such retune is listed.
+
+**Phase D criteria: the visible misses (predeclared 2026-10-11, before code).** Quiet town, seeds 1–5, unless stated.
+
+1. "A lovely spot" is at most 30% of place views (42% on seed 1): a view of the place's own qualities is tried first, and the generic line is capped per resident.
+2. At least 60% of steps are on or beside a path in the path town (54%).
+3. The neglected-town measure counts founders present on both days; it is reported with that measure, against its 0.10 bar, and left visible if missed.
+4. M3a's "a do-nothing steward sees dreams through" becomes a measure of the player's influence: a considerate steward sees at least four more of the six founders' dreams through than a steward who does nothing (6.0 against 2.0 today).
+5. The favour-refusal tests say in their names and here that they ask like a synthetic player, not that players are refused at that rate.
+6. The second fortnight: a headless count of what there is to decide on days 15–30 (proposals posted, asks made, dreams in progress, favours offered) is measured before and after round 8 and reported as numbers, not as a claim.
+
 ### 9.4 The bar (set 2026-10-08)
 
 Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:

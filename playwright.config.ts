@@ -14,8 +14,16 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4173',
     viewport: { width: 1280, height: 800 },
-    launchOptions: { ...(executablePath ? { executablePath } : {}), args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
   },
+  // Chromium runs everything; WebKit (Safari's engine) runs the device matrix, as emulation, not a
+  // real iPhone (plan 2026-10-11).
+  projects: [
+    {
+      name: 'chromium',
+      use: { browserName: 'chromium', launchOptions: { ...(executablePath ? { executablePath } : {}), args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } },
+    },
+    { name: 'webkit', use: { browserName: 'webkit' }, testMatch: /devices\.spec\.ts/ },
+  ],
   webServer: {
     command: 'npm run build && npm run preview -- --strictPort',
     url: 'http://localhost:4173',

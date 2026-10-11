@@ -49,12 +49,13 @@ test('Goals is never cut by its widget: what does not fit scrolls inside its bod
   }
 });
 
-test.fail('the Goals widget shows all of itself on a desktop: no child is cut by its bottom edge (moved in round 6; see the note)', async ({ page }) => {
+test.fail('the Goals widget shows all of itself on a desktop: no child is cut by its bottom edge (moved in round 6; 100 px over at 1280×800 after the plan of 2026-10-11 folded the tier card; see the note)', async ({ page }) => {
   await open(page, 'scenario=bakery&seed=2&speed=0', at(5, 10));
   await putOff(page);
   const widget = page.getByTestId('widget-goals');
   const box = (await widget.boundingBox())!;
   const bottoms = await widget.evaluate((w) => [...w.querySelectorAll('.widget-body *')].map((e) => e.getBoundingClientRect().bottom));
+  console.log(`Goals at 1280x800: ${Math.round(Math.max(...bottoms) - (box.y + box.height))} px below its bottom edge`);
   for (const b of bottoms) expect(b).toBeLessThanOrEqual(box.y + box.height + 1);
 });
 

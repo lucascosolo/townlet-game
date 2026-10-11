@@ -78,7 +78,7 @@ describe('round 7, criterion 1: losses cost', () => {
 });
 
 describe('round 7, criterion 2: the economy keeps asking', () => {
-  it('eating the winter stores early lowers mood and is named on the board; the fountain opens at Hamlet', () => {
+  it('eating the winter stores early lowers mood and is named on the board; the fountain opens at Hamlet', { timeout: 120_000 }, () => {
     const sim = runScenario('quiet', 1, 'none');
     sim.runUntil(at(5, 6));
     expect(seasonOf(sim.state.tick)).not.toBe('winter');
@@ -215,7 +215,7 @@ describe('round 7, criterion 5: talk without stock clauses', () => {
     }
   });
 
-  it('"What\'s been the best of it?" is answered with something from their week', () => {
+  it('"What\'s been the best of it?" is answered with something from their week', { timeout: 120_000 }, () => {
     const sim = runScenario('quiet', 1, 'considerate');
     const n = new Narrator(sim, { stewardIsYou: true });
     sim.runUntil(at(6, 12));

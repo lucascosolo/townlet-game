@@ -1420,6 +1420,15 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 5. The favour-refusal tests say in their names and here that they ask like a synthetic player, not that players are refused at that rate.
 6. The second fortnight: a headless count of what there is to decide on days 15–30 (proposals posted, asks made, dreams in progress, favours offered) is measured before and after round 8 and reported as numbers, not as a claim.
 
+**Phase D status (2026-10-11): criteria 1, 4, 5 and 6 met; 2 and 3 missed and kept visible.**
+
+- Criterion 1, "a lovely spot": met. A resident arriving somewhere they like now takes a view of what makes it (the smell, the green, the water close by, or the company) when one quality carries 45% or more of the appeal, and once they hold two "lovely spot" views they always say what they like. "A lovely spot" is 0%, 7%, 0%, 0% and 0% of settled place views on day 20 of seeds 1–5 (it was 42% on seed 1); the round 4 test is plain again.
+- Criterion 2, paths: missed, 50% (the bar is 60%). Of the steps within a tile of a path, 50% are on it, 22% are inside the buildings at either end, and 28% are on open ground: nearly all of that is worn track beside the path and most of it is mid-walk. Cutting the worn track's discount from 1.5 to 1.0 moves none of these numbers, so the cost of a worn tile is not the cause; those walks run beside the laid paths rather than along them. The test keeps its expected failure with the breakdown in its note; the fix is a routing question for its own round, not a constant.
+- Criterion 3, the neglected town: measured over the founders there on both days, seed 1 is 0.096 glummer (0.756 to 0.660 over four founders) against the 0.10 bar; seeds 2–5 meet it. Still a visible miss, now on the honest measure.
+- Criterion 4, the player's influence: met. Over seeds 1–5 and 28 days, a considerate steward sees 6.0 of the six founders' dreams through and a do-nothing steward 2.0, a difference of 4.0 against the bar of 4 (an equality: the test is on its edge, and is reported as such).
+- Criterion 5: the two favour-refusal tests say in their names that they ask like a synthetic player (someone different each morning).
+- Criterion 6, the second fortnight, counted headless on the quiet town, seeds 1–5 (proposals posted, asks made, dream steps, arrivals, leaving warnings and the stores ask), before round 8 (commit e2f6a33) and now: with a steward who does nothing, days 15–28 held 16 to 25 such things (mean 18.6) and hold 17 to 21 (mean 19.2); with the considerate steward they held 7 to 9 (mean 8.0) and hold 16 to 21 (mean 19.2). Round 8's claim holds for a played town: the asks (0–1, now 5–8) and the newcomers (0, now 3–4) are what changed; for an ignored town it was about as busy before.
+
 ### 9.4 The bar (set 2026-10-08)
 
 Townlet is done with this phase when an independent reviewer, playing it fresh, and the builder both agree it meets all five of these, each scored out of 10 with 8 as the pass mark:

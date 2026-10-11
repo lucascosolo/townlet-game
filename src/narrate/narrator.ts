@@ -1085,6 +1085,7 @@ export class Narrator {
         const m = /^(chat|compliment|reminisce|share meal|tease|comfort|apologize|share_opinion|argue) with (.+)$/.exec(note);
         const heard = /^heard it from (.+)$/.exec(note);
         if (heard) return `${heard[1]} told me all the news`;
+        if (note === 'good company') return `there's always good company at ${x}`;
         if (!m) return note;
         const who = m[2] as string;
         const deeds: Record<string, string> = { chat: `${who} and I had a good long chat`, compliment: `${who} and I said nice things about each other`, reminisce: `${who} and I talked over old times`, 'share meal': `${who} and I shared a meal`, tease: `${who} and I had a good laugh`, comfort: `${who} and I looked after each other` };
@@ -1093,6 +1094,10 @@ export class Narrator {
       case 'peaceful_spot':
         // Bar round 8: "a lovely spot" said with the place it is.
         return note === 'reminisced' ? `we sat and remembered at ${x}` : `${x} ${PLURAL_NAMES.some((n) => x.endsWith(n)) ? 'are' : 'is'} a lovely spot`;
+      case 'green_spot':
+        return `${x} ${PLURAL_NAMES.some((n) => x.endsWith(n)) ? 'are' : 'is'} all green and growing`;
+      case 'by_the_water':
+        return `${x} ${PLURAL_NAMES.some((n) => x.endsWith(n)) ? 'have' : 'has'} the water close by`;
       case 'nice_addition':
         return /by my door$/.test(note) ? `${x} made it ${note.replace(/^smells lovely/, 'smell lovely')}` : note;
       case 'my_workplace':

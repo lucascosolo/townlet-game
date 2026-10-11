@@ -125,7 +125,7 @@ export function opinion(r: ResidentState, subject: SubjectId): number {
 }
 
 /** Views of a place as a matter of taste: liking it and finding it not for you cannot both stand. */
-export const TASTE_ASPECTS = new Set(['good_times', 'peaceful_spot', 'smells_lovely', 'not_for_me', 'eyesore']);
+export const TASTE_ASPECTS = new Set(['good_times', 'peaceful_spot', 'smells_lovely', 'green_spot', 'by_the_water', 'not_for_me', 'eyesore']);
 
 /** Opinion plus half the weight of feelings still forming, for losses that come before a belief settles. */
 export function attachment(r: ResidentState, subject: SubjectId): number {

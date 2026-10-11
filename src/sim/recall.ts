@@ -35,6 +35,8 @@ export const RETELLABLE: Record<string, number> = {
   my_workplace: 1,
   asks_too_much: 0.9,
   smells_lovely: 0.4,
+  green_spot: 0.4,
+  by_the_water: 0.4,
   went_hungry: 1.1,
   still_waiting: 0.5,
   heard_me_out: 0.5,

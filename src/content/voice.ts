@@ -18,6 +18,9 @@ export const BELIEF_STATEMENTS: Record<string, string> = {
   smells_lovely: '{s} makes the mornings smell wonderful',
   good_times: '{s} is where the good evenings happen',
   peaceful_spot: '{s} is a lovely spot',
+  // Plan of 2026-10-11: a place liked for what it has, not only "a lovely spot".
+  green_spot: '{s} is green and growing',
+  by_the_water: '{s} has the water close by',
   // Bar round 4: places can be disliked.
   not_for_me: "{s} isn't {poss} sort of place",
   eyesore: '{s} spoils the view',
@@ -521,6 +524,20 @@ addLines(THOUGHTS['smells_lovely+'], {
   chatty: ['{S} smells AMAZING!', 'Sniff! {S}! Sniff again!', 'I want to bottle {s}!', 'Follow your nose to {s}!'],
   dreamy: ['{S} is a scent with a place attached.', 'The air near {s} is sweet and slow.', '{S} perfumes the whole afternoon.', 'I carry the smell of {s} home in my sleeves.'],
 });
+THOUGHTS['green_spot+'] = {
+  plain: ['Green all round {s}.', '{S}. Growing things everywhere.', 'Like the green at {s}.', '{S} is good and green.', 'Plenty growing by {s}.'],
+  formal: ['{S} is most pleasantly green.', 'The greenery about {s} is a credit to the place.', 'One breathes easier among the green at {s}.', '{S} is beautifully kept, all leaf and blossom.', 'I find the green of {s} very restful.'],
+  warm: ['Everything grows so well round {s}.', 'I love how green it is at {s}.', '{S} is all leaves and growing things. Lovely.', 'The green at {s} does my heart good.', 'I could sit in the green at {s} all day.'],
+  chatty: ['{S}! Green as anything!', 'Look at all that growing at {s}!', 'So much green at {s}, you could get lost in it!', '{S} is a jungle, in the best way!', 'Leaves, leaves, leaves at {s}!'],
+  dreamy: ['{S} is wrapped in green.', 'The green at {s} hums with growing.', 'Everything at {s} is reaching for the light.', '{S} breathes leaves.', 'The world is greenest at {s}.'],
+};
+THOUGHTS['by_the_water+'] = {
+  plain: ['Water close by {s}. Good.', '{S}. Can hear the brook.', 'Like being near the water at {s}.', '{S} has the water right there.', 'The brook runs by {s}. Nice.'],
+  formal: ['{S} has the brook for company, which I find agreeable.', 'The sound of water at {s} is most soothing.', 'One hears the brook from {s}; a fine thing.', '{S} sits well beside the water.', 'The water near {s} lends it a certain calm.'],
+  warm: ['I love hearing the water at {s}.', 'The brook by {s} makes it feel like home.', '{S} is lovely with the water so near.', 'Sit at {s} and listen to the brook. Bliss.', 'There is nothing like the water running by {s}.'],
+  chatty: ['{S}! Right by the water!', 'You can hear the brook from {s}! Listen!', 'Splash splash at {s}!', '{S} has the brook for a neighbour!', 'Water everywhere at {s}, I love it!'],
+  dreamy: ['{S} listens to the brook all day.', 'The water sings past {s}.', 'At {s} the brook keeps time.', '{S} and the water keep each other company.', 'The brook runs through my thoughts of {s}.'],
+};
 addLines(THOUGHTS['good_times+'], {
   plain: ['Good times at {s}.', 'Always a laugh at {s}.', 'Like {s}. Good company there.', '{S}. Happy place.'],
   formal: ['I have spent many pleasant hours at {s}.', '{S} is where the town is at its best.', 'There is good company to be had at {s}.', 'My happiest hours lately were at {s}.'],

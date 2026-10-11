@@ -341,7 +341,7 @@ describe('round 3, criterion 7: approval earned, favours refused', () => {
   // Audit 2026-10-10, moved measure: the favours steward asks whoever is likeliest to say yes, so it
   // never meets a refusal. Asked the way a player asks, a town the steward neglects refuses for
   // standing (or hunger) on every seed; the favours town itself rarely does, as it should not.
-  it('asked the way a player asks, every seed of a neglected town sees a refusal for standing or hunger', { timeout: 600_000 }, () => {
+  it('asked like a synthetic player (someone different each morning), every seed of a neglected town sees a refusal for standing or hunger', { timeout: 600_000 }, () => {
     for (const seed of SEEDS) {
       const answers = askLikeAPlayer(runScenario('bakery', seed, 'none', { scripted: false }), seed);
       expect(answers.some((a) => a === 'distrust' || a === 'hungry'), `seed ${seed}: ${answers.join(',')}`).toBe(true);

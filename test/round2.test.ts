@@ -426,7 +426,7 @@ describe('round 2, criterion 6: approval slower, a no that means something', () 
   // refusals per seed. Moved measure: favours asked the way a player asks, of someone different each
   // morning, in the same town. A refusal for low standing or mood is looked for in a neglected town,
   // where it belongs; where the steward is good to people they do not refuse for standing.
-  it('at least 15% of favours a player asks are refused; a neglected town refuses for standing or mood on every seed', { timeout: 600_000 }, () => {
+  it('asked like a synthetic player (someone different each morning): at least 15% of favours are refused; a neglected town refuses for standing or mood on every seed', { timeout: 600_000 }, () => {
     let asked = 0;
     let refused = 0;
     for (const seed of SEEDS) {

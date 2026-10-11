@@ -41,7 +41,7 @@ export function replySaid(offer: ReplyOffer, subject?: (id: string) => string): 
 
 export const REPLY_LINES: Record<ReplyStance, Lines> = <Record<ReplyStance, Lines>>{
   warm: {
-    plain: ['Good.', 'Glad you see it.', 'Right, then.'],
+    plain: ['Good.', 'Glad you see it.', 'Right, then.', 'Fair enough.', 'Glad of that.'],
     formal: ['I am glad we understand each other.', 'Thank you for hearing me.', 'That is good of you to say.'],
     warm: ["Thank you. That means a lot.", "I'm glad you think so.", 'See, we do all right, you and I.'],
     chatty: ['Ha! Knew you would get it!', 'See? Easy!', 'That is what I like to hear!'],
@@ -129,7 +129,7 @@ Object.assign(REPLY_LINES, {
     dreamy: ['You looked past the curtain.', 'The weather in me is greyer than I said.', 'You see the cloud behind the smile.', 'Yes. There is a shadow on it.', 'Kind of you to look closer.'],
   },
   with_you: {
-    plain: ['Glad you see it.', 'Right, then.', "Thought you might.", 'Good.', 'Same mind, us.'],
+    plain: ['Glad you see it.', 'Right, then.', "Thought you might.", 'Just so.', 'Same mind, us.'],
     formal: ['I am glad we see it alike.', 'It is pleasant to be agreed with.', 'Then we are of one mind.', 'Good. I hoped you would.', 'That settles it.'],
     warm: ["Oh, good. I thought it was just me.", "See? You get it.", "Isn't it nice to agree?", "I'm glad you think so too.", 'That makes two of us.'],
     chatty: ['Yes! Exactly! See!', 'Ha! Great minds!', 'Finally, someone agrees with me!', "That's what I keep saying!", 'Two of us! A movement!'],

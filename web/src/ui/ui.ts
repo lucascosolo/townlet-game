@@ -248,6 +248,8 @@ export class Ui {
   private readonly toasts: HTMLElement;
   private readonly widgetMenu: HTMLElement;
   private phone = false;
+  /** Whether the desktop's one-line tier card has been opened. */
+  private tierOpen = false;
   private lastGoalsKey = '';
   private lastFolkKey = '';
   private lastRenown = -1;
@@ -306,6 +308,8 @@ export class Ui {
     this.renownEl.addEventListener('click', () => this.showTab('goals'));
     hud.append(el('div', { class: 'title' }, 'Townlet'), this.clockEl, this.stockEl, this.renownEl, speeds, rot);
     root.appendChild(hud);
+    // The dashboard starts below the HUD however many rows it wraps to (on a tablet the second row sat under Goals).
+    new ResizeObserver(() => document.documentElement.style.setProperty('--hud-bottom', `${Math.round(hud.getBoundingClientRect().bottom)}px`)).observe(hud);
     this.panels.push(hud);
 
     // The scroll: rolls up to its top rod.
@@ -422,9 +426,18 @@ export class Ui {
     this.bubbleLayer = el('div', { class: 'bubbles' });
     root.appendChild(this.bubbleLayer);
 
-    const media = window.matchMedia('(max-width: 760px)');
-    this.applyLayout(media.matches);
-    media.addEventListener('change', (m) => this.applyLayout(m.matches));
+    // A phone is narrow, or a touch screen too short for the dashboard (plan 2026-10-11: a phone
+    // turned sideways got the desktop layout on a 390px-tall screen).
+    const narrow = window.matchMedia('(max-width: 760px)');
+    const flat = window.matchMedia('(pointer: coarse) and (max-height: 500px)');
+    const layout = () => {
+      // Any touch screen this short gets the sideways HUD and sheet, narrow or not (a 320x568 phone turned is 568 wide).
+      document.body.classList.toggle('landscape', flat.matches);
+      this.applyLayout(narrow.matches || flat.matches);
+    };
+    layout();
+    narrow.addEventListener('change', layout);
+    flat.addEventListener('change', layout);
     this.showTab('board');
     // Opening the board ourselves is not the player looking around (bar round 1).
     this.lookedAround = false;
@@ -893,19 +906,29 @@ export class Ui {
     if (goals.length) pane.appendChild(el('div', { class: `goal bonus${p.goals.bonus ? ' done' : ''}` }, p.goals.bonus ? `All done today: +${RENOWN.allGoals} ✦ bonus earned` : `All three: +${RENOWN.allGoals} ✦ bonus`));
 
     const nt = nextTier(state);
-    const tier = el('div', { class: 'tier-card', 'data-testid': 'tier' });
-    tier.append(el('div', { class: 'tier-name' }, TIERS[p.tier] as string), el('div', { class: 'tier-renown' }, `${p.renown} ✦ renown`));
+    // One line on a desktop, where the HUD already shows the tier and the bar, opened by a click; the
+    // whole card on a phone, whose HUD shows no bar (plan 2026-10-11: the card was cut by the widget's foot).
+    const tier = el('details', { class: 'tier-card', 'data-testid': 'tier' }) as HTMLDetailsElement;
+    tier.open = this.phone || this.tierOpen;
+    tier.addEventListener('toggle', () => {
+      if (!this.phone) this.tierOpen = tier.open;
+    });
+    const line = el('summary', { class: 'tier-line', 'data-testid': 'tier-line' });
+    line.append(el('span', { class: 'tier-name' }, TIERS[p.tier] as string), el('span', { class: 'tier-renown' }, `${p.renown} ✦`), el('span', { class: 'quiet tier-next' }, nt ? `${nt.need} to ${nt.name}` : 'a Townlet'));
+    tier.appendChild(line);
+    const more = el('div', { class: 'tier-more' });
     if (nt) {
       const track = el('div', { class: 'track' });
       const fill = el('div', { class: 'fill' });
       fill.style.width = pct((p.renown - nt.from) / (nt.to - nt.from));
       track.appendChild(fill);
-      tier.appendChild(track);
+      more.appendChild(track);
       const opens = ({ Hamlet: 'beehives, a fountain', Village: 'a chicken coop' } as Record<string, string>)[nt.name];
-      tier.appendChild(el('p', { class: 'quiet' }, `${nt.need} ✦ to ${nt.name}: it opens ${opens ? `${opens} and ` : ''}room for more neighbours.`));
-    } else tier.appendChild(el('p', { class: 'quiet' }, 'A Townlet: the valley is all it set out to be.'));
+      more.appendChild(el('p', { class: 'quiet' }, `${nt.need} ✦ to ${nt.name}: it opens ${opens ? `${opens} and ` : ''}room for more neighbours.`));
+    } else more.appendChild(el('p', { class: 'quiet' }, 'A Townlet: the valley is all it set out to be.'));
     const renownHow = 'Renown comes from goals, granted asks and wishes, dreams come true, the winter stores, newcomers, and getting to know people.';
-    tier.appendChild(el('p', { class: 'quiet small renown-how' }, renownHow));
+    more.appendChild(el('p', { class: 'quiet small renown-how' }, renownHow));
+    tier.appendChild(more);
     tier.title = renownHow;
     pane.appendChild(tier);
     const trader = this.traderCard();

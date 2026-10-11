@@ -2,6 +2,39 @@
 
 These are decisions that change what gets built. Each entry says what was chosen, what was rejected, and why. Newest entries go at the top.
 
+## 2026-10-11: Usability first, then saves, then routing and balance
+
+**Why.** After the audit the owner asked why residents talk so much about "a busy lane", and brought an outside assessment that asked for a focused, risk-ranked plan before any further change: phone and desktop usability first, save reliability second, routing and balance third; no test loosened; design decisions told apart from misses; a synthetic refusal rate not presented as what players meet; the second fortnight's gains verified. The plan's criteria are in the spec (9.3, "the plan of 2026-10-11"); nothing merges until the owner has seen the numbers.
+
+**"A busy lane" was a wording miss, not a design decision.** Most of the cast likes company a little more than the rest of the town does, so "what lifts them" picked bustle for most of them, and bustle had one phrase. Now a quality is said to be loved only when the resident feels it at 0.15 or more (else their strongest quality is named), and each quality has two to four phrasings, chosen per resident. The underlying liking is unchanged.
+
+**Phone layout follows the screen, not only its width.** A touch screen 500 px or shorter gets the phone layout whatever its width, with a one-row HUD and a tab bar along the bottom, so a phone turned sideways no longer gets the desktop dashboard it cannot fit. The phone rules in the stylesheet are keyed to the layout class rather than a width query, so there is one decision.
+- *Rejected:* a third "landscape" layout of its own; the phone layout with a shorter HUD does the job.
+
+**The HUD measures itself.** The side widgets and the widget menu start below the HUD's real bottom edge (a resize observer sets a variable), so a wrapped HUD on a tablet no longer sits on top of Goals.
+
+**The Goals tier card folds on the desktop.** It is a single line (tier, renown, what is next) that opens on click; the track and the "how renown is earned" note are inside. On phones it stays open. The widget also shows a "more" chevron when its body scrolls.
+- With the card folded, Goals shows all of itself at 1280×800 for the first time since round 6 (the expected failure from round 2 is plain again). Taking the tier card out of the widget, rejected twice, was not needed.
+
+**Touch targets.** 44 px in the phone layout; 40 px for every button on a touch tablet in the dashboard, where several were 18 to 29 px.
+
+**A save holds the town, not only the way to rebuild it.** A save now carries a snapshot of the sim state and the version of the sim that made it (a hash of src/sim, src/content and src/scenarios set by the build), as well as the command log. Loading comes back from the snapshot, so a town saved under one build loads under the next whatever changed in the sim. A save from before this change, which has only commands, still replays; a snapshot the code cannot read falls back to replay; a replay that fails starts the same town over rather than showing nothing.
+- *Rejected:* replaying when the sim version matches and using the snapshot only otherwise, which was the plan as first written. A town once brought back from a snapshot cannot be replayed again (its history was made by two sims), so the save would have needed a "replayable" flag and two paths to keep right; loading from the snapshot every time is one path, and instant at any age. The command log is kept, and the loader test checks that replaying a fixture's commands lands exactly on its snapshot, which is a stronger determinism check than the old save had.
+- *Fixtures per release:* test/fixtures/saves holds a month-long bakery save per release that changed the sim (made by src/tools/save-fixture.ts); every one must load and run on. A month's save is about 140 KB in the quiet town and 240 KB in the bakery town; a year's is under 1 MB.
+
+**The routing fix is not shipped, again, and this time the reason is measured.** The fix of 2026-10-10 (a total order in the A* heap, and the day's tracks fixed at midnight) was put back and calibrated on seeds 1–10 against the five tuned measures it had tipped, with each half of it alone as well. Neither half passes the route test alone. Every variant moved the same measures the same way: the considerate steward's winter stores met on 4 seeds of 10 instead of 6, the larder-cap days rose from 0 to a seed at 3, the week-long larder drop fell from a mean of 0.123 to 0.087 with one seed at 0.001. The economy is sensitive to any change in routes, not to this one; the "before" numbers are one draw of that. Shipping would have meant restating three per-seed criteria as means with margins chosen to fit, which the plan allowed but which is still three failures redefined for a cosmetic gain. The numbers are in the spec (9.3, Phase C status) and the fix is commit 3b62b21 on the branch.
+- *What has to come first:* economy criteria that are means over many seeds by design (ten or more, with a margin set before the run), and a winter-stores outcome that depends less on who walks where (a town that meets its target on 6 of 10 seeds with one routing and 4 of 10 with another is deciding its winter on a coin).
+- *Rejected:* retuning food yields or the stores target to recover the "before" numbers under the fix; that tunes to one draw.
+
+**"A lovely spot" was a missing vocabulary, not a tuning problem.** The mind formed one view of any place that scored well (0.7 or more on the resident's own liking for its ambience). Now, when one quality carries 45% or more of that score, the view is of that quality: the smell (an existing view), the green, the water close by (two new views with their own thoughts and board lines), or the company (an existing view). After two "lovely spot" views a resident always says what they like. On seeds 1–5 the share went from up to 42% to 0–7%.
+- *Rejected:* raising the 0.7 bar (tried in round 5; it moved five other measures) and capping the generic line in the narrator (the belief itself was the problem, not its wording).
+
+**Paths: the 60% stays a visible miss, with the cause narrowed.** Of steps within a tile of a laid path, 50% are on it, 22% are inside the buildings at either end, and 28% are on open ground, nearly all worn track beside the path and most of it mid-walk. The worn track's discount is not the cause (cutting it from 1.5 to 1.0 moved nothing). Those walks run beside the paths that were laid for other walks; the question is which walks get paths, and that is a round of its own.
+
+**Review 9 (targeted) found two misses in the plan's own claims, both fixed before anything merges.** The Town log came back empty from a snapshot reload: the sim state has no telling in it, and only a replay rebuilt the narrator's entries. The save now carries the narrator's entries (plain records; a month is a few hundred) with the snapshot. And three phone controls were under 44 px where the device matrix never looked: it measured after the intro and after putting proposals off, so the intro's and a proposal's buttons (31 px) and the board's "more" links (17 px) went unmeasured; they are 44 px now and the matrix measures them. The review's other findings (the second fortnight's asks repeating, raw joins in talk, two minds on one page) are the next round's, not this plan's.
+
+**Tests.** Two round 7 tests that ran in 2 to 3 seconds had no timeout and failed at the 5-second default under the load of the device matrix; they now have the file's usual timeout. No criterion was loosened.
+
 ## 2026-10-10: Fixing what the audit left open
 
 **Why.** The owner asked to fix any remaining issues after the audit.

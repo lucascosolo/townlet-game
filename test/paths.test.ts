@@ -126,9 +126,13 @@ describe('paths', () => {
     }
   });
 
-  // MISSED, reported in spec 9.3: as declared, 52% of steps near a path are on it, against 60%.
-  // Most of the rest are steps inside the buildings at either end of a walk, which can't be on a
-  // path (leaving those out, 68%). Kept as an expected failure so it stays visible.
+  // MISSED, reported in spec 9.3: as declared, 50% of steps near a path are on it, against 60%.
+  // Plan of 2026-10-11 (Phase D, criterion 2), measured: of the steps within a tile of a path, 50%
+  // are on it, 22% are inside the buildings at either end (which can't be on a path; leaving those
+  // out, 64%), and 28% are on open ground, nearly all of it worn track beside the path and mostly
+  // mid-walk. Cutting the worn track's discount from 1.5 to 1.0 changes none of those numbers, so the
+  // cost of a worn tile is not the cause; those walks run beside the laid paths, not along them.
+  // Kept as an expected failure so it stays visible.
   it.fails('criterion 3b: at least 60% of steps near a path are on it', { timeout: 300_000 }, () => {
     let onPath = 0;
     let near = 0;

@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite';
+import { simVersion } from './src/tools/sim-version.js';
 
-// The browser build lives in web/ and imports the sim core from src/ directly. A relative base
-// lets the same build serve from GitHub Pages' /townlet-game/ path or from a domain root.
 export default defineConfig({
   root: 'web',
   base: './',
+  // Which sim made a save, so the loader test can tell a fixture from this build from an older one.
+  define: { __SIM_VERSION__: JSON.stringify(simVersion()) },
   // three.js goes in its own file: it rarely changes, so returning players keep it cached across deploys.
   build: {
     outDir: '../dist',

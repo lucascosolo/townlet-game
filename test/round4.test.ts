@@ -225,14 +225,21 @@ describe('round 4, criterion 2: everyday play moves mood', () => {
 });
 
 describe('round 4, criterion 2 as declared', () => {
-  // Missed on seed 2 in round 4 and kept visible; in round 5 seed 1 is 0.0986 (seed 2 now meets it). Still visible.
-  it.fails('a neglected quiet town is at least 0.10 glummer on day 21 than day 2, and half say fair or worse, on every seed (missed on seed 1 by 0.0014; see the note)', { timeout: 900_000 }, () => {
+  // Missed on seed 2 in round 4 and kept visible; in round 5 seed 1 is 0.0986 (seed 2 now meets it).
+  // Plan of 2026-10-11 (Phase D, criterion 3): the measure counts the founders who are there on both
+  // days, so someone leaving (which lifts the mean of those left) no longer hides the town's gloom.
+  // Measured that way: seed 1 is 0.096 over the four founders still there (0.756 to 0.660). Still visible.
+  it.fails('a neglected quiet town is at least 0.10 glummer on day 21 than day 2 among the founders there both days, and half say fair or worse, on every seed (missed on seed 1: 0.096; see the note)', { timeout: 900_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'none');
       sim.runUntil(at(2, 12));
-      const before = meanMood(sim);
+      const founders = here(sim).map((r) => r.id);
+      const moodsBefore = Object.fromEntries(here(sim).map((r) => [r.id, r.mood]));
       sim.runUntil(at(21, 12));
-      expect(before - meanMood(sim), `seed ${seed}`).toBeGreaterThanOrEqual(0.1);
+      const both = here(sim).filter((r) => founders.includes(r.id)).map((r) => r.id);
+      const before = both.reduce((s, id) => s + (moodsBefore[id] as number), 0) / both.length;
+      const after = meanMood(sim, both);
+      expect(before - after, `seed ${seed}: ${before.toFixed(3)} to ${after.toFixed(3)} over ${both.length} founders`).toBeGreaterThanOrEqual(0.1);
       const bands = sim.state.order.filter((id) => awake(sim, id)).map((id) => (sim.talk(id, 'how') as TalkAnswer).band);
       expect(bands.filter((b) => b !== 'good' && b !== 'great').length * 2, `seed ${seed}`).toBeGreaterThanOrEqual(bands.length);
     }
@@ -331,12 +338,15 @@ describe('round 4, criterion 4: opinions with an edge', () => {
 describe('round 4, criterion 4: "a lovely spot"', () => {
   // Met in round 4 (20% to 27%); in round 5 seed 1 has 4 of 9 settled place views "a lovely spot"
   // (the bar for "lovely" went to 0.75 and came back to 0.7, which kept five older measures). Kept visible.
-  it.fails('"a lovely spot" is at most 30% of settled place views on day 20 (missed on seed 1; see the note)', { timeout: 900_000 }, () => {
+  // Plan of 2026-10-11 (Phase D, criterion 1): a place is liked for what it has before it is "a lovely
+  // spot", and "a lovely spot" is held about two places at most; met on every seed, so plain again.
+  it('"a lovely spot" is at most 30% of settled place views on day 20', { timeout: 900_000 }, () => {
     for (const seed of SEEDS) {
       const sim = runScenario('quiet', seed, 'considerate');
       sim.runUntil(at(20, 12));
       const placeViews = here(sim).flatMap((r) => Object.values(r.beliefs).filter((b) => b.subject.startsWith('b:')));
       const lovely = placeViews.filter((b) => b.aspect === 'peaceful_spot').length;
+      console.log(`seed ${seed}: "a lovely spot" ${lovely} of ${placeViews.length} settled place views (${((100 * lovely) / Math.max(1, placeViews.length)).toFixed(0)}%)`);
       expect(lovely / Math.max(1, placeViews.length), `seed ${seed}: ${lovely} of ${placeViews.length}`).toBeLessThanOrEqual(0.3);
     }
   });

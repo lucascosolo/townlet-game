@@ -4,9 +4,9 @@
 
 import { Narrator } from '../../src/narrate/narrator.js';
 import { runScenario } from '../../src/scenarios/index.js';
-import type { StewardPolicy } from '../../src/scenarios/steward.js';
-import type { Command, Simulation } from '../../src/sim/sim.js';
-import type { SimEvent } from '../../src/sim/types.js';
+import { attachSteward, type StewardPolicy } from '../../src/scenarios/steward.js';
+import { type Command, Simulation } from '../../src/sim/sim.js';
+import type { SimEvent, SimState } from '../../src/sim/types.js';
 
 export const SPEEDS = [0, 1, 3, 10, 30] as const;
 /** Ticks (in-game minutes) per real second at 1x: a day lasts six minutes. */
@@ -22,6 +22,8 @@ export interface GameOptions {
   steward: StewardPolicy;
   /** The scenario's own scripted commands: off in the browser since bar round 1, on for a save made before then. */
   scripted?: boolean;
+  /** A saved town to carry on from, instead of the scenario's first morning (save reliability, 2026-10-11). */
+  snapshot?: SimState;
 }
 
 /** FNV-1a over a string, continuing from a previous hash. */
@@ -50,7 +52,10 @@ export class Game {
 
   constructor(options: GameOptions) {
     this.options = options;
-    this.sim = runScenario(options.scenario, options.seed, options.steward, { scripted: options.scripted ?? false });
+    if (options.snapshot) {
+      this.sim = new Simulation(options.snapshot);
+      attachSteward(this.sim, options.steward);
+    } else this.sim = runScenario(options.scenario, options.seed, options.steward, { scripted: options.scripted ?? false });
     // In the browser the player is the steward: narrate their actions as "you".
     this.narrator = new Narrator(this.sim, { stewardIsYou: true });
     this.sim.on((e) => {

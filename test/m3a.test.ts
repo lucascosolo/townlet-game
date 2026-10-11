@@ -72,13 +72,19 @@ describe('criterion 1: aspirations', () => {
     expect(total / SEEDS.length).toBeGreaterThanOrEqual(3);
   });
 
-  // MISSED, reported in spec 9.3: Fen's and Marlow's plans need nothing from the steward, so a
-  // do-nothing steward still sees 2 of 6 through (2.0 on every seed, measured as above since the
-  // audit of 2026-10-10). Kept as an expected failure so it is visible and flips the day the bound is met.
-  it.fails('a do-nothing steward sees at most 1.5 of 6 through (missed: 2.0)', { timeout: 300_000 }, () => {
-    let total = 0;
-    for (const seed of SEEDS) total += doneAfter28('none', seed);
-    expect(total / SEEDS.length).toBeLessThanOrEqual(1.5);
+  // Fen's and Marlow's plans need nothing from the steward, so a do-nothing steward sees 2 of 6
+  // through (2.0 on every seed since the audit of 2026-10-10). The plan of 2026-10-11 (Phase D,
+  // criterion 4) makes the criterion the player's influence: how many more dreams a considerate
+  // steward sees through than one who does nothing.
+  it('a considerate steward sees at least four more of the six founders\' dreams through than a do-nothing one, on average over the seeds', { timeout: 600_000 }, () => {
+    let considerate = 0;
+    let none = 0;
+    for (const seed of SEEDS) {
+      considerate += doneAfter28('considerate', seed);
+      none += doneAfter28('none', seed);
+    }
+    console.log(`founders' dreams through in 28 days: considerate ${(considerate / SEEDS.length).toFixed(1)}, do-nothing ${(none / SEEDS.length).toFixed(1)}`);
+    expect((considerate - none) / SEEDS.length).toBeGreaterThanOrEqual(4);
   });
 });
 

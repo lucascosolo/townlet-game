@@ -92,6 +92,23 @@ const QUALITY_LIKES: Record<Quality, [string, string]> = {
   water: ['being near water', 'staying dry'],
 };
 
+/**
+ * What a liking for each quality is called on a page, several ways, each resident keeping one
+ * (plan 2026-10-11: "a busy lane" was eighteen of thirty-six residents' loves, and said nothing).
+ */
+export const LIFTS_WORDS: Record<Quality, string[]> = {
+  noise: ['a bit of noise', 'a lively din'],
+  bustle: ['people passing the door', 'company in the lane', 'a bit of bustle about the place', 'a lane with people in it'],
+  green: ['growing things', 'green all round the house', 'a garden to look at'],
+  scent: ['a good smell on the air', 'the smell of baking and blossom'],
+  water: ['being near water', 'the sound of the brook'],
+};
+/** A love is only called one when it is a real liking, not merely the least dislike. */
+export const LOVE_AT_LEAST = 0.15;
+/** A loved quality is felt at least this share of the strongest one (review 9). */
+export const LOVE_SHARE_OF_STRONGEST = 0.5;
+const wordFor = (id: string, words: string[]): string => words[[...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % words.length] as string;
+
 const QUIRK_WORDS: Record<string, string> = {
   // One whole sentence each (bar round 4: the page split this on its semicolon into "any noise at night wakes them").
   light_sleeper: 'Sleeps lightly, and wakes at the least noise',
@@ -142,15 +159,19 @@ export function factValue(state: SimState, r: ResidentState, key: string): strin
       // What they love more than the rest of the town does (bar round 5: four of six founders "love
       // growing things"); noise they love is the noise they mind least.
       const mean = castMean(state, (d) => ambientPrefs(d) as unknown as Record<string, number>);
-      const top = [...ranked].filter((x) => x.q !== 'noise' || x.v > 0).map((x) => ({ ...x, rel: x.v - (mean[x.q] ?? 0) })).sort((a, b) => b.rel - a.rel)[0] as { q: Quality; v: number; rel: number };
-      return `Loves ${top.q === 'noise' ? QUALITY_LIKES.noise[top.v > 0 ? 0 : 1] : QUALITY_LIKES[top.q][0]}`;
+      // Review 9: Maud "loved a bit of bustle" at 0.25 while liking green at 0.55 and wanting quiet; what
+      // they love is chosen among the qualities they feel at least half as much as their strongest.
+      const strongest = Math.max(...ranked.map((x) => x.v));
+      const byRel = [...ranked].filter((x) => x.q !== 'noise' || x.v > 0).filter((x) => x.v >= LOVE_SHARE_OF_STRONGEST * strongest).map((x) => ({ ...x, rel: x.v - (mean[x.q] ?? 0) })).sort((a, b) => b.rel - a.rel);
+      const top = (byRel.find((x) => x.v >= LOVE_AT_LEAST) ?? ranked[0]) as { q: Quality; v: number };
+      return `Loves ${wordFor(def.id, LIFTS_WORDS[top.q])}`;
     }
     case 'dislikes': {
       // What they mind more than the rest of the town does (bar round 4: every founder "can't abide
       // noise", Bram included): their liking set against the town's average.
       const mean = castMean(state, (d) => ambientPrefs(d) as unknown as Record<string, number>);
       const worst = [...ranked].map((x) => ({ ...x, rel: x.v - (mean[x.q] ?? 0) })).sort((a, b) => a.rel - b.rel)[0] as { q: Quality; v: number; rel: number };
-      return worst.v < 0 && worst.rel < -0.05 ? `Can't abide ${worst.q === 'noise' ? 'noise, especially at night' : QUALITY_LIKES[worst.q][0]}` : `Not much bothers ${def.pronouns.obj}`;
+      return worst.v < 0 && worst.rel < -0.05 ? `Can't abide ${worst.q === 'noise' ? 'noise, especially at night' : worst.q === 'bustle' ? 'a crowd about the place' : QUALITY_LIKES[worst.q][0]}` : `Not much bothers ${def.pronouns.obj}`;
     }
     case 'quirk':
       return def.quirks.length ? def.quirks.map((q) => QUIRK_WORDS[q] ?? q).join('; ') : 'No odd habits to speak of';

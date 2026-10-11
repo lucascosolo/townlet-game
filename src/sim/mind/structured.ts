@@ -45,13 +45,24 @@ interface Candidate {
   score: number;
 }
 
-const MILD_ASPECTS = new Set(['good_times', 'peaceful_spot', 'smells_lovely', 'not_for_me']);
+const MILD_ASPECTS = new Set(['good_times', 'peaceful_spot', 'smells_lovely', 'green_spot', 'by_the_water', 'not_for_me']);
 /**
  * Bar round 4: a first visit scored against what they like. Most of the valley scores well, so the
  * thresholds sit on the spread (measured: a tenth below 0.22, half above 0.5): the top half is "a
  * lovely spot" (0.5 and 0.6 still left it 59% and 43% of settled place views), the bottom sixth a dislike (it was 0.35 and never, so 79% were lovely and 2% not).
  */
 export const LOVELY_ABOVE = 0.7;
+/** The share of a place's appeal one quality must carry to be named instead of "a lovely spot". */
+export const LOVELY_OWN_SHARE = 0.45;
+/** How many places one resident may find simply "a lovely spot"; after that they say what they like. */
+export const LOVELY_AT_MOST = 2;
+/** A view of a place by the quality that makes it (plan of 2026-10-11). */
+const PLACE_VIEWS: Record<'scent' | 'green' | 'water' | 'bustle', { aspect: string; note: string; relevance: NonNullable<Perception['relevance']> }> = {
+  scent: { aspect: 'smells_lovely', note: 'loved the smell of the place', relevance: ['nature', 'beauty'] },
+  green: { aspect: 'green_spot', note: 'all green and growing', relevance: ['nature', 'beauty'] },
+  water: { aspect: 'by_the_water', note: 'the water close by', relevance: ['nature', 'beauty'] },
+  bustle: { aspect: 'good_times', note: 'good company', relevance: ['community'] },
+};
 export const DISLIKE_BELOW = 0.3;
 
 /**
@@ -282,17 +293,24 @@ export const StructuredMind: Mind = {
     if (!r.visitAppraised) {
       r.visitAppraised = true;
       const [tx, ty] = placeTile(b);
-      const s = prefScore(ambientPrefs(def), ambientAt(ctx.state, tx, ty, ctx.worked));
+      const prefs = ambientPrefs(def);
+      const amb = ambientAt(ctx.state, tx, ty, ctx.worked);
+      const s = prefScore(prefs, amb);
       if (s > LOVELY_ABOVE) {
+        // Plan of 2026-10-11 (Phase D, criterion 1): what they like about the place is said first,
+        // when one quality is most of it; "a lovely spot" is for the rest, and at most twice a head.
+        const [q, share] = (['scent', 'green', 'water', 'bustle'] as const).map((k) => [k, (prefs[k] * amb[k]) / s] as const).sort((a, b) => b[1] - a[1])[0] as readonly ['scent' | 'green' | 'water' | 'bustle', number];
+        const lovelyHeld = Object.values(r.beliefs).filter((b) => b.aspect === 'peaceful_spot').length;
+        const own = share >= LOVELY_OWN_SHARE || lovelyHeld >= LOVELY_AT_MOST ? PLACE_VIEWS[q] : null;
         const p: Perception = {
           subject,
-          aspect: 'peaceful_spot',
+          aspect: own?.aspect ?? 'peaceful_spot',
           valence: 0.6,
           base: 0.15 + 0.4 * s,
           source: 'witnessed',
           placeId,
-          note: 'a lovely spot',
-          relevance: ['nature', 'beauty'],
+          note: own?.note ?? 'a lovely spot',
+          relevance: own?.relevance ?? ['nature', 'beauty'],
         };
         perceive(ctx, r, p);
       } else if (s < DISLIKE_BELOW && !dreamBuildings(ctx.state, r).has(b.type)) {

@@ -6,7 +6,7 @@ import { buildingDef } from '../../src/content/buildings.js';
 import { STEWARD_POLICIES, type StewardPolicy } from '../../src/scenarios/steward.js';
 import { canPlace, footprint } from '../../src/sim/world.js';
 import { Game } from './game.js';
-import { clearSave, loadSave, restore, saveGame, scriptedFor } from './save.js';
+import { clearSave, loadGame, loadSave, saveGame, type LoadedHow } from './save.js';
 import { Ui } from './ui/ui.js';
 import { TIMBER_FROM } from '../../src/narrate/board.js';
 import { TownView, seatingOrder } from './view/scene.js';
@@ -25,18 +25,20 @@ if (fresh) {
 const found = fresh ? null : loadSave();
 const named = params.has('scenario') || params.has('seed');
 const saved = found && (!named || (found.scenario === (params.get('scenario') ?? 'quiet') && found.seed === (Number(params.get('seed') ?? 1) || 1))) ? found : null;
-const game = new Game(
-  saved
-    ? { scenario: saved.scenario, seed: saved.seed, steward: saved.steward, scripted: scriptedFor(saved) }
-    : {
-        scenario: params.get('scenario') ?? 'quiet',
-        // Bar round 6: ?new=1 with a named seed starts that seed afresh; without one, a random town.
-        seed: fresh && !params.has('seed') ? 1 + Math.floor(Math.random() * 1_000_000) : Number(params.get('seed') ?? 1) || 1,
-        // In the browser, the player is the steward.
-        steward: stewardParam && STEWARD_POLICIES.includes(stewardParam) ? stewardParam : 'none',
-      },
-);
-if (saved) restore(game, saved);
+let loaded: LoadedHow | null = null;
+let game: Game;
+if (saved) {
+  const l = loadGame(saved);
+  game = l.game;
+  loaded = l.how;
+} else
+  game = new Game({
+    scenario: params.get('scenario') ?? 'quiet',
+    // Bar round 6: ?new=1 with a named seed starts that seed afresh; without one, a random town.
+    seed: fresh && !params.has('seed') ? 1 + Math.floor(Math.random() * 1_000_000) : Number(params.get('seed') ?? 1) || 1,
+    // In the browser, the player is the steward.
+    steward: stewardParam && STEWARD_POLICIES.includes(stewardParam) ? stewardParam : 'none',
+  });
 if (params.has('speed')) game.speedIndex = Number(params.get('speed'));
 
 const app = document.getElementById('app') as HTMLElement;
@@ -373,6 +375,7 @@ window.__townlet = {
   stats: () => ({ fps, stepMs: game.stepMs, tick: game.sim.tick, eventHash: game.eventHash, eventCount: game.eventCount, commands: game.commandLog }),
   runTicks: (n: number) => game.runTicks(n),
   save: () => saveGame(game),
+  loaded,
   residentScreen: (id: string) => view.residentScreen(id),
   buildingScreen: (id: number) => view.buildingScreen(id),
   tileScreen: (x: number, y: number) => view.tileScreen(x, y),

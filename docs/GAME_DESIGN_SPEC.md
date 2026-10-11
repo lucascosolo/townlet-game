@@ -1411,6 +1411,19 @@ M1 is the most important de-risking step: **if the town isn't interesting as tex
 2. The determinism tests hold and the year soak flags no seed of ten.
 3. The five measures the fix moved last time (larder mood, neglected-town mood, days at the larder cap, what the granary keeps, the story bands) are measured on seeds 1–10 before and after. Each either stays within its criterion's band, or its criterion is restated as a mean over ten seeds with a stated margin and recorded as a moved measure with both numbers; a constant is retuned only where the measure has genuinely moved, and each such retune is listed.
 
+**Phase C status (2026-10-11): criterion 1 met on its own, criterion 2 not reached, criterion 3 missed; the fix is not shipped.** The calibration tool is `src/tools/calibrate.ts`; the fix is commit 3b62b21 on the branch, reverted by the commit after it. Numbers below are means over seeds 1–10 (minimum in brackets), before the fix, with both halves of it, with the heap order alone, and with the midnight wear alone.
+
+- Criterion 1: with both halves, the route test passes on seeds 1–5. With either half alone it fails: both are needed.
+- Criterion 3: every variant moved the same measures, in the same direction, so this is not one seed's knife edge but the economy's sensitivity to any change in routes.
+  - The larder held low for a week, drop in mean mood (bar 0.025 every seed, 0.06 declared): before 0.123 (0.038); both 0.087 (0.001; seed 1 at 0.024 and seed 8 at 0.001); heap 0.125 (0.017); wear 0.133 (0.058).
+  - A neglected town, glummer on day 21 (bar 0.08 every seed, 0.10 declared): before 0.130 (0.077); both 0.115 (0.071; seed 2 misses); heap 0.133 (0.088); wear 0.127 (0.091).
+  - Days at the larder cap with the considerate steward (bar 2): before 0 on every seed; both 0.4 (seed 5 at 3); heap 0.4; wear 0.3.
+  - Winter stores met by the considerate steward (reported, not a bar): before 6 of 10, with a mean of 11 food over the target; both 4 of 10 and 31 under; heap 4 of 10 and 25 under (one seed 240 short); wear 4 of 10 and 10 under. The favours steward, which is the bar (3 of 5): before 10 of 10; both 9 of 10 (seeds 1–5: 4 of 5); heap 9 of 10; wear 10 of 10.
+  - Eating the stores early, mood difference (bar 0.02): before 0.046 (0.020); both 0.045 (0.028); heap 0.039 (0.022); wear 0.045 (0.019).
+  - Rival pairs over ten seeds (bar 0.5 to 4): before 0.7; both 0.5; heap 0.4; wear 0.6. Arguments on 10 of 10 and the 48-hour gap hold throughout.
+- Shipping both halves would flip three per-seed tests (round 4's larder drop on seed 1 by 0.001, round 4's neglected town on seed 2, the larder cap on seed 5) and would mean restating each as a mean with a margin written to fit this data. That is what the predeclared criterion allowed, and it is still a redefinition of three failures for a fix whose benefit is that worn tracks do not jump when you build elsewhere; with the winter stores of the played town falling from 6 to 4 of 10 on every variant, it is not worth it. The fix stays recorded, the route test stays an expected failure, and the lesson is in DECISIONS.md: before routes can be changed, the economy's measures need to be means over many seeds by design, and the winter-stores outcome needs to depend less on who walks where.
+- Criterion 2 (the year soak on the fix) was not run to the end once the decision was made; the soak on the tree that ships is in the acceptance run.
+
 **Phase D criteria: the visible misses (predeclared 2026-10-11, before code).** Quiet town, seeds 1–5, unless stated.
 
 1. "A lovely spot" is at most 30% of place views (42% on seed 1): a view of the place's own qualities is tried first, and the generic line is capped per resident.

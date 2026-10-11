@@ -75,15 +75,17 @@ async function controls(page: Page) {
   );
 }
 
-/** Whether the element at the centre of a test id is that element (so nothing covers it). */
-async function uncovered(page: Page, testid: string): Promise<boolean> {
+/** Whether the element at the centre of a test id is that element (so nothing covers it); else what is there. */
+async function uncovered(page: Page, testid: string): Promise<true | string> {
   return page.evaluate((id) => {
     const e = document.querySelector<HTMLElement>(`[data-testid="${id}"]`);
-    if (!e) return false;
+    if (!e) return 'missing';
     const r = e.getBoundingClientRect();
-    if (r.width === 0 || r.height === 0 || r.right > window.innerWidth + 0.5 || r.bottom > window.innerHeight + 0.5 || r.left < -0.5 || r.top < -0.5) return false;
+    if (r.width === 0 || r.height === 0) return 'no size';
+    if (r.right > window.innerWidth + 0.5 || r.bottom > window.innerHeight + 0.5 || r.left < -0.5 || r.top < -0.5) return `off screen at ${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)} in ${window.innerWidth}x${window.innerHeight}`;
     const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    return !!hit && (hit === e || e.contains(hit));
+    if (hit && (hit === e || e.contains(hit))) return true;
+    return `covered by ${hit ? `${hit.tagName.toLowerCase()}.${(hit as HTMLElement).className}`.slice(0, 80) : 'nothing'}`;
   }, testid);
 }
 
@@ -191,7 +193,8 @@ for (const d of DEVICES) {
       expect(turned.phone, 'still the phone layout when turned').toBe(true);
       expect(turned.wide).toBeLessThanOrEqual(turned.inner);
       await expect(page.getByTestId('tabbar')).toBeVisible();
-      for (const id of ['clock', 'renown', 'nav-town']) expect(await uncovered(page, id), `${id} after turning`).toBe(true);
+      // The sheet and HUD settle over a few frames after a turn (a 400 ms wait was once not enough on Chromium).
+      for (const id of ['clock', 'renown', 'nav-town']) await expect.poll(() => uncovered(page, id), { message: `${id} after turning`, timeout: 3000 }).toBe(true);
     } else {
       // The dashboard: Goals and Folk whole, the tier line opens, the scroll and dock reachable.
       for (const id of ['widget-goals', 'widget-folk', 'scroll', 'open-build', 'tool-remove']) await expect(page.getByTestId(id)).toBeVisible();

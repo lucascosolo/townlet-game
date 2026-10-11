@@ -178,6 +178,13 @@ const THOUGHTS_PER_RESIDENT = 3;
 export class Narrator {
   readonly lines: string[] = [];
   readonly entries: NarratorEntry[] = [];
+  /** A saved town's log, taken back on load (a snapshot holds the sim, not the telling; review 9 found the log empty after a reload). */
+  restoreEntries(entries: NarratorEntry[]): void {
+    for (const e of entries) {
+      this.entries.push({ ...e, who: [...e.who] });
+      this.lines.push(e.text);
+    }
+  }
   private entryListeners: Array<(e: NarratorEntry) => void> = [];
   /** Notice-board items, rendered at dawn so they read right as of the morning. */
   private board: Array<{ text: () => string; importance: Importance }> = [];

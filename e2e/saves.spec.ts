@@ -4,7 +4,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { at } from '../src/sim/time.js';
 
-type Handle = { runTicks(n: number): void; save(): void; loaded: string | null; game: { speedIndex: number; sim: { tick: number; state: { order: string[]; buildings: unknown[] } } } };
+type Handle = { runTicks(n: number): void; save(): void; loaded: string | null; game: { speedIndex: number; narrator: { entries: unknown[] }; sim: { tick: number; state: { order: string[]; buildings: unknown[] } } } };
 const KEY = 'townlet.save.v1';
 
 async function open(page: Page, query: string, tick: number): Promise<void> {
@@ -20,7 +20,7 @@ async function open(page: Page, query: string, tick: number): Promise<void> {
 const handle = (page: Page) =>
   page.evaluate(() => {
     const h = (window as unknown as { __townlet: Handle }).__townlet;
-    return { tick: h.game.sim.tick, loaded: h.loaded, order: h.game.sim.state.order, buildings: h.game.sim.state.buildings.length };
+    return { tick: h.game.sim.tick, loaded: h.loaded, order: h.game.sim.state.order, buildings: h.game.sim.state.buildings.length, log: h.game.narrator.entries.length };
   });
 
 async function reload(page: Page): Promise<void> {
@@ -50,6 +50,10 @@ test('a save holds a snapshot stamped with the build, and a plain reload comes b
   expect(after.tick).toBe(before.tick);
   expect(after.order).toEqual(before.order);
   expect(after.buildings).toBe(before.buildings);
+  // Review 9: the Town log came back empty from a snapshot.
+  expect(before.log).toBeGreaterThan(10);
+  expect(after.log).toBe(before.log);
+  await expect(page.locator('[data-testid="widget-log"], [data-testid="scroll"]').first()).toBeVisible();
   // The town carries on: the clock moves and nothing throws.
   await page.evaluate(() => (window as unknown as { __townlet: Handle }).__townlet.runTicks(1440));
   expect((await handle(page)).tick).toBe(before.tick + 1440);

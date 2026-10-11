@@ -69,6 +69,10 @@ describe('save reliability (predeclared 2026-10-11)', () => {
     const { game: b, how } = loadGame(data);
     expect(how).toBe('snapshot');
     expect(town(b)).toEqual(town(a));
+    // Review 9: the log came back empty from a snapshot.
+    expect(b.narrator.entries.length).toBe(a.narrator.entries.length);
+    expect(b.narrator.entries.length).toBeGreaterThan(10);
+    expect(b.narrator.entries).toEqual(a.narrator.entries);
     a.runTicks(3 * 1440);
     b.runTicks(3 * 1440);
     expect(town(b)).toEqual(town(a));

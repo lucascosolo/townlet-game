@@ -41,6 +41,16 @@ async function putOff(page: Page, touch: boolean): Promise<void> {
     await frames(page);
     const later = page.locator('[data-testid^="later-"], [data-testid="tier-ok"]');
     if ((await later.count()) > 0) {
+      // Review 9: a proposal's Approve and Decline were 31 px on phones, and sideways the card sat over the HUD.
+      if (await page.evaluate(() => document.body.classList.contains('phone'))) {
+        const card = await page.evaluate(() => {
+          const m = document.querySelector('.modal') as HTMLElement | null;
+          const hud = document.querySelector('.hud') as HTMLElement | null;
+          return { buttons: [...document.querySelectorAll<HTMLElement>('.modal-buttons button')].map((b) => b.getBoundingClientRect().height), top: m?.getBoundingClientRect().top ?? 0, hudBottom: hud?.getBoundingClientRect().bottom ?? 0, landscape: document.body.classList.contains('landscape') };
+        });
+        for (const h of card.buttons) expect(h, 'a proposal button on a phone').toBeGreaterThanOrEqual(43.5);
+        if (card.landscape) expect(card.top, 'the card sits below the HUD when sideways').toBeGreaterThanOrEqual(card.hudBottom - 1);
+      }
       if (touch) await later.first().tap();
       else await later.first().click();
       quiet = 0;
@@ -90,6 +100,8 @@ for (const d of DEVICES) {
     for (let i = 0; i < 3; i++) {
       await expect(page.getByTestId('intro-next')).toBeVisible();
       expect(await uncovered(page, 'intro-next'), 'the intro button is reachable').toBe(true);
+      // Review 9: the intro's Next and Begin were 31 px on phones.
+      if (d.phone) expect((await page.getByTestId('intro-next').boundingBox())!.height, 'intro button height').toBeGreaterThanOrEqual(43.5);
       await press(page, 'intro-next', d.touch);
       await frames(page);
     }

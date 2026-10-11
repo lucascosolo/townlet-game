@@ -105,6 +105,8 @@ export const LIFTS_WORDS: Record<Quality, string[]> = {
 };
 /** A love is only called one when it is a real liking, not merely the least dislike. */
 export const LOVE_AT_LEAST = 0.15;
+/** A loved quality is felt at least this share of the strongest one (review 9). */
+export const LOVE_SHARE_OF_STRONGEST = 0.5;
 const wordFor = (id: string, words: string[]): string => words[[...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % words.length] as string;
 
 const QUIRK_WORDS: Record<string, string> = {
@@ -157,7 +159,10 @@ export function factValue(state: SimState, r: ResidentState, key: string): strin
       // What they love more than the rest of the town does (bar round 5: four of six founders "love
       // growing things"); noise they love is the noise they mind least.
       const mean = castMean(state, (d) => ambientPrefs(d) as unknown as Record<string, number>);
-      const byRel = [...ranked].filter((x) => x.q !== 'noise' || x.v > 0).map((x) => ({ ...x, rel: x.v - (mean[x.q] ?? 0) })).sort((a, b) => b.rel - a.rel);
+      // Review 9: Maud "loved a bit of bustle" at 0.25 while liking green at 0.55 and wanting quiet; what
+      // they love is chosen among the qualities they feel at least half as much as their strongest.
+      const strongest = Math.max(...ranked.map((x) => x.v));
+      const byRel = [...ranked].filter((x) => x.q !== 'noise' || x.v > 0).filter((x) => x.v >= LOVE_SHARE_OF_STRONGEST * strongest).map((x) => ({ ...x, rel: x.v - (mean[x.q] ?? 0) })).sort((a, b) => b.rel - a.rel);
       const top = (byRel.find((x) => x.v >= LOVE_AT_LEAST) ?? ranked[0]) as { q: Quality; v: number };
       return `Loves ${wordFor(def.id, LIFTS_WORDS[top.q])}`;
     }
@@ -166,7 +171,7 @@ export function factValue(state: SimState, r: ResidentState, key: string): strin
       // noise", Bram included): their liking set against the town's average.
       const mean = castMean(state, (d) => ambientPrefs(d) as unknown as Record<string, number>);
       const worst = [...ranked].map((x) => ({ ...x, rel: x.v - (mean[x.q] ?? 0) })).sort((a, b) => a.rel - b.rel)[0] as { q: Quality; v: number; rel: number };
-      return worst.v < 0 && worst.rel < -0.05 ? `Can't abide ${worst.q === 'noise' ? 'noise, especially at night' : QUALITY_LIKES[worst.q][0]}` : `Not much bothers ${def.pronouns.obj}`;
+      return worst.v < 0 && worst.rel < -0.05 ? `Can't abide ${worst.q === 'noise' ? 'noise, especially at night' : worst.q === 'bustle' ? 'a crowd about the place' : QUALITY_LIKES[worst.q][0]}` : `Not much bothers ${def.pronouns.obj}`;
     }
     case 'quirk':
       return def.quirks.length ? def.quirks.map((q) => QUIRK_WORDS[q] ?? q).join('; ') : 'No odd habits to speak of';

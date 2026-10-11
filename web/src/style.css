@@ -542,6 +542,9 @@ body.phone .widget-head button.icon, body.phone .quick-head button.icon { height
 body.phone .menu-head button { min-height: 44px; }
 body.phone .build-card { min-height: 44px; }
 body.phone button.link { min-height: 44px; }
+/* Review 9: the intro's Next and a proposal's Approve and Decline were 31 px, and the board's "more" links 17 px. */
+body.phone .modal-buttons button { min-height: 44px; }
+body.phone .log-group .more { min-height: 44px; display: inline-flex; align-items: center; }
 body.phone .subtabs button { min-height: 44px; }
 body.phone .talk-grid button { min-height: 44px; }
 .modal-buttons .link { margin-left: auto; }
@@ -653,3 +656,7 @@ body.phone.landscape .toasts { top: 58px; }
 @media (max-height: 820px) {
   .widget[data-widget='folk'] { min-height: 200px; }
 }
+
+/* Review 9: turned sideways, a proposal card sat over the stock and renown; it sits below the HUD and scrolls if it must. */
+body.phone.landscape .modal-back { align-items: flex-start; padding-top: calc(var(--hud-bottom, 52px) + 6px); box-sizing: border-box; }
+body.phone.landscape .modal { max-height: calc(100vh - var(--hud-bottom, 52px) - 14px); overflow-y: auto; padding: 12px 18px; border-top-width: 8px; border-bottom-width: 8px; }

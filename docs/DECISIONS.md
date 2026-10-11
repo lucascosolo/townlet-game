@@ -31,6 +31,8 @@ These are decisions that change what gets built. Each entry says what was chosen
 
 **Paths: the 60% stays a visible miss, with the cause narrowed.** Of steps within a tile of a laid path, 50% are on it, 22% are inside the buildings at either end, and 28% are on open ground, nearly all worn track beside the path and most of it mid-walk. The worn track's discount is not the cause (cutting it from 1.5 to 1.0 moved nothing). Those walks run beside the paths that were laid for other walks; the question is which walks get paths, and that is a round of its own.
 
+**Review 9 (targeted) found two misses in the plan's own claims, both fixed before anything merges.** The Town log came back empty from a snapshot reload: the sim state has no telling in it, and only a replay rebuilt the narrator's entries. The save now carries the narrator's entries (plain records; a month is a few hundred) with the snapshot. And three phone controls were under 44 px where the device matrix never looked: it measured after the intro and after putting proposals off, so the intro's and a proposal's buttons (31 px) and the board's "more" links (17 px) went unmeasured; they are 44 px now and the matrix measures them. The review's other findings (the second fortnight's asks repeating, raw joins in talk, two minds on one page) are the next round's, not this plan's.
+
 **Tests.** Two round 7 tests that ran in 2 to 3 seconds had no timeout and failed at the 5-second default under the load of the device matrix; they now have the file's usual timeout. No criterion was loosened.
 
 ## 2026-10-10: Fixing what the audit left open

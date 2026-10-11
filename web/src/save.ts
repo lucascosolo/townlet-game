@@ -8,6 +8,7 @@
 import type { StewardPolicy } from '../../src/scenarios/steward.js';
 import type { Command } from '../../src/sim/sim.js';
 import type { SimState } from '../../src/sim/types.js';
+import type { NarratorEntry } from '../../src/narrate/narrator.js';
 import { Game, type GameOptions } from './game.js';
 
 const KEY = 'townlet.save.v1';
@@ -36,6 +37,8 @@ export interface SaveData {
   /** Version 2: the sim that made the save (SIM_VERSION), and the town as it was. */
   simVersion?: string;
   snapshot?: SimState;
+  /** Version 2: the town's log as told so far (the snapshot holds the sim, not the telling). */
+  log?: NarratorEntry[];
 }
 
 /** How a saved town was brought back. */
@@ -76,6 +79,7 @@ export function saveData(game: Game, savedAt = new Date()): SaveData {
     scripted: game.options.scripted ?? false,
     simVersion: SIM_VERSION,
     snapshot: game.sim.state,
+    log: game.narrator.entries,
   };
 }
 
@@ -137,6 +141,7 @@ export function loadGame(data: SaveData): { game: Game; how: LoadedHow } {
       // A copy: the game steps its state in place, and the caller's save must stay as it was.
       const game = new Game({ ...options, snapshot: structuredClone(snapshot) });
       for (const c of data.commands) game.commandLog.push({ ...c });
+      if (Array.isArray(data.log)) game.narrator.restoreEntries(data.log);
       return { game, how: 'snapshot' };
     } catch (e) {
       console.warn('the saved town could not be loaded as it was; replaying it', e);

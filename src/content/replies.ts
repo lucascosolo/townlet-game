@@ -41,7 +41,7 @@ export function replySaid(offer: ReplyOffer, subject?: (id: string) => string): 
 
 export const REPLY_LINES: Record<ReplyStance, Lines> = <Record<ReplyStance, Lines>>{
   warm: {
-    plain: ['Good.', 'Glad you see it.', 'Right, then.'],
+    plain: ['Good.', 'Glad you see it.', 'Right, then.', 'Fair enough.', 'Glad of that.'],
     formal: ['I am glad we understand each other.', 'Thank you for hearing me.', 'That is good of you to say.'],
     warm: ["Thank you. That means a lot.", "I'm glad you think so.", 'See, we do all right, you and I.'],
     chatty: ['Ha! Knew you would get it!', 'See? Easy!', 'That is what I like to hear!'],

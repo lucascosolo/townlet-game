@@ -14,7 +14,7 @@ These are decisions that change what gets built. Each entry says what was chosen
 **The HUD measures itself.** The side widgets and the widget menu start below the HUD's real bottom edge (a resize observer sets a variable), so a wrapped HUD on a tablet no longer sits on top of Goals.
 
 **The Goals tier card folds on the desktop.** It is a single line (tier, renown, what is next) that opens on click; the track and the "how renown is earned" note are inside. On phones it stays open. The widget also shows a "more" chevron when its body scrolls.
-- *Not changed:* Goals still scrolls at 1280×800 (see the status for the number); taking the tier card out of the widget was rejected again.
+- With the card folded, Goals shows all of itself at 1280×800 for the first time since round 6 (the expected failure from round 2 is plain again). Taking the tier card out of the widget, rejected twice, was not needed.
 
 **Touch targets.** 44 px in the phone layout; 40 px for every button on a touch tablet in the dashboard, where several were 18 to 29 px.
 

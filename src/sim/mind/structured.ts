@@ -60,7 +60,7 @@ export const LOVELY_AT_MOST = 2;
 const PLACE_VIEWS: Record<'scent' | 'green' | 'water' | 'bustle', { aspect: string; note: string; relevance: NonNullable<Perception['relevance']> }> = {
   scent: { aspect: 'smells_lovely', note: 'loved the smell of the place', relevance: ['nature', 'beauty'] },
   green: { aspect: 'green_spot', note: 'all green and growing', relevance: ['nature', 'beauty'] },
-  water: { aspect: 'by_the_water', note: 'the water close by', relevance: ['nature', 'quiet'] },
+  water: { aspect: 'by_the_water', note: 'the water close by', relevance: ['nature', 'beauty'] },
   bustle: { aspect: 'good_times', note: 'good company', relevance: ['community'] },
 };
 export const DISLIKE_BELOW = 0.3;

@@ -49,7 +49,9 @@ test('Goals is never cut by its widget: what does not fit scrolls inside its bod
   }
 });
 
-test.fail('the Goals widget shows all of itself on a desktop: no child is cut by its bottom edge (moved in round 6; 100 px over at 1280×800 after the plan of 2026-10-11 folded the tier card; see the note)', async ({ page }) => {
+// Plan of 2026-10-11 (Phase A, criterion 8): with the tier card folded to one line on the desktop (and
+// its closed body out of the layout), Goals fits whole at 1280×800 (-1 px), so the round 2 measure is plain again.
+test('the Goals widget shows all of itself on a desktop: no child is cut by its bottom edge', async ({ page }) => {
   await open(page, 'scenario=bakery&seed=2&speed=0', at(5, 10));
   await putOff(page);
   const widget = page.getByTestId('widget-goals');
